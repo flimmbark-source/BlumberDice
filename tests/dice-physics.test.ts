@@ -16,7 +16,7 @@ function run(world: World, ms: number): void {
   for (let t = 0; t < ms; t += 16) step(world, 16);
 }
 
-function thrownDie(result: Face | null, minTumbleMs = 400): { world: World; die: DieBody } {
+function thrownDie(result: Face | null, minTumbleMs = 300): { world: World; die: DieBody } {
   const world = createWorld(420, 420);
   const die = spawnDie(world);
   throwDie(world, die, { minTumbleMs });
@@ -51,6 +51,25 @@ describe('the animation always reports the engine result', () => {
     }
   });
 
+  it('lands before it hops, rather than skipping the bounce', () => {
+    // The hop reads as a final bounce only if the die has actually touched
+    // down first.
+    for (let trial = 0; trial < 30; trial++) {
+      const { world, die } = thrownDie(2);
+      let touches = 0;
+      let low = false;
+      while (die.state === 'tumbling' && world.t < 4000) {
+        step(world, 16);
+        let lowest = Infinity;
+        for (const lv of LOCAL_VERTICES) lowest = Math.min(lowest, die.pos.z + qRotate(die.q, lv).z);
+        const nowLow = lowest < 2;
+        if (nowLow && !low) touches += 1;
+        low = nowLow;
+      }
+      expect(touches, 'hopped without landing first').toBeGreaterThanOrEqual(1);
+    }
+  });
+
   it('starts the hop promptly rather than rolling on and on', () => {
     // The turn is what ends a roll, so it must not wait for free physics to
     // come to rest on its own, which it rarely does.
@@ -62,7 +81,7 @@ describe('the animation always reports the engine result', () => {
       expect(die.state).toBe('aligning');
       worst = Math.max(worst, elapsed);
     }
-    expect(worst).toBeLessThanOrEqual(760);
+    expect(worst).toBeLessThanOrEqual(560);
   });
 
   it('hops off the surface while it turns onto its face', () => {
@@ -170,8 +189,9 @@ describe('the animation always reports the engine result', () => {
       expect(die.state).toBe('rest');
       worst = Math.max(worst, elapsed);
     }
-    // Comfortably inside the 700ms cooldown plus one hop.
-    expect(worst).toBeLessThan(1400);
+    // Inside the 700ms cooldown plus one hop, so the tray is never the thing
+    // holding up the next roll.
+    expect(worst).toBeLessThan(1000);
   });
 });
 

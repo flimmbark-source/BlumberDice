@@ -52,7 +52,7 @@ const CLEARANCE_SAMPLES = 16;
  * times the hop for most rolls: free physics rarely comes to rest on its own
  * first.
  */
-const SETTLE_DEADLINE = 340;
+const SETTLE_DEADLINE = 240;
 const ORPHAN_TIMEOUT = 45000;
 
 /** Opposite faces sum to seven. */

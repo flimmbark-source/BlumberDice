@@ -16,9 +16,9 @@ const HEADROOM = 0.34;
 
 /** How long a die must tumble. Big cascades speed up so the tray keeps pace. */
 function tumbleFor(backlog: number): number {
-  if (backlog > 10) return 140;
-  if (backlog > 4) return 240;
-  return 400;
+  if (backlog > 10) return 110;
+  if (backlog > 4) return 180;
+  return 300;
 }
 
 export function DiceTray({ s }: { s: GameState }): JSX.Element {
@@ -187,7 +187,7 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
       }
       throwing.forEach((die, i) => {
         throwDie(world, die, {
-          minTumbleMs: 400 + i * 70,
+          minTumbleMs: 300 + i * 70,
           fromClick: i === 0,
           power: i === 0 ? 1.05 : 1,
         });
