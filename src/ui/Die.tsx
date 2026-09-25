@@ -9,17 +9,20 @@ const PIPS: Record<Face, [number, number][]> = {
   6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]],
 };
 
-export function Die({ face, size = 168, rolling = false }: {
+/**
+ * Small inline die for the decision bar, control rail and stats panel. The
+ * main tray is a canvas; see ui/dice.
+ */
+export function Die({ face, size = 168 }: {
   face: Face | null;
   size?: number;
-  rolling?: boolean;
 }): JSX.Element {
   const s = size;
   const off = s * 0.24;
   const r = s * 0.075;
   return (
     <svg
-      className={`die${rolling ? ' die--rolling' : ''}`}
+      className="die"
       width={s}
       height={s}
       viewBox={`0 0 ${s} ${s}`}

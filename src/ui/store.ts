@@ -7,27 +7,18 @@ import {
 import { clearStorage, loadFromStorage, saveToStorage } from '../engine/save.ts';
 import type { Face } from '../engine/types.ts';
 
-export interface Flash {
-  id: number;
-  face: number | null;
-  score: number;
-  meta: number;
-}
-
 /**
  * Holds the single mutable GameState and drives it with real time. React reads
  * it through useSyncExternalStore; nothing in the engine knows React exists.
  */
 class GameStore {
   state: GameState;
-  flashes: Flash[] = [];
   debug = false;
   private version = 0;
   private listeners = new Set<() => void>();
   private raf: number | null = null;
   private lastFrame = 0;
   private lastSave = 0;
-  private nextFlashId = 1;
 
   constructor() {
     this.state = loadFromStorage() ?? createGame(Math.floor(Math.random() * 0xffffffff));
@@ -73,15 +64,8 @@ class GameStore {
 
   private step(dt: number, now: number): void {
     const s = this.state;
-    const busy = s.pending.length > 0 || s.cooldownRemaining > 0;
-    if (busy) {
-      const beforeScore = s.score;
-      const beforeMeta = s.meta;
-      const beforeRolls = s.totalRolls;
+    if (s.pending.length > 0 || s.cooldownRemaining > 0) {
       tick(s, dt);
-      if (s.totalRolls !== beforeRolls) {
-        this.pushFlash(s.lastFace, s.score - beforeScore, s.meta - beforeMeta);
-      }
       this.notify();
     }
     if (now - this.lastSave > 4000) {
@@ -90,17 +74,11 @@ class GameStore {
     }
   }
 
-  private pushFlash(face: Face | null, score: number, meta: number): void {
-    this.flashes.push({ id: this.nextFlashId++, face, score, meta });
-    if (this.flashes.length > 6) this.flashes.splice(0, this.flashes.length - 6);
-  }
-
   save = (): void => saveToStorage(this.state);
 
   reset = (): void => {
     clearStorage();
     this.state = createGame(Math.floor(Math.random() * 0xffffffff));
-    this.flashes = [];
     this.notify();
   };
 

@@ -90,13 +90,28 @@ describe('graph integrity', () => {
     expect(multiRoute.length).toBeGreaterThanOrEqual(8);
   });
 
-  it('places bridges between two different regions', () => {
+  it('declares two regions for every bridge', () => {
     for (const n of NODES.filter((x) => x.nodeType === 'bridge')) {
       expect(n.bridges, n.id).toBeDefined();
       expect(n.bridges![0]).not.toBe(n.bridges![1]);
-      // Its prerequisites should come from both sides.
+    }
+  });
+
+  it('gives a dual-entry bridge one prerequisite from each side', () => {
+    // Some bridges are single-entry on purpose: they sit inside one region and
+    // do another region's job, so reaching them means investing in both. Where
+    // a bridge does have two entrances, they must genuinely straddle it.
+    for (const n of NODES.filter((x) => x.nodeType === 'bridge' && x.prerequisites.length > 1)) {
       const preRegions = new Set(n.prerequisites.map((p) => NODES_BY_ID.get(p)!.region));
       expect(preRegions.size, `${n.id} prerequisites: ${[...preRegions]}`).toBeGreaterThan(1);
+    }
+  });
+
+  it('keeps every bridge reachable from at least one of its regions', () => {
+    for (const n of NODES.filter((x) => x.nodeType === 'bridge')) {
+      const preRegions = new Set(n.prerequisites.map((p) => NODES_BY_ID.get(p)!.region));
+      const touches = n.bridges!.some((r) => preRegions.has(r)) || preRegions.has(n.region);
+      expect(touches, `${n.id} hangs off ${[...preRegions]}`).toBe(true);
     }
   });
 });
@@ -132,9 +147,9 @@ describe('allocation rules', () => {
   });
 
   it('rejects an undiscovered node even when affordable and reachable', () => {
-    const c = ctx();
-    expect(checkAllocation('ad_transition', c).reason).toBe('undiscovered');
-    const d = ctx({ discovered: new Set<DiscoveryFlag>(['frameworkB']) });
+    const reached = new Set(['start', 'ct_second']);
+    expect(checkAllocation('ad_transition', ctx({ allocated: reached })).reason).toBe('undiscovered');
+    const d = ctx({ allocated: reached, discovered: new Set<DiscoveryFlag>(['frameworkB']) });
     expect(checkAllocation('ad_transition', d).ok).toBe(true);
   });
 
@@ -145,6 +160,7 @@ describe('allocation rules', () => {
 
   it('rejects insufficient Meta on a mixed-cost node', () => {
     const c = ctx({
+      allocated: new Set(['start', 'ct_second']),
       discovered: new Set<DiscoveryFlag>(['frameworkB']),
       score: 1e9,
       meta: 0,
@@ -157,9 +173,11 @@ describe('allocation rules', () => {
     s.discovered.push('frameworkB');
     s.score = 1000;
     s.meta = 100;
+    expect(allocate(s, 'ct_second').ok).toBe(true);
+    const spent = NODES_BY_ID.get('ct_second')!.costs.score!;
     const node = NODES_BY_ID.get('ad_transition')!;
     expect(allocate(s, 'ad_transition').ok).toBe(true);
-    expect(s.score).toBe(1000 - node.costs.score!);
+    expect(s.score).toBe(1000 - spent - node.costs.score!);
     expect(s.meta).toBe(100 - node.costs.meta!);
     expect(s.allocated).toContain('ad_transition');
   });

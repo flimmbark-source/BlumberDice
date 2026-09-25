@@ -27,6 +27,7 @@ Three labels are used:
 | Mechanical tooltips only | every `description` in `engine/nodes.ts` |
 | Progressive disclosure of Meta and the toggle | `ui/App.tsx`, `discoveryRequirements` |
 | Inspectable statistics, valid under both frameworks | `ui/StatsPanel.tsx` |
+| The main interaction is visually dominant | `ui/dice/` — a physics tray the player throws |
 | Seeded RNG, deterministic state layer, local save | `engine/rng.ts`, `engine/save.ts` |
 | No merit, morality, enlightenment, balance meter or ratio requirement | *nothing implements one; `tests/tree.test.ts` asserts no pre-discovery Meta cost leaks* |
 
@@ -137,14 +138,55 @@ The spec leaves "some property of the previous framework's final roll"
 undefined. Chosen: bonus rolls created within 3 rolls of a switch resolve as the
 last face rolled before the switch. Arbitrary among several workable readings.
 
-### 8. Loaded Choice × Prepared Roll
+### 8. Four bridges are single-entry
+
+Not specified, and forced by the web's geometry. The bridge graph over the six
+regions needs more adjacencies than a ring can offer: High Roller alone wants
+Volume, Control and Pattern as neighbours, and a ring gives any region two.
+With every bridge reachable from both its regions, the drawing had 26 crossing
+connections.
+
+**Overflow, Arrange, Afterimage and Hedge** now have one prerequisite each.
+Each sits inside one region and performs another region's job, so reaching it
+means investing in both. That is arguably the better design: a bridge entered
+from either side is taken by buying one cheap entry node, which encourages no
+hybridisation at all. Loaded Choice, More Tickets, Chain Reaction, Peak
+Sequence and Counterplay keep both entrances — Loaded Choice because the
+specification asks for High Roller and Control to both reach it.
+
+Every bridge still declares both its regions, and `tests/tree.test.ts` checks
+that each remains reachable from one of them.
+
+### 9. Loaded Choice × Prepared Roll
 
 Not specified. As first built, Prepared Roll silently nullified Loaded Choice —
 two keystones where one deletes the other. Now they compose: with both
 allocated, the choice is between the next queued result and a fresh sample, and
 only taking the queued one consumes the queue.
 
-### 9. Hold is declared before the roll
+### 9. Dice are thrown, not displayed
+
+Not specified. The main interaction is a physics tray: clicking a die pops it
+up, tumbles it and lands it. The simulation (`ui/dice/physics.ts`) decides
+nothing — the engine has already resolved the roll, and the die lands on the
+face it was handed. Its randomness is cosmetic and deliberately *not* drawn
+from the seeded game RNG, so watching dice can never perturb a reproducible
+run. `tests/dice-physics.test.ts` asserts a die settles on exactly the face it
+was given, for every face.
+
+Two consequences worth stating:
+
+- **Animation pace is decoupled from resolution pace.** The engine resolves a
+  cascade on a stagger the tray cannot match, so tumble time shortens as the
+  backlog grows (640ms for a single roll, 170ms deep in a cascade) and the tray
+  recycles its oldest settled die past twelve on screen. The alternative —
+  slowing the engine to match — would punish exactly the Volume builds whose
+  whole point is throughput.
+- **A die keeps tumbling while a decision is open.** The roll has suspended,
+  so no result exists yet. This turned out to read well: the die hangs in the
+  air while you choose.
+
+### 10. Hold is declared before the roll
 
 Not specified. A prompt on every roll was intolerable. Base Hold is a pre-roll
 toggle ("store next result") plus playing a held result in place of a roll.
@@ -199,7 +241,15 @@ Carryover is 150 Score / 95 Meta, Counterweight is 420 / 35, Peak Sequence is
 so no ratio is implied. Nothing states the requirement. Whether
 players read the structure as intended is a playtest question.
 
-**4. The discovery gate can be missed.** A player who never opens the stats
+**4. Adaptive is no longer entered from the root.** Three Adaptive nodes used
+to hang directly off the starting node, which gave the root eight spokes and
+put connective territory on top of every archetype's entry path. Adaptive now
+grows from Control and Jackpot. This reads better — connective territory you
+reach by having already invested somewhere — but it does mean a player
+committed to one distant archetype pays a small entry tax to reach Adaptive.
+Judged negligible (45-50 Score) and not resolved beyond that.
+
+**5. The discovery gate can be missed.** A player who never opens the stats
 panel never finds the second framework. The pulse at 250 rolls is a mitigation,
 not a fix. Making it more visible would start explaining.
 
@@ -213,6 +263,7 @@ not a fix. Making it more visible would start explaining.
 | 2. Multiple builds feel mechanically distinct | Asserted across throughput, average face, rolls per action and volatility. |
 | 3. Players develop preferences around outcomes | Structural: high results pay more, and the decision policies make the preference explicit. |
 | 4. Probability manipulation is understandable | Stats panel shows per-face probability, and it matches the sampler to within 1.2 points over 40k rolls. |
+| — The web is legible | Zero crossing connections and zero node-on-edge overlaps, asserted in `tests/layout.test.ts`. |
 | 5. Framework B changes how builds are evaluated | Same build, same distribution, inverted incentive. Asserted for High Roller, Volume, Control and Loaded Choice. |
 | 6. B does not merely make low rolls the new good rolls | Asserted: a low-roll build gains no Meta advantage, only Score preservation. Volume drives Meta. |
 | 7. Pattern and Control stay interesting independent of raw value | Pattern pays Meta in B; Control's tools reverse direction rather than losing purpose. |

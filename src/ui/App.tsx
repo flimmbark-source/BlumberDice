@@ -8,7 +8,7 @@ import type { DiscoveryFlag } from '../engine/types.ts';
 import { actions, store, useGame } from './store.ts';
 import { ControlRail } from './ControlRail.tsx';
 import { DecisionBar } from './DecisionBar.tsx';
-import { Die } from './Die.tsx';
+import { DiceTray } from './dice/DiceTray.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
 import { TreeView } from './TreeView.tsx';
 
@@ -23,10 +23,6 @@ export function App(): JSX.Element {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.code === 'Space' && !(e.target as HTMLElement)?.closest('input,button,select')) {
-        e.preventDefault();
-        actions.roll();
-      }
       if (e.key === '`') store.toggleDebug();
     };
     window.addEventListener('keydown', onKey);
@@ -117,51 +113,27 @@ function GamePanel({ s }: { s: GameState }): JSX.Element {
   const build = getBuild(s);
   const stats = displayStats(s, build);
   const cd = CONFIG.baseCooldownMs * stats.cooldownMult;
-  const ready = canRoll(s);
   const progress = cd > 0 ? 1 - Math.min(1, s.cooldownRemaining / cd) : 1;
-  const resolving = s.pending.length > 0;
-  const dice = Math.max(1, Math.floor(stats.handfulDice));
+  const ready = canRoll(s);
 
   return (
     <section className="game">
-      <div className="game__stage">
-        <Die face={s.lastFace} rolling={resolving} />
-        <div className="flashes">
-          {store.flashes.slice(-4).map((f) => (
-            <span key={f.id} className="flash">
-              {f.score > 0 && <em className="flash__score">+{Math.round(f.score)}</em>}
-              {f.score < 0 && <em className="flash__loss">{Math.round(f.score)}</em>}
-              {f.meta > 0 && <em className="flash__meta">+{Math.round(f.meta)} Meta</em>}
-            </span>
+      <DiceTray s={s} />
+
+      <div className={`cooldown${ready ? ' cooldown--ready' : ''}`}>
+        <span className="cooldown__fill" style={{ width: `${progress * 100}%` }} />
+      </div>
+
+      {s.decision && <DecisionBar decision={s.decision} />}
+
+      <div className="game__lower">
+        <div className="feed">
+          {s.log.slice(-5).reverse().map((e) => (
+            <div key={e.id} className={`feed__line feed__line--${e.kind}`}>{e.text}</div>
           ))}
         </div>
+        <ControlRail s={s} />
       </div>
-
-      {s.decision
-        ? <DecisionBar decision={s.decision} />
-        : (
-          <button
-            type="button"
-            className={`rollbtn${ready ? ' rollbtn--ready' : ''}`}
-            onClick={() => actions.roll()}
-            disabled={!ready}
-          >
-            <span className="rollbtn__fill" style={{ width: `${progress * 100}%` }} />
-            <span className="rollbtn__text">
-              {resolving
-                ? `resolving ${s.pending.length}…`
-                : dice > 1 ? `Roll ${dice} dice` : 'Roll'}
-            </span>
-          </button>
-        )}
-
-      <div className="feed">
-        {s.log.slice(-6).reverse().map((e) => (
-          <div key={e.id} className={`feed__line feed__line--${e.kind}`}>{e.text}</div>
-        ))}
-      </div>
-
-      <ControlRail s={s} />
     </section>
   );
 }

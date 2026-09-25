@@ -75,6 +75,8 @@ export interface RollIntent {
   face?: Face;
   staked: number;
   payout: number;
+  scoreBefore: number;
+  metaBefore: number;
 }
 
 export type Decision =
@@ -98,6 +100,21 @@ export interface Transient {
   tempStats: TimedEffect[];
   rollsSinceBonus: number;
   flipCooldown: number;
+}
+
+/**
+ * One resolved roll, for the presentation layer. The dice animation is a
+ * visualisation of results the engine has already decided; it never influences
+ * them.
+ */
+export interface RollRecord {
+  id: number;
+  action: number;
+  face: Face;
+  score: number;
+  meta: number;
+  isBonus: boolean;
+  framework: FrameworkId;
 }
 
 export interface LogEntry {
@@ -168,6 +185,8 @@ export interface GameState {
   policies: DecisionPolicy;
   log: LogEntry[];
   nextLogId: number;
+  /** Recent resolved rolls, newest last. Capped; purely for feedback. */
+  rollLog: RollRecord[];
   stats: RunStats;
 }
 
@@ -206,6 +225,7 @@ export function createGame(seed = 0x5eed1e): GameState {
     policies: { loadedChoice: 'ask', hold: 'ask', flip: 'ask', letItRide: 'ask' },
     log: [],
     nextLogId: 1,
+    rollLog: [],
     stats: {
       rollsA: 0, rollsB: 0, manualRolls: 0, bonusRolls: 0,
       scoreEarned: 0, scoreLost: 0, metaEarned: 0, jackpots: 0,
@@ -363,6 +383,8 @@ function queueBonusRolls(s: GameState, count: number, depth: number): void {
       stage: 'generate',
       staked: 0,
       payout: 0,
+      scoreBefore: 0,
+      metaBefore: 0,
     });
     s.stats.bonusRolls += 1;
   }
@@ -627,6 +649,8 @@ function takeCandidate(
 
 function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): boolean {
   const face = intent.face!;
+  intent.scoreBefore = s.score;
+  intent.metaBefore = s.meta;
   const framework = s.framework;
   const inA = framework === 'A';
 
@@ -821,6 +845,16 @@ function completeRoll(
   // --- Bookkeeping --------------------------------------------------------
   if (s.transient.flipCooldown > 0) s.transient.flipCooldown -= 1;
   s.lastFace = intent.face!;
+  s.rollLog.push({
+    id: intent.id,
+    action: s.stats.manualRolls,
+    face: intent.face!,
+    score: Math.round((s.score - intent.scoreBefore) * 100) / 100,
+    meta: Math.round((s.meta - intent.metaBefore) * 100) / 100,
+    isBonus: intent.isBonus,
+    framework: s.framework,
+  });
+  if (s.rollLog.length > 48) s.rollLog.splice(0, s.rollLog.length - 48);
   s.totalRolls += 1;
   s.rollsSinceSwitch += 1;
   s.stats.faceCounts[intent.face!] += 1;
@@ -856,6 +890,8 @@ export function manualRoll(s: GameState): void {
       stage: 'generate',
       staked: i === 0 ? staked : 0,
       payout: 0,
+      scoreBefore: 0,
+      metaBefore: 0,
     });
   }
   s.stats.manualRolls += 1;
