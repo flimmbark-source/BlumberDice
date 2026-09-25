@@ -48,7 +48,7 @@ export function App(): JSX.Element {
         <aside className="side">
           <nav className="tabs">
             <TabBtn id="web" tab={tab} set={setTab} label="Web" badge={availableCount(s)} />
-            <TabBtn id="stats" tab={tab} set={setTab} label="Stats" />
+            <TabBtn id="stats" tab={tab} set={setTab} label="Stats" dot={statsUnread(s)} />
             <TabBtn id="log" tab={tab} set={setTab} label="Log" />
           </nav>
           <div className="side__body">
@@ -177,15 +177,24 @@ function LogPanel({ s }: { s: GameState }): JSX.Element {
   );
 }
 
-function TabBtn({ id, tab, set, label, badge }: {
-  id: Tab; tab: Tab; set: (t: Tab) => void; label: string; badge?: number;
+function TabBtn({ id, tab, set, label, badge, dot }: {
+  id: Tab; tab: Tab; set: (t: Tab) => void; label: string; badge?: number; dot?: boolean;
 }): JSX.Element {
   return (
     <button type="button" className={`tab${tab === id ? ' tab--on' : ''}`} onClick={() => set(id)}>
       {label}
       {badge ? <span className="tab__badge">{badge}</span> : null}
+      {dot ? <span className="tab__dot" aria-label="new" /> : null}
     </button>
   );
+}
+
+/**
+ * The ordinary "there is something here you have not looked at" convention.
+ * It points at the panel, not at what is in it.
+ */
+function statsUnread(s: GameState): boolean {
+  return !s.sawStats && s.totalRolls >= CONFIG.discoveryRollThreshold;
 }
 
 function availableCount(s: GameState): number {

@@ -4,6 +4,8 @@ import {
   manualRoll, switchFramework,
 } from '../src/engine/game.ts';
 import { makeBuild, runManualRolls } from '../src/engine/sim.ts';
+import { resolveBuild } from '../src/engine/tree.ts';
+import { buildDistribution } from '../src/engine/dice.ts';
 import type { Face } from '../src/engine/types.ts';
 
 /** Resolves exactly one roll with a forced face, bypassing sampling. */
@@ -143,6 +145,40 @@ describe('Framework switching', () => {
     expect(s.score).toBe(scoreBefore);
     expect(s.meta).toBe(metaBefore);
     expect(s.pattern.history).toEqual(historyBefore);
+  });
+
+  it('keeps the distribution the build produces, while clearing temporary pushes', () => {
+    // Precise statement of the rule: nothing the passive web contributes to the
+    // die changes across a switch. Temporary weight pushes are transient state
+    // and go with the rest of it, unless Carryover is allocated.
+    const nodes = ['hr_edge', 'hr_heavy6', 'hr_momentum', 'jp_longodds', 'jp_nearmiss'];
+
+    const s = makeBuild({ seed: 17, nodes });
+    s.discovered.push('frameworkB');
+    runManualRolls(s, 200);
+    // Guarantee a live push regardless of what the last roll happened to be.
+    s.transient.weightPush.push({ face: 6, value: 1.5, expiresAt: s.totalRolls + 2 });
+
+    const baseBefore = resolveBuild(new Set(s.allocated)).stats;
+    const effectiveBefore = currentDistribution(s).probabilities.slice();
+    switchFramework(s);
+    const baseAfter = resolveBuild(new Set(s.allocated)).stats;
+
+    expect(baseAfter).toEqual(baseBefore);
+    expect(s.transient.weightPush).toEqual([]);
+    // With the push gone the effective distribution is the base one again.
+    expect(currentDistribution(s).probabilities).not.toEqual(effectiveBefore);
+    expect(currentDistribution(s).probabilities)
+      .toEqual(buildDistribution(baseBefore).probabilities);
+
+    // Carryover keeps the push, so even the effective distribution is stable.
+    const carried = makeBuild({ seed: 17, nodes: [...nodes, 'ad_carryover'] });
+    carried.discovered.push('frameworkB');
+    runManualRolls(carried, 200);
+    carried.transient.weightPush.push({ face: 6, value: 1.5, expiresAt: carried.totalRolls + 2 });
+    const carriedBefore = currentDistribution(carried).probabilities.slice();
+    switchFramework(carried);
+    expect(currentDistribution(carried).probabilities).toEqual(carriedBefore);
   });
 
   it('clears volatile streak state on a switch, and Carryover keeps it', () => {

@@ -91,8 +91,17 @@ which. The rule chosen:
 - **Cleared** on a switch: Climb stacks, Pressure, ticket stacks, temporary
   weight pushes, temporary stat modifiers, the Flip cooldown, the
   rolls-since-bonus counter. The Carryover node keeps them instead.
-- **Kept** on a switch: allocations, currencies, probability distribution, held
-  results, the prepared queue, the sealed face, roll history, run statistics.
+- **Kept** on a switch: allocations, currencies, the distribution the passive
+  web produces, held results, the prepared queue, the sealed face, roll history,
+  run statistics.
+
+Note the precise form of the probability guarantee. The distribution *the build
+produces* is identical across a switch — nothing the passive web contributes to
+the die changes. The distribution the *next roll* samples from can differ,
+because a temporary weight push from Momentum or Near Miss is transient state
+and is cleared with the rest of it. Carryover keeps those too, making even the
+next roll's distribution stable. Both halves are asserted in
+`tests/framework.test.ts`.
 
 Carryover exists *because* the default is to clear. Both halves are asserted in
 `tests/framework.test.ts`.
