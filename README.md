@@ -180,8 +180,9 @@ or pressed, so it stays readable while you look elsewhere and follows that node
 as you pan. It floats over the web rather than sitting in the layout — a docked
 panel changed height with every description and shoved the web around under the
 pointer — and it never takes a pointer event, so the node beneath stays
-hoverable. **Refund Points** sits in the corner of the web: a full respec, since
-refunding a single node would orphan whatever hangs off it.
+hoverable. Clicking empty canvas puts it away; panning does not, since a drag
+is not a dismissal. **Refund Points** sits in the corner of the web: a full
+respec, since refunding a single node would orphan whatever hangs off it.
 
 A node whose behaviour differs between the two frameworks carries one line of
 text for each, and only the line for the framework in play is shown. No tooltip

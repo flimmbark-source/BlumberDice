@@ -25,6 +25,8 @@ const NODE_RADIUS: Record<PassiveNode['nodeType'], number> = {
 };
 
 const POPUP_WIDTH = 296;
+/** Pointer travel, in pixels, past which a press counts as a pan not a click. */
+const DRAG_SLOP = 3;
 
 /**
  * Where a node sits in the container, in pixels.
@@ -95,7 +97,13 @@ export const TreeView = memo(function TreeView({
   // not empty out the moment the pointer moves away.
   const [inspected, setInspected] = useState<string | null>(null);
   const [confirmRefund, setConfirmRefund] = useState(false);
-  const drag = useRef<{ x: number; y: number; vx: number; vy: number } | null>(null);
+  const drag = useRef<{
+    x: number; y: number; vx: number; vy: number;
+    /** Set once the pointer travels far enough to count as a pan. */
+    moved: boolean;
+    /** Whether the press landed on a node rather than empty canvas. */
+    onNode: boolean;
+  } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -124,15 +132,35 @@ export const TreeView = memo(function TreeView({
   };
 
   const onDown = (e: React.PointerEvent): void => {
-    drag.current = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y };
+    drag.current = {
+      x: e.clientX,
+      y: e.clientY,
+      vx: view.x,
+      vy: view.y,
+      moved: false,
+      onNode: (e.target as Element).closest?.('.node') != null,
+    };
     (e.target as Element).setPointerCapture?.(e.pointerId);
   };
+
   const onMove = (e: React.PointerEvent): void => {
     const d = drag.current;
     if (!d) return;
+    if (Math.abs(e.clientX - d.x) > DRAG_SLOP || Math.abs(e.clientY - d.y) > DRAG_SLOP) {
+      d.moved = true;
+    }
     setView((v) => ({ ...v, x: d.vx + (e.clientX - d.x) / v.zoom, y: d.vy + (e.clientY - d.y) / v.zoom }));
   };
-  const onUp = (): void => { drag.current = null; };
+
+  const onUp = (): void => {
+    const d = drag.current;
+    drag.current = null;
+    // A press on empty canvas that was not a pan puts the popup away.
+    if (d && !d.moved && !d.onNode) {
+      setInspected(null);
+      setConfirmRefund(false);
+    }
+  };
 
   const shown = inspected ? NODES_BY_ID.get(inspected) ?? null : null;
   const shownStatus = shown ? statuses.get(shown.id) ?? null : null;
