@@ -36,8 +36,16 @@ const SOLVER_ITERATIONS = 3;
 const PENETRATION_SLOP = 0.4;
 /** Below this approach speed a contact is treated as resting, not bouncing. */
 const RESTITUTION_CUTOFF = 110;
-/** Milliseconds spent easing onto the result face. */
-const ALIGN_MS = 240;
+/**
+ * The settling hop. Free physics cannot be trusted to land on a chosen face,
+ * so the last part of a roll is steered — but the cube pops off the surface
+ * while it turns, which both reads as a real final bounce and lifts its
+ * corners clear of the surface during the rotation.
+ */
+const ALIGN_MIN_MS = 190;
+const ALIGN_MAX_MS = 360;
+/** Samples taken along the turn to size the hop. */
+const CLEARANCE_SAMPLES = 16;
 const SETTLE_DEADLINE = 420;
 const ORPHAN_TIMEOUT = 45000;
 
@@ -66,11 +74,8 @@ export interface DieBody {
   omega: Vec3;
 
   result: Face | null;
+  /** The engine roll this die is showing, or null while it is still turning. */
   rollId: number | null;
-  action: number;
-  scoreDelta: number;
-  metaDelta: number;
-  isBonus: boolean;
 
   state: DieState;
   minTumbleUntil: number;
@@ -81,6 +86,13 @@ export interface DieBody {
   alignTo: Quat;
   alignT: number;
   alignZ0: number;
+  alignX0: number;
+  alignY0: number;
+  alignDriftX: number;
+  alignDriftY: number;
+  /** Apex of the hop above the straight line from start to resting height. */
+  alignHop: number;
+  alignMs: number;
 
   alpha: number;
   retiring: boolean;
@@ -152,10 +164,6 @@ export function spawnDie(
     omega: v3(0, 0, 0),
     result: null,
     rollId: null,
-    action: -1,
-    scoreDelta: 0,
-    metaDelta: 0,
-    isBonus: false,
     state: 'idle',
     minTumbleUntil: 0,
     bornAt: world.t,
@@ -164,6 +172,12 @@ export function spawnDie(
     alignTo: die_identity(),
     alignT: 0,
     alignZ0: H,
+    alignX0: 0,
+    alignY0: 0,
+    alignDriftX: 0,
+    alignDriftY: 0,
+    alignHop: 0,
+    alignMs: ALIGN_MIN_MS,
     alpha: opts.dropped ? 0 : 1,
     retiring: false,
     hover: false,
@@ -308,18 +322,61 @@ function lowestVertexHeight(die: DieBody): number {
   return lowest;
 }
 
+const easeOutQuad = (t: number): number => 1 - (1 - t) ** 2;
+
 function beginAlign(die: DieBody, world: World): void {
   die.state = 'aligning';
   die.alignFrom = die.q;
   die.alignTo = orientationFor(die.q, die.result!);
   die.alignT = 0;
   die.alignZ0 = die.pos.z;
+  die.alignX0 = die.pos.x;
+  die.alignY0 = die.pos.y;
+
+  // How far the cube still has to turn, as a fraction of a half turn.
+  const d = Math.abs(
+    die.alignFrom.x * die.alignTo.x + die.alignFrom.y * die.alignTo.y
+    + die.alignFrom.z * die.alignTo.z + die.alignFrom.w * die.alignTo.w,
+  );
+  const angle = 2 * Math.acos(Math.min(1, d));
+  const turn = Math.min(1, angle / Math.PI);
+
+  // Big enough to look like a bounce, and always big enough that no corner
+  // scrapes through the surface. The clearance a cube needs depends on how it
+  // is tilted at each instant, and the rotation eases rather than running at
+  // a constant rate, so the worst moment is not the apex — walk the actual
+  // path and size the hop from it.
+  const styled = H * (0.44 + 0.55 * turn);
+  let needed = 0;
+  for (let i = 1; i < CLEARANCE_SAMPLES; i++) {
+    const t = i / CLEARANCE_SAMPLES;
+    const q = qSlerp(die.alignFrom, die.alignTo, easeOutQuad(t));
+    let lowest = 0;
+    for (const lv of LOCAL_VERTICES) lowest = Math.min(lowest, qRotate(q, lv).z);
+    const base = die.alignZ0 + (H - die.alignZ0) * t;
+    const arc = 4 * t * (1 - t);
+    if (arc > 1e-3) needed = Math.max(needed, (-lowest - base) / arc);
+  }
+  die.alignHop = Math.max(styled, needed + H * 0.08);
+
+  // A parabola with apex `hop` above the chord has acceleration 8*hop/T^2, so
+  // this airtime makes the hop fall under the same gravity as everything else.
+  die.alignMs = Math.max(
+    ALIGN_MIN_MS,
+    Math.min(ALIGN_MAX_MS, 1000 * Math.sqrt((8 * die.alignHop) / GRAVITY)),
+  );
+
+  // Carry a little of the motion it had, so the hop continues the roll.
+  const airtime = die.alignMs / 1000;
+  const drift = Math.min(DIE * 0.22, len(v3(die.vel.x, die.vel.y, 0)) * airtime * 0.5);
+  const flat = normalize(v3(die.vel.x, die.vel.y, 0));
+  die.alignDriftX = flat.x * drift;
+  die.alignDriftY = flat.y * drift;
+
   die.vel = v3(0, 0, 0);
   die.omega = v3(0, 0, 0);
   void world;
 }
-
-const easeOutCubic = (t: number): number => 1 - (1 - t) ** 3;
 
 export function step(world: World, dtMs: number): void {
   const dt = Math.min(dtMs, 34) / 1000;
@@ -334,15 +391,26 @@ export function step(world: World, dtMs: number): void {
     die.impacts = die.impacts.filter((im) => im.t < 520);
 
     if (die.state === 'aligning') {
-      die.alignT = Math.min(1, die.alignT + dtMs / ALIGN_MS);
-      const e = easeOutCubic(die.alignT);
-      die.q = qSlerp(die.alignFrom, die.alignTo, e);
-      die.pos.z = die.alignZ0 + (H - die.alignZ0) * e;
-      if (die.alignT >= 1) {
+      const t = Math.min(1, die.alignT + dtMs / die.alignMs);
+      die.alignT = t;
+
+      // Turn through the air, easing into the landing.
+      die.q = qSlerp(die.alignFrom, die.alignTo, easeOutQuad(t));
+      // Straight line from where it left the surface to its resting height,
+      // plus a parabolic hop over the top.
+      die.pos.z = die.alignZ0 + (H - die.alignZ0) * t + die.alignHop * 4 * t * (1 - t);
+      die.pos.x = die.alignX0 + die.alignDriftX * t;
+      die.pos.y = die.alignY0 + die.alignDriftY * t;
+
+      if (t >= 1) {
         die.q = die.alignTo;
         die.pos.z = H;
         die.state = 'rest';
         die.settledAt = world.t;
+        // The hop has to land like everything else does.
+        const strength = Math.min(1, die.alignHop / (H * 1.1));
+        die.impacts.push({ t: 0, strength, x: die.pos.x, y: die.pos.y });
+        world.shake = Math.min(world.shake + strength * 3, 10);
       }
       continue;
     }

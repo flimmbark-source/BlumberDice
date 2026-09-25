@@ -51,6 +51,56 @@ describe('the animation always reports the engine result', () => {
     }
   });
 
+  it('hops off the surface while it turns onto its face', () => {
+    let sawHop = false;
+    for (const face of FACES) {
+      const { world, die } = thrownDie(face);
+      let peak = 0;
+      let sawAligning = false;
+      for (let t = 0; t < 6000; t += 16) {
+        step(world, 16);
+        if (die.state === 'aligning') {
+          sawAligning = true;
+          peak = Math.max(peak, die.pos.z);
+        }
+      }
+      expect(sawAligning, `face ${face} never entered the turn`).toBe(true);
+      // It leaves the surface rather than pivoting in place.
+      expect(peak, `face ${face} did not hop`).toBeGreaterThan(DIE_HALF * 1.2);
+      sawHop = true;
+    }
+    expect(sawHop).toBe(true);
+  });
+
+  it('never scrapes a corner through the surface while turning', () => {
+    // This is what the hop is for: a cube pivoting in place would drag its
+    // corners below the floor, because a rotating cube needs its centre at
+    // H * sqrt(2) to clear.
+    for (const face of FACES) {
+      for (let trial = 0; trial < 4; trial++) {
+        const { world, die } = thrownDie(face);
+        let worst = Infinity;
+        for (let t = 0; t < 6000; t += 16) {
+          step(world, 16);
+          if (die.state !== 'aligning') continue;
+          for (const lv of LOCAL_VERTICES) {
+            worst = Math.min(worst, die.pos.z + qRotate(die.q, lv).z);
+          }
+        }
+        expect(worst, `face ${face} dipped to ${worst.toFixed(2)}`).toBeGreaterThan(-0.5);
+      }
+    }
+  });
+
+  it('lands the hop exactly on the surface', () => {
+    for (const face of FACES) {
+      const { world, die } = thrownDie(face);
+      run(world, 6000);
+      expect(die.pos.z).toBeCloseTo(DIE_HALF, 6);
+      expect(die.state).toBe('rest');
+    }
+  });
+
   it('picks the nearest orientation, so the correction is small', () => {
     // A die already close to showing its face should barely turn.
     for (let trial = 0; trial < 40; trial++) {

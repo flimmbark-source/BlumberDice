@@ -117,10 +117,6 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
 
       target.result = rec.face;
       target.rollId = rec.id;
-      target.action = rec.action;
-      target.scoreDelta = rec.score;
-      target.metaDelta = rec.meta;
-      target.isBonus = rec.isBonus;
       target.minTumbleUntil = Math.min(target.minTumbleUntil, world.t + tumbleFor(backlog));
       // Keep a busy surface readable: results linger only while there is room.
       target.ghostLife = backlog > 8 ? 620 : backlog > 3 ? 950 : 1400;

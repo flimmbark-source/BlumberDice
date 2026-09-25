@@ -84,16 +84,23 @@ them exactly. Shadows are the convex hull of the eight vertices cast down the
 light ray onto the surface, blurred by height.
 
 It decides nothing. The engine resolves every roll first; a cube tumbles freely
-and is then eased onto the face it was handed, by the shortest rotation that
-puts that face up — so the correction is small enough to be invisible, and the
-animation can never disagree with the game state. Its randomness is
-deliberately not drawn from the seeded RNG, so watching dice cannot perturb a
-reproducible run.
+and is then turned onto the face it was handed, by the shortest rotation that
+puts that face up, so the animation can never disagree with the game state. Its
+randomness is deliberately not drawn from the seeded RNG, so watching dice
+cannot perturb a reproducible run.
+
+That turn happens **in the air**: the cube pops off the surface, rotates as it
+rises and falls, and lands flat on its answer. The hop is not decoration. A
+cube pivoting in place drags its corners through the floor — a rotating cube
+needs its centre well above its resting height to clear — so the hop is sized
+by walking the actual rotation path and taking the worst clearance it demands,
+then given the airtime that same height would take under the sim's own gravity.
+It reads as a final bounce because it is one.
 
 `tests/dice-physics.test.ts` pins all of it: a die comes to rest with exactly
 the given face up for every face, sits perfectly flat rather than on an edge,
-never sinks through the surface, stays inside the walls, and always stops
-within 2.2s.
+leaves the surface while it turns, never scrapes a corner through the floor,
+stays inside the walls, and always stops within 2.2s.
 
 ### The passive web
 

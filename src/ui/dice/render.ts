@@ -308,26 +308,13 @@ export function drawGhost(c: CanvasRenderingContext2D, die: DieBody, theme: Them
   c.textAlign = 'center';
   c.textBaseline = 'middle';
 
-  c.font = '700 46px ui-sans-serif, system-ui, sans-serif';
+  // Just the rolled value. What it was worth is the HUD's job.
+  c.font = '700 50px ui-sans-serif, system-ui, sans-serif';
   c.fillStyle = 'rgba(0,0,0,0.55)';
   c.fillText(String(die.result), 0, 3);
   c.fillStyle = theme.accent;
-  c.globalAlpha = fade * 0.55 * die.alpha;
+  c.globalAlpha = fade * 0.6 * die.alpha;
   c.fillText(String(die.result), 0, 0);
-
-  // Colour follows what is being reported: in Framework B a roll gains Meta
-  // and costs Score at the same time.
-  let delta = '';
-  let colour = theme.accent;
-  if (die.metaDelta > 0) delta = `+${Math.round(die.metaDelta)}`;
-  else if (die.scoreDelta > 0) delta = `+${Math.round(die.scoreDelta)}`;
-  else if (die.scoreDelta < 0) { delta = String(Math.round(die.scoreDelta)); colour = '#e0685f'; }
-  if (delta) {
-    c.globalAlpha = fade * 0.95 * die.alpha;
-    c.font = '600 20px ui-sans-serif, system-ui, sans-serif';
-    c.fillStyle = colour;
-    c.fillText(delta, 0, 34);
-  }
   c.restore();
 }
 

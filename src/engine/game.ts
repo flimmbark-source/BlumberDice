@@ -109,11 +109,10 @@ export interface Transient {
  */
 export interface RollRecord {
   id: number;
-  action: number;
   face: Face;
+  /** What this roll alone did to each currency. */
   score: number;
   meta: number;
-  isBonus: boolean;
   framework: FrameworkId;
 }
 
@@ -847,11 +846,9 @@ function completeRoll(
   s.lastFace = intent.face!;
   s.rollLog.push({
     id: intent.id,
-    action: s.stats.manualRolls,
     face: intent.face!,
     score: Math.round((s.score - intent.scoreBefore) * 100) / 100,
     meta: Math.round((s.meta - intent.metaBefore) * 100) / 100,
-    isBonus: intent.isBonus,
     framework: s.framework,
   });
   if (s.rollLog.length > 48) s.rollLog.splice(0, s.rollLog.length - 48);

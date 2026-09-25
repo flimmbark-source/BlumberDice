@@ -180,10 +180,17 @@ game RNG, so watching dice can never perturb a reproducible run.
 face up, for every face, and that it lands flat rather than on an edge.
 
 One honest note: free physics cannot be trusted to land on a chosen face, so
-the last fraction of the roll is steered. The correction is the *nearest* valid
-orientation and runs over 240ms while the cube is already nearly still, which
-is why it does not read as a cheat — but it is a cheat, and it is the price of
+the last part of the roll is steered. It is a cheat, and it is the price of
 letting the engine stay authoritative.
+
+What makes it invisible is that the cube performs the turn *in the air*: it
+pops off the surface, rotates as it rises and falls, and lands flat on its
+answer. A final hop is what a real die does, so the steered rotation has
+something to hide behind. The hop also earns its keep mechanically — a cube
+pivoting in place would drag its corners through the floor, since a rotating
+cube needs its centre well above its resting height to clear — so its height is
+derived from the worst clearance the actual rotation path demands, and its
+airtime from that height under the sim's own gravity.
 
 Two consequences worth stating:
 
