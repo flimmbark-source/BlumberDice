@@ -14,6 +14,12 @@ import type { Face } from '../engine/types.ts';
  */
 class GameStore {
   state: GameState;
+  /**
+   * Currency the dice tray is still holding back from the HUD, because the
+   * number above the die has not faded yet. Read every frame by the counters,
+   * so it is a plain field rather than notified state.
+   */
+  heldBack = { score: 0, meta: 0 };
   debug = false;
   private version = 0;
   private listeners = new Set<() => void>();
@@ -80,6 +86,7 @@ class GameStore {
   reset = (): void => {
     clearStorage();
     this.state = createGame(Math.floor(Math.random() * 0xffffffff));
+    this.heldBack = { score: 0, meta: 0 };
     this.notify();
   };
 

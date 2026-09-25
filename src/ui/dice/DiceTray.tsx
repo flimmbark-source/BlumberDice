@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { canRoll, displayStats, type GameState, type RollRecord } from '../../engine/game.ts';
-import { actions } from '../store.ts';
+import { actions, store } from '../store.ts';
 import { ISO_X, ISO_Y, project, v3 } from './math3d.ts';
 import {
-  createWorld, dieAt, DIE, nudgeDie, retireDie, setWorldSize, spawnDie, step,
-  throwDie, type DieBody, type World,
+  createWorld, dieAt, DIE, nudgeDie, releaseFadedGhosts, retireDie, setWorldSize,
+  spawnDie, step, throwDie, type DieBody, type World,
 } from './physics.ts';
 import { drawWorld, THEME_A, THEME_B } from './render.ts';
 
@@ -117,6 +117,8 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
 
       target.result = rec.face;
       target.rollId = rec.id;
+      target.heldScore = rec.score;
+      target.heldMeta = rec.meta;
       target.minTumbleUntil = Math.min(target.minTumbleUntil, world.t + tumbleFor(backlog));
       // Keep a busy surface readable: results linger only while there is room.
       target.ghostLife = backlog > 8 ? 620 : backlog > 3 ? 950 : 1400;
@@ -135,6 +137,8 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
       }
 
       step(world, dt);
+      // The HUD counts a roll only once its number has faded off the die.
+      store.heldBack = releaseFadedGhosts(world);
 
       const theme = game.framework === 'A' ? THEME_A : THEME_B;
       const shake = world.shake;
@@ -215,6 +219,8 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
 
     return () => {
       cancelAnimationFrame(raf);
+      // Nothing is left to reveal once the tray is gone.
+      store.heldBack = { score: 0, meta: 0 };
       ro.disconnect();
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerleave', onLeave);

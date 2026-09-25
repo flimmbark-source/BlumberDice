@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   createWorld, DIE, DIE_HALF, dieAt, faceUp, LOCAL_VERTICES, nudgeDie,
-  orientationFor, retireDie, setWorldSize, spawnDie, step, throwDie,
-  type DieBody, type World,
+  orientationFor, releaseFadedGhosts, retireDie, setWorldSize, spawnDie, step,
+  throwDie, type DieBody, type World,
 } from '../src/ui/dice/physics.ts';
 import {
   dot, project, qRandom, qRotate, v3, VIEW_DIR, add, len,
@@ -342,5 +342,105 @@ describe('tray interaction', () => {
     die.result = 2;
     run(world, 6000);
     expect(faceUp(die.q)).toBe(2);
+  });
+});
+
+
+describe('holding the score back until the number fades', () => {
+  /** Throws a die and hands it a roll worth `score`. */
+  function rolling(score: number, meta = 0, ghostLife = 400): { world: World; die: DieBody } {
+    const world = createWorld(420, 420);
+    const die = spawnDie(world);
+    throwDie(world, die, { minTumbleMs: 300 });
+    die.result = 4;
+    die.rollId = 1;
+    die.heldScore = score;
+    die.heldMeta = meta;
+    die.ghostLife = ghostLife;
+    return { world, die };
+  }
+
+  it('withholds a roll while the die is still in the air', () => {
+    const { world } = rolling(12);
+    step(world, 16);
+    expect(releaseFadedGhosts(world)).toEqual({ score: 12, meta: 0 });
+  });
+
+  it('keeps withholding it while its number is showing', () => {
+    const { world, die } = rolling(12);
+    while (die.state !== 'rest' && world.t < 4000) step(world, 16);
+    expect(die.state).toBe('rest');
+    step(world, 16);
+    expect(releaseFadedGhosts(world).score).toBe(12);
+  });
+
+  it('releases it once the number has faded', () => {
+    const { world, die } = rolling(12, 0, 400);
+    while (die.state !== 'rest' && world.t < 4000) step(world, 16);
+    for (let t = 0; t < 500; t += 16) { step(world, 16); releaseFadedGhosts(world); }
+    expect(releaseFadedGhosts(world)).toEqual({ score: 0, meta: 0 });
+    expect(die.rollId).toBeNull();
+  });
+
+  it('withholds a loss the same way, so the number falls only after the fade', () => {
+    const { world, die } = rolling(-5);
+    step(world, 16);
+    // A negative hold means the HUD keeps showing the pre-loss total.
+    expect(releaseFadedGhosts(world).score).toBe(-5);
+    while (die.state !== 'rest' && world.t < 4000) step(world, 16);
+    for (let t = 0; t < 500; t += 16) { step(world, 16); releaseFadedGhosts(world); }
+    expect(releaseFadedGhosts(world).score).toBe(0);
+  });
+
+  it('sums every die still showing a number', () => {
+    const world = createWorld(460, 460);
+    for (let i = 0; i < 4; i++) {
+      const die = spawnDie(world, { dropped: true });
+      throwDie(world, die, { minTumbleMs: 300 });
+      die.result = 3;
+      die.rollId = i + 1;
+      die.heldScore = 10;
+      die.heldMeta = 1;
+    }
+    step(world, 16);
+    expect(releaseFadedGhosts(world)).toEqual({ score: 40, meta: 4 });
+  });
+
+  it('releases a roll when its die is re-thrown before the number fades', () => {
+    const { world, die } = rolling(12);
+    step(world, 16);
+    expect(releaseFadedGhosts(world).score).toBe(12);
+    throwDie(world, die, { minTumbleMs: 300 });
+    expect(releaseFadedGhosts(world)).toEqual({ score: 0, meta: 0 });
+  });
+
+  it('releases a roll when its die leaves the tray', () => {
+    const { world, die } = rolling(12);
+    step(world, 16);
+    expect(releaseFadedGhosts(world).score).toBe(12);
+    retireDie(die);
+    run(world, 2000);
+    expect(world.dice).not.toContain(die);
+    expect(releaseFadedGhosts(world)).toEqual({ score: 0, meta: 0 });
+  });
+
+  it('ignores dice that were never handed a roll', () => {
+    const world = createWorld(420, 420);
+    spawnDie(world);
+    step(world, 16);
+    expect(releaseFadedGhosts(world)).toEqual({ score: 0, meta: 0 });
+  });
+
+  it('releases sooner when a cascade shortens the ghost', () => {
+    const quick = rolling(9, 0, 120);
+    while (quick.die.state !== 'rest' && quick.world.t < 4000) step(quick.world, 16);
+    const slow = rolling(9, 0, 1400);
+    while (slow.die.state !== 'rest' && slow.world.t < 4000) step(slow.world, 16);
+    for (let t = 0; t < 300; t += 16) {
+      step(quick.world, 16); releaseFadedGhosts(quick.world);
+      step(slow.world, 16); releaseFadedGhosts(slow.world);
+    }
+    expect(releaseFadedGhosts(quick.world).score).toBe(0);
+    expect(releaseFadedGhosts(slow.world).score).toBe(9);
   });
 });

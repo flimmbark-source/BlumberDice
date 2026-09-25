@@ -97,10 +97,19 @@ by walking the actual rotation path and taking the worst clearance it demands,
 then given the airtime that same height would take under the sim's own gravity.
 It reads as a final bounce because it is one.
 
+The HUD waits for the dice. A roll's Score is credited by the engine the moment
+it resolves, which is while the die is still in the air, so the tray withholds
+each roll's currency until the number above that die has faded and only then
+lets the counter move. In a cascade the total tallies up as the ghosts expire
+one by one; in the second framework the loss lands the same way, after you have
+seen what you rolled. Re-throwing a die releases its hold immediately, because
+that is also when its number disappears.
+
 `tests/dice-physics.test.ts` pins all of it: a die comes to rest with exactly
 the given face up for every face, sits perfectly flat rather than on an edge,
 leaves the surface while it turns, never scrapes a corner through the floor,
-stays inside the walls, and always stops within 2.2s.
+stays inside the walls, always stops within 1s, and holds its currency back for
+exactly as long as its number is showing.
 
 ### The passive web
 

@@ -7,14 +7,24 @@ const SNAP = 0.75;
 
 /**
  * Eases a displayed number toward its real value so currencies roll up rather
- * than jumping. Reports whether it is still catching up, which the HUD uses to
- * highlight the number while it moves.
+ * than jumping.
+ *
+ * `getHold` lets a caller withhold part of the value: the dice tray reports
+ * the currency from rolls whose number is still showing above the die, so the
+ * counter does not move until the player has seen what they rolled. It is read
+ * every frame rather than passed as a prop, so a roll landing does not cost a
+ * React render.
  */
-export function useCountUp(target: number): { value: number; moving: boolean } {
+export function useCountUp(
+  target: number,
+  getHold?: () => number,
+): { value: number; moving: boolean } {
   const [shown, setShown] = useState(target);
   const current = useRef(target);
   const goal = useRef(target);
   goal.current = target;
+  const hold = useRef(getHold);
+  hold.current = getHold;
 
   useEffect(() => {
     let raf = 0;
@@ -23,11 +33,12 @@ export function useCountUp(target: number): { value: number; moving: boolean } {
     const frame = (now: number): void => {
       const dt = Math.min(now - last, 100) / 1000;
       last = now;
-      const diff = goal.current - current.current;
+      const revealed = goal.current - (hold.current?.() ?? 0);
+      const diff = revealed - current.current;
       if (Math.abs(diff) < SNAP) {
-        if (current.current !== goal.current) {
-          current.current = goal.current;
-          setShown(goal.current);
+        if (current.current !== revealed) {
+          current.current = revealed;
+          setShown(revealed);
         }
       } else {
         current.current += diff * (1 - Math.exp(-dt / TAU));
@@ -39,5 +50,6 @@ export function useCountUp(target: number): { value: number; moving: boolean } {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  return { value: shown, moving: Math.abs(target - shown) >= SNAP };
+  const revealed = target - (getHold?.() ?? 0);
+  return { value: shown, moving: Math.abs(revealed - shown) >= SNAP };
 }

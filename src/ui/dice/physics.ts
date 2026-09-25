@@ -80,8 +80,14 @@ export interface DieBody {
   omega: Vec3;
 
   result: Face | null;
-  /** The engine roll this die is showing, or null while it is still turning. */
+  /**
+   * The engine roll this die still owes a reveal for. Cleared once the number
+   * above it has faded, which is when the HUD is allowed to count that roll.
+   */
   rollId: number | null;
+  /** What that roll did to each currency, withheld until its number fades. */
+  heldScore: number;
+  heldMeta: number;
 
   state: DieState;
   minTumbleUntil: number;
@@ -170,6 +176,8 @@ export function spawnDie(
     omega: v3(0, 0, 0),
     result: null,
     rollId: null,
+    heldScore: 0,
+    heldMeta: 0,
     state: 'idle',
     minTumbleUntil: 0,
     bornAt: world.t,
@@ -478,6 +486,33 @@ export function step(world: World, dtMs: number): void {
   }
 
   world.dice = world.dice.filter((die) => !(die.retiring && die.alpha <= 0));
+}
+
+/**
+ * Currency the tray is still holding back from the HUD, and the release of any
+ * roll whose number has finished fading.
+ *
+ * The score of a roll is credited by the engine the instant it resolves, which
+ * is while the die is still in the air. Counting it up then means the number
+ * moves before the player has seen what they rolled, so each roll's change is
+ * withheld until its ghost has gone.
+ *
+ * Dice that are re-thrown or removed drop out on their own: `throwDie` clears
+ * `rollId`, and a die that has left the world is no longer counted.
+ */
+export function releaseFadedGhosts(world: World): { score: number; meta: number } {
+  let score = 0;
+  let meta = 0;
+  for (const die of world.dice) {
+    if (die.rollId === null) continue;
+    if (die.state === 'rest' && world.t - die.settledAt >= die.ghostLife) {
+      die.rollId = null;
+      continue;
+    }
+    score += die.heldScore;
+    meta += die.heldMeta;
+  }
+  return { score, meta };
 }
 
 /** Frontmost die whose projected centre is near the given screen point. */

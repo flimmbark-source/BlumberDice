@@ -108,7 +108,11 @@ function TopBar({ s, knowsB }: { s: GameState; knowsB: boolean }): JSX.Element {
 }
 
 function Currency({ label, value, alt = false }: { label: string; value: number; alt?: boolean }): JSX.Element {
-  const { value: shown, moving } = useCountUp(value);
+  // Held back while the rolled number is still showing above its die.
+  const { value: shown, moving } = useCountUp(
+    value,
+    alt ? () => store.heldBack.meta : () => store.heldBack.score,
+  );
   const rising = moving && value > shown;
   return (
     <div className={`currency${alt ? ' currency--alt' : ''}`}>
