@@ -713,7 +713,7 @@ export const NODES: PassiveNode[] = [
     region: 'adaptive',
     description:
       'Climb stacks, Momentum, Pressure, ticket stacks, weight pushes and the Flip cooldown are kept when you change framework instead of being cleared.',
-    costs: { score: 260, meta: 60 },
+    costs: { score: 150, meta: 95 },
     prerequisites: ['start'],
     position: { x: -204, y: -118 },
     tags: ['adaptive', 'switch'],
@@ -726,7 +726,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'adaptive',
     description: 'While Score is below 60, bonus roll chance is increased by 25%. While Score is above 400, Framework A Score is multiplied by 1.2.',
-    costs: { score: 240, meta: 55 },
+    costs: { score: 420, meta: 35 },
     prerequisites: ['start'],
     position: { x: 204, y: 118 },
     tags: ['adaptive', 'state'],
@@ -774,7 +774,7 @@ export const NODES: PassiveNode[] = [
     region: 'adaptive',
     description:
       'If the first result after changing framework equals the last result before it, grant 2 bonus rolls and +60 Score in Framework A, or +4 Meta in Framework B.',
-    costs: { score: 540, meta: 145 },
+    costs: { score: 820, meta: 90 },
     prerequisites: ['ad_counterweight'],
     position: { x: 118, y: -204 },
     tags: ['adaptive', 'switch', 'pattern'],

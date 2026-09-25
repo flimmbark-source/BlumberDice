@@ -39,6 +39,21 @@ describe('save round-trip', () => {
     expect(restored.decision).toBeNull();
   });
 
+  it('rebuilds the prepared queue for the restored build', () => {
+    const s = makeBuild({ seed: 2, nodes: ['ct_prepared'] });
+    s.queue = [];
+    const restored = deserialize(serialize(s))!;
+    expect(restored.queue.length).toBe(3);
+  });
+
+  it('clears a queue the restored build can no longer support', () => {
+    const s = makeBuild({ seed: 2 });
+    const payload = JSON.parse(serialize(s));
+    payload.state.queue = [1, 2, 3];
+    const restored = deserialize(JSON.stringify(payload))!;
+    expect(restored.queue).toEqual([]);
+  });
+
   it('rejects malformed and version-mismatched payloads', () => {
     expect(deserialize('not json')).toBeNull();
     expect(deserialize('null')).toBeNull();

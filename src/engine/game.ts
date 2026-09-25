@@ -70,13 +70,15 @@ export interface RollIntent {
   depth: number;
   stage: RollStage;
   candidates?: Face[];
+  /** Index into `candidates` that was taken from the prepared queue, if any. */
+  queueCandidate?: number;
   face?: Face;
   staked: number;
   payout: number;
 }
 
 export type Decision =
-  | { kind: 'loadedChoice'; intentId: number; options: Face[] }
+  | { kind: 'loadedChoice'; intentId: number; options: Face[]; fromQueue?: number }
   | { kind: 'hold'; intentId: number; face: Face; canStore: boolean; heldOptions: Face[]; reactive: boolean }
   | { kind: 'flip'; intentId: number; face: Face; flipped: Face }
   | { kind: 'letItRide'; intentId: number; amount: number };
@@ -140,6 +142,8 @@ export interface GameState {
   queue: Face[];
   sealedFace: Face | null;
   useHeldNext: number | null;
+  /** When set, the next resolved roll is stored instead of resolving. */
+  storeNext: boolean;
 
   // Pacing
   cooldownRemaining: number;
@@ -185,6 +189,7 @@ export function createGame(seed = 0x5eed1e): GameState {
     queue: [],
     sealedFace: null,
     useHeldNext: null,
+    storeNext: false,
     cooldownRemaining: 0,
     resolveTimer: 0,
     pending: [],
@@ -493,28 +498,33 @@ function processIntent(s: GameState, intent: RollIntent): ProcessResult {
           && s.faceBeforeSwitch !== null
         ) {
           face = s.faceBeforeSwitch;
-        } else if (build.flags.has('preparedRoll')) {
-          refillQueue(s, build);
-          if (s.queue.length > 0) {
-            face = s.queue.shift()!;
-            refillQueue(s, build);
-          }
         }
 
-        if (face !== null) {
-          intent.face = refineFace(s, build, face);
-          intent.stage = 'hold';
-          break;
-        }
+        const prepared = build.flags.has('preparedRoll');
+        if (prepared) refillQueue(s, build);
 
-        if (build.flags.has('loadedChoice')) {
+        if (face === null && build.flags.has('loadedChoice')) {
+          // Both keystones stay live: with Prepared Roll allocated the choice
+          // is between the next queued result and a fresh sample, and only
+          // taking the queued one consumes the queue.
           const dist = currentDistribution(s, build);
-          intent.candidates = [sampleFace(s.rng, dist), sampleFace(s.rng, dist)];
+          const candidates: Face[] = [];
+          if (prepared && s.queue.length > 0) {
+            candidates.push(s.queue[0]);
+            intent.queueCandidate = 0;
+          }
+          while (candidates.length < 2) candidates.push(sampleFace(s.rng, dist));
+          intent.candidates = candidates;
           intent.stage = 'loadedChoice';
           break;
         }
 
-        intent.face = refineFace(s, build, sampleFace(s.rng, currentDistribution(s, build)));
+        if (face === null && prepared && s.queue.length > 0) {
+          face = s.queue.shift()!;
+          refillQueue(s, build);
+        }
+
+        intent.face = refineFace(s, build, face ?? sampleFace(s.rng, currentDistribution(s, build)));
         intent.stage = 'hold';
         break;
       }
@@ -523,25 +533,44 @@ function processIntent(s: GameState, intent: RollIntent): ProcessResult {
         const opts = intent.candidates!;
         const policy = s.policies.loadedChoice;
         if (policy === 'ask') {
-          s.decision = { kind: 'loadedChoice', intentId: intent.id, options: opts };
+          s.decision = {
+            kind: 'loadedChoice', intentId: intent.id, options: opts,
+            fromQueue: intent.queueCandidate,
+          };
           return 'suspended';
         }
-        const picked = policy === 'higher' ? Math.max(...opts) : Math.min(...opts);
-        intent.face = refineFace(s, build, picked as Face);
-        intent.stage = 'hold';
+        let pick = 0;
+        for (let i = 1; i < opts.length; i++) {
+          const better = policy === 'higher' ? opts[i] > opts[pick] : opts[i] < opts[pick];
+          if (better) pick = i;
+        }
+        takeCandidate(s, build, intent, pick);
         break;
       }
 
       case 'hold': {
         if (!build.flags.has('hold')) { intent.stage = 'flip'; break; }
         const capacity = Math.floor(displayStats(s, build).holdCapacity);
-        const canStore = s.held.length < capacity;
-        const reactive = build.flags.has('hedge');
-        const heldOptions = reactive ? s.held.slice() : [];
-        if (!canStore && heldOptions.length === 0) { intent.stage = 'flip'; break; }
-        if (s.policies.hold === 'ask') {
+
+        // Storing is declared before the roll, so it needs no prompt.
+        if (s.storeNext && s.held.length < capacity) {
+          s.storeNext = false;
+          s.held.push(intent.face!);
+          log(s, 'system', `Held ${intent.face}`);
+          s.pending.splice(s.pending.indexOf(intent), 1);
+          return 'done';
+        }
+
+        // Hedge is what makes the swap reactive: it happens after the face is
+        // known. Without it a held result can only be played before the roll.
+        if (build.flags.has('hedge') && s.held.length > 0 && s.policies.hold === 'ask') {
           s.decision = {
-            kind: 'hold', intentId: intent.id, face: intent.face!, canStore, heldOptions, reactive,
+            kind: 'hold',
+            intentId: intent.id,
+            face: intent.face!,
+            canStore: s.held.length < capacity,
+            heldOptions: s.held.slice(),
+            reactive: true,
           };
           return 'suspended';
         }
@@ -579,6 +608,21 @@ function processIntent(s: GameState, intent: RollIntent): ProcessResult {
         return 'suspended';
     }
   }
+}
+
+/** Locks in one of the Loaded Choice candidates, consuming the queue if taken. */
+function takeCandidate(
+  s: GameState, build: ResolvedBuild, intent: RollIntent, index: number,
+): void {
+  const opts = intent.candidates ?? [];
+  const i = index >= 0 && index < opts.length ? index : 0;
+  if (intent.queueCandidate === i && s.queue.length > 0) {
+    s.queue.shift();
+    refillQueue(s, build);
+  }
+  intent.face = refineFace(s, build, opts[i]);
+  intent.queueCandidate = undefined;
+  intent.stage = 'hold';
 }
 
 function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): boolean {
@@ -868,9 +912,12 @@ function autoDecide(s: GameState): void {
   const d = s.decision;
   if (!d) return;
   switch (d.kind) {
-    case 'loadedChoice':
-      resolveDecision(s, { kind: 'loadedChoice', face: Math.max(...d.options) as Face });
+    case 'loadedChoice': {
+      let pick = 0;
+      for (let i = 1; i < d.options.length; i++) if (d.options[i] > d.options[pick]) pick = i;
+      resolveDecision(s, { kind: 'loadedChoice', index: pick });
       break;
+    }
     case 'hold':
       resolveDecision(s, { kind: 'hold', action: 'resolve' });
       break;
@@ -884,7 +931,7 @@ function autoDecide(s: GameState): void {
 }
 
 export type DecisionChoice =
-  | { kind: 'loadedChoice'; face: Face }
+  | { kind: 'loadedChoice'; index: number }
   | { kind: 'hold'; action: 'resolve' | 'store'; swapIndex?: number }
   | { kind: 'flip'; flip: boolean }
   | { kind: 'letItRide'; ride: boolean };
@@ -900,8 +947,7 @@ export function resolveDecision(s: GameState, choice: DecisionChoice): void {
   switch (d.kind) {
     case 'loadedChoice': {
       if (choice.kind !== 'loadedChoice') return;
-      intent.face = refineFace(s, build, choice.face);
-      intent.stage = 'hold';
+      takeCandidate(s, build, intent, choice.index);
       break;
     }
     case 'hold': {
@@ -1021,6 +1067,7 @@ export function allocate(s: GameState, nodeId: string): { ok: boolean; reason?: 
   // Keep persistent control state legal after a capacity change.
   const cap = Math.floor(displayStats(s).holdCapacity);
   if (s.held.length > cap) s.held.length = cap;
+  syncQueue(s);
   return { ok: true };
 }
 
@@ -1040,7 +1087,24 @@ export function setSeal(s: GameState, face: Face | null): void {
   const build = getBuild(s);
   if (!build.flags.has('seal')) return;
   s.sealedFace = face;
+  // Queued results were drawn from the old distribution.
   s.queue = [];
+  syncQueue(s);
+}
+
+/** Brings the visible queue in line with the current build. */
+export function syncQueue(s: GameState, build = getBuild(s)): void {
+  if (!build.flags.has('preparedRoll')) {
+    s.queue = [];
+    return;
+  }
+  refillQueue(s, build);
+}
+
+export function setStoreNext(s: GameState, on: boolean): void {
+  const build = getBuild(s);
+  if (!build.flags.has('hold')) { s.storeNext = false; return; }
+  s.storeNext = on;
 }
 
 export function swapQueue(s: GameState, i: number, j: number): void {
