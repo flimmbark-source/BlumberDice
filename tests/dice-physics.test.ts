@@ -16,7 +16,7 @@ function run(world: World, ms: number): void {
   for (let t = 0; t < ms; t += 16) step(world, 16);
 }
 
-function thrownDie(result: Face | null, minTumbleMs = 520): { world: World; die: DieBody } {
+function thrownDie(result: Face | null, minTumbleMs = 400): { world: World; die: DieBody } {
   const world = createWorld(420, 420);
   const die = spawnDie(world);
   throwDie(world, die, { minTumbleMs });
@@ -49,6 +49,20 @@ describe('the animation always reports the engine result', () => {
       }
       expect(die.pos.z).toBeCloseTo(DIE_HALF, 5);
     }
+  });
+
+  it('starts the hop promptly rather than rolling on and on', () => {
+    // The turn is what ends a roll, so it must not wait for free physics to
+    // come to rest on its own, which it rarely does.
+    let worst = 0;
+    for (let trial = 0; trial < 30; trial++) {
+      const { world, die } = thrownDie(3);
+      let elapsed = 0;
+      while (die.state !== 'aligning' && elapsed < 4000) { step(world, 16); elapsed += 16; }
+      expect(die.state).toBe('aligning');
+      worst = Math.max(worst, elapsed);
+    }
+    expect(worst).toBeLessThanOrEqual(760);
   });
 
   it('hops off the surface while it turns onto its face', () => {
@@ -150,13 +164,14 @@ describe('the animation always reports the engine result', () => {
   it('settles quickly enough to keep up with play', () => {
     let worst = 0;
     for (let trial = 0; trial < 40; trial++) {
-      const { world, die } = thrownDie(6, 520);
+      const { world, die } = thrownDie(6);
       let elapsed = 0;
       while (die.state !== 'rest' && elapsed < 8000) { step(world, 16); elapsed += 16; }
       expect(die.state).toBe('rest');
       worst = Math.max(worst, elapsed);
     }
-    expect(worst).toBeLessThan(2200);
+    // Comfortably inside the 700ms cooldown plus one hop.
+    expect(worst).toBeLessThan(1400);
   });
 });
 

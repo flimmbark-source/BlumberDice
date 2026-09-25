@@ -28,7 +28,7 @@ const FRICTION = 0.42;
 const LINEAR_DRAG = 0.5;
 const ANGULAR_DRAG = 0.55;
 /** Extra damping once the cube is lying on the surface, so it beds down. */
-const GROUND_ANGULAR_DRAG = 3.6;
+const GROUND_ANGULAR_DRAG = 5.2;
 const SLEEP_SPEED = 26;
 const SLEEP_SPIN = 1.5;
 const SOLVER_ITERATIONS = 3;
@@ -46,7 +46,13 @@ const ALIGN_MIN_MS = 190;
 const ALIGN_MAX_MS = 360;
 /** Samples taken along the turn to size the hop. */
 const CLEARANCE_SAMPLES = 16;
-const SETTLE_DEADLINE = 420;
+/**
+ * How long after its minimum tumble a die is allowed to keep rolling before it
+ * is made to settle. Together with the minimum tumble this is what actually
+ * times the hop for most rolls: free physics rarely comes to rest on its own
+ * first.
+ */
+const SETTLE_DEADLINE = 340;
 const ORPHAN_TIMEOUT = 45000;
 
 /** Opposite faces sum to seven. */
