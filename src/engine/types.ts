@@ -8,6 +8,8 @@
 //
 // Adding a node that reuses existing kinds requires editing nodes.ts only.
 
+import type { NodeNotation } from './notation.ts';
+
 export type Face = 1 | 2 | 3 | 4 | 5 | 6;
 export const FACES: readonly Face[] = [1, 2, 3, 4, 5, 6];
 
@@ -216,6 +218,8 @@ export interface PassiveNode {
   /** Secondary region for bridges — used for layout and Duality accounting. */
   bridges?: [Region, Region];
   description: NodeDescription;
+  /** Symbolic statement of the mechanic. See engine/notation.ts. */
+  notation?: NodeNotation;
   costs: { score?: number; meta?: number };
   prerequisites: string[];
   position: { x: number; y: number };

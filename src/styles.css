@@ -283,10 +283,10 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 .nodepop {
   position: absolute; z-index: 5;
   transform: translate(-50%, -100%);
-  padding: 11px 13px 10px;
-  border: 1px solid var(--line); border-radius: var(--radius);
-  background: rgba(18, 23, 30, 0.97);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  padding: 10px 12px 9px;
+  border: 1px solid #2f3a49; border-radius: var(--radius);
+  background: rgba(13, 17, 23, 0.975);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   /* Never eat a pointer event: the web underneath stays hoverable. */
   pointer-events: none;
 }
@@ -297,24 +297,119 @@ button.minidie:hover .die__body { stroke: var(--muted); }
   content: ''; position: absolute; left: 50%; margin-left: -7px;
   border: 7px solid transparent;
 }
-.nodepop:not(.nodepop--below)::after {
-  top: 100%; border-top-color: rgba(18, 23, 30, 0.97);
-}
-.nodepop--below::after {
-  bottom: 100%; border-bottom-color: rgba(18, 23, 30, 0.97);
+.nodepop:not(.nodepop--below)::after { top: 100%; border-top-color: rgba(13, 17, 23, 0.975); }
+.nodepop--below::after { bottom: 100%; border-bottom-color: rgba(13, 17, 23, 0.975); }
+
+/* 1. Name, with the class understated in the corner. */
+.nodepop__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.nodepop__name { font-weight: 650; font-size: 13.5px; letter-spacing: 0.01em; }
+.nodepop__type {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.13em;
+  color: #5c6675; font-weight: 600;
 }
 
-.nodepop__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.nodepop__name { font-weight: 650; font-size: 13.5px; }
-.nodepop__type {
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
+/* 2. The mechanic. The strongest element on the card. */
+.nt {
+  display: flex; flex-direction: column; gap: 4px;
+  margin: 9px 0 8px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: rgba(125, 155, 205, 0.055);
+  border: 1px solid rgba(125, 155, 205, 0.1);
 }
-.nodepop__desc { margin: 7px 0 0; font-size: 12.5px; line-height: 1.45; color: #c3ccd8; }
-.nodepop__costs { display: flex; gap: 12px; margin-top: 9px; font-size: 12.5px; font-weight: 600; }
+.nt__row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+  min-height: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.nt__cell {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; padding: 0 2px;
+  border: 1px solid #38455a; border-radius: 4px;
+  background: #171e28;
+}
+.nt__cell--any { font-size: 10.5px; font-weight: 600; color: #b9c6d8; padding: 0 5px; }
+.nt__anyMark { fill: none; stroke: #5d6b80; stroke-width: 1.2; stroke-dasharray: 2.4 2; }
+.nt__cell--dim { opacity: 0.45; }
+.nt__cell--out { opacity: 0.32; position: relative; }
+.nt__cell--out::after {
+  content: ''; position: absolute; inset: 40% -2px auto -2px;
+  border-top: 1px solid var(--risk);
+}
+.nt__die { display: block; }
+.nt__dieBody { fill: none; stroke: none; }
+.nt__diePip { fill: #d7e0ec; }
+.nt__cell--dim .nt__diePip, .nt__cell--out .nt__diePip { fill: #8b97a8; }
+
+.nt__slot {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 15px; height: 20px; padding: 0 4px;
+  border: 1px dashed #3d4b60; border-radius: 4px;
+  font-size: 10px; color: var(--muted);
+}
+.nt__slot--filled {
+  border-style: solid; background: rgba(138, 180, 248, 0.14); border-color: #4a5f7d;
+}
+
+.nt__op { color: #6d7a8c; font-size: 12px; padding: 0 1px; }
+.nt__op--arrow { color: #8fa3bd; font-size: 13px; }
+.nt__arrow { display: inline-flex; flex-direction: column; align-items: center; line-height: 1; }
+.nt__arrowLabel { font-size: 9px; color: var(--accent); font-weight: 650; margin-bottom: -1px; }
+
+.nt__val { font-size: 12px; font-weight: 650; }
+.nt__val--accent { color: var(--accent); }
+.nt__val--score { color: var(--score); }
+.nt__val--meta { color: var(--meta); }
+.nt__val--warn { color: var(--risk); }
+.nt__val--muted { color: #6f7b8b; font-weight: 500; font-size: 11px; }
+
+.nt__roll {
+  display: inline-flex; align-items: center; gap: 3px;
+  height: 20px; padding: 0 6px;
+  border: 1px solid rgba(138, 180, 248, 0.38); border-radius: 10px;
+  background: rgba(138, 180, 248, 0.12);
+  font-size: 11px; font-weight: 650; color: #a9c5f2;
+}
+.nt__rollGlyph { display: block; }
+.nt__rollGlyph rect { fill: none; stroke: currentColor; stroke-width: 1; opacity: 0.8; }
+.nt__rollGlyph circle { fill: currentColor; opacity: 0.9; }
+
+.nt__meter {
+  position: relative; display: inline-flex; align-items: center;
+  height: 20px; min-width: 62px; padding: 0 7px;
+  border: 1px solid #3a4658; border-radius: 4px;
+  background: #151b24; overflow: hidden;
+}
+.nt__meterFill { position: absolute; inset: 0 auto 0 0; background: rgba(138, 180, 248, 0.2); }
+.nt__meterText { position: relative; font-size: 10px; color: #98a6b8; font-weight: 600; }
+
+.nt__off {
+  font-size: 11px; color: #5f6a79; font-style: italic;
+  padding: 1px 0;
+}
+
+/* 3. Prose. Clarifies the notation; keywords tie systems together. */
+.nodepop__desc {
+  margin: 0; font-size: 11.5px; line-height: 1.45; color: #8d98a8;
+}
+.kw { font-style: normal; color: #aeb9cb; font-weight: 550; }
+
+/* 4. Cost and state, secondary to the mechanic. */
+.nodepop__foot {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;
+  margin-top: 8px; padding-top: 7px;
+  border-top: 1px solid rgba(125, 155, 205, 0.09);
+}
+.nodepop__costs { display: inline-flex; gap: 9px; font-size: 12px; font-weight: 650; }
 .cost { color: var(--score); }
+.cost::after { content: ' Score'; font-size: 9.5px; font-weight: 500; opacity: 0.6; }
 .cost--alt { color: var(--meta); }
+.cost--alt::after { content: ' Meta'; }
 .cost--short { color: var(--risk); }
-.nodepop__status { margin-top: 7px; font-size: 11.5px; color: var(--muted); }
+.nodepop__status {
+  margin-left: auto; font-size: 10.5px; color: #5f6a79; white-space: nowrap;
+}
 
 .tree__tools {
   position: absolute; right: 12px; bottom: 9px; z-index: 4;

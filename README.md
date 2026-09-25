@@ -158,6 +158,38 @@ editing `nodes.ts` and nothing else.
 Keystones that change a rule rather than a number are flags with a code path in
 `game.ts`. Everything else is pure data.
 
+### Tooltips are notation, not paragraphs
+
+Every node in the web says the same sentence: **a condition produces an
+effect**, sometimes with a probability or a duration attached. The conditions
+come from a small closed set (eleven pattern shapes, five face sets, three
+Score thresholds, two chance gates, the switch, a counter) and so do the
+effects (a payout, a bonus roll, a weight change, a multiplier, a
+substitution, storage, a counter tick). Fifty-four nodes, one grammar.
+
+`src/engine/notation.ts` is that grammar, and `src/ui/Notation.tsx` draws it.
+A node's `notation` is one or two rows of tokens — die faces, a blank die for
+"any value", an arrow (labelled with its probability where there is one), a
+storage slot, a fill meter, the bonus-roll chip, a Score or Meta amount, a
+weight change. Nodes whose mechanic differs by framework give a row per
+framework, like `description` does, and a node inert under the framework in
+play draws a single struck-through `off` token rather than nothing.
+
+```ts
+notation: [[die(2), die(3), die(4), to(), score('+8'), roll()]]   // Run
+notation: [[die(1, 'dim'), to('30%'), die(2)]]                     // Raised Floor
+notation: { A: [[die(3), die(3), to(), score('+3')]], B: [[off()]] }
+```
+
+Quantities are written as concrete die faces, never as `n`, `hi` or `≥4`: a
+letter is text that has to be decoded, which is the thing the notation exists
+to avoid. The exemplar carries the shape, the prose underneath carries the
+general rule. `tests/notation.test.ts` enforces that, along with the row and
+token caps, the shared tokens (a bonus roll is always the roll chip, a
+weighted face is always that face), the prose word cap, and the keyword
+registry in `KEYWORDS` — terms that name a system rather than describe one,
+highlighted identically wherever they appear.
+
 ### The roll pipeline
 
 `generate → loadedChoice → hold → flip → finalize → ride`

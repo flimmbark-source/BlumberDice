@@ -245,6 +245,36 @@ toggle ("store next result") plus playing a held result in place of a roll.
 **Hedge** is what makes the swap reactive — offered after the face is known.
 This gives Hedge a clear reason to exist beyond its wager refund.
 
+### 13. Tooltips lead with notation, and the prose is demoted
+
+Not specified beyond "mechanical, never philosophical". The tooltips were
+prose-first, which made them slow to compare: two nodes with the same shape
+read as two different sentences.
+
+Resolved by giving the tree one closed visual grammar and making it the
+strongest element in the popup, with the prose below it as the precision
+layer. This is affordable only because the tree is more uniform than it looks
+— every node is `CONDITION → EFFECT` drawn from small closed sets, so one
+grammar covers all fifty-four. It also does archetype work for free: rows of
+faces read as High Roller, roll chips as Volume, sequences as Pattern,
+substitutions as Control, wagers as Jackpot, switch marks as Adaptive.
+
+Two decisions inside it are worth recording:
+
+- **Concrete faces, not variables.** An earlier pass used `n`, `n+1`, `hi`,
+  `lo` and `≥4`. That was wrong: a variable is text to decode, and decoding is
+  what the notation was meant to remove. A node now shows an exemplar — `[2]
+  [3] [4] → +8` — and the sentence underneath states the general rule. A
+  regression test forbids the algebra coming back.
+- **The prose got shorter, not redundant.** Word caps (34, or 46 for
+  keystones) are asserted, so a mechanic carried by the diagram cannot also be
+  spelled out at length below it. Hold's description lost three words to this
+  and reads better for it.
+
+The cost: the notation is a second thing to learn, and a player who never
+looks at the prose will miss caps and exact durations that only fit there.
+The bet is that the shapes are learned once and then pay out on every node.
+
 ---
 
 ## Unresolved — deliberately not implemented

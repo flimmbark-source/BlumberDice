@@ -3,6 +3,7 @@ import { EDGES, NODES, NODES_BY_ID } from '../engine/nodes.ts';
 import { checkAllocation, describeNode, isReachable, isVisible } from '../engine/tree.ts';
 import type { DiscoveryFlag, FrameworkId, PassiveNode, Region } from '../engine/types.ts';
 import { actions } from './store.ts';
+import { NotationView, Prose } from './Notation.tsx';
 
 /**
  * One interconnected web. Build identity is carried by shape, size and
@@ -332,33 +333,41 @@ function NodePopup({ node, status, framework, score, meta, anchor, size }: {
 
   return (
     <div
-      className={`nodepop${below ? ' nodepop--below' : ''}`}
+      className={`nodepop nodepop--${node.nodeType}${below ? ' nodepop--below' : ''}`}
       style={{ left, top: anchor.y + (below ? gap : -gap), width: POPUP_WIDTH }}
     >
       <div className="nodepop__head">
         <span className="nodepop__name">{node.name}</span>
         <span className="nodepop__type">{node.nodeType}</span>
       </div>
-      <p className="nodepop__desc">{describeNode(node, framework)}</p>
-      {(costScore > 0 || costMeta > 0) && (
-        <div className="nodepop__costs">
-          {costScore > 0 && (
-            <span className={costScore > score ? 'cost cost--short' : 'cost'}>
-              {costScore.toLocaleString()} Score
-            </span>
-          )}
-          {costMeta > 0 && (
-            <span className={costMeta > meta ? 'cost cost--alt cost--short' : 'cost cost--alt'}>
-              {costMeta.toLocaleString()} Meta
-            </span>
-          )}
-        </div>
-      )}
-      <div className="nodepop__status">
-        {status === 'allocated' && 'Allocated'}
-        {status === 'available' && 'Click to allocate'}
-        {status === 'unaffordable' && 'Cannot afford'}
-        {status === 'locked' && 'Connect an adjacent node first'}
+
+      {/* The mechanic first: the strongest element on the card. */}
+      {node.notation && <NotationView notation={node.notation} framework={framework} />}
+
+      {/* Prose clarifies the notation rather than carrying the explanation. */}
+      <Prose text={describeNode(node, framework)} />
+
+      <div className="nodepop__foot">
+        {(costScore > 0 || costMeta > 0) && (
+          <span className="nodepop__costs">
+            {costScore > 0 && (
+              <span className={costScore > score ? 'cost cost--short' : 'cost'}>
+                {costScore.toLocaleString()}
+              </span>
+            )}
+            {costMeta > 0 && (
+              <span className={costMeta > meta ? 'cost cost--alt cost--short' : 'cost cost--alt'}>
+                {costMeta.toLocaleString()}
+              </span>
+            )}
+          </span>
+        )}
+        <span className="nodepop__status">
+          {status === 'allocated' && 'Allocated'}
+          {status === 'available' && 'Click to allocate'}
+          {status === 'unaffordable' && 'Cannot afford'}
+          {status === 'locked' && 'Connect an adjacent node first'}
+        </span>
       </div>
     </div>
   );
