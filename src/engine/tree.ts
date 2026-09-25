@@ -4,12 +4,18 @@ import {
   BASE_STATS,
   type DiscoveryFlag,
   type FlagKey,
+  type FrameworkId,
   type PassiveNode,
   type Region,
   type StatBlock,
   type StatModifier,
   type Trigger,
 } from './types.ts';
+
+/** The tooltip line for a node under the framework currently in play. */
+export function describeNode(node: PassiveNode, framework: FrameworkId): string {
+  return typeof node.description === 'string' ? node.description : node.description[framework];
+}
 
 export interface ResolvedBuild {
   /** Stats with every unconditional modifier applied. */

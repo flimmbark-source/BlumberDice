@@ -1104,6 +1104,50 @@ export function allocate(s: GameState, nodeId: string): { ok: boolean; reason?: 
   return { ok: true };
 }
 
+/** Total Score and Meta currently sunk into the passive web. */
+export function allocatedCost(s: GameState): { score: number; meta: number } {
+  let score = 0;
+  let meta = 0;
+  for (const id of s.allocated) {
+    const node = NODES_BY_ID.get(id);
+    if (!node) continue;
+    score += node.costs.score ?? 0;
+    meta += node.costs.meta ?? 0;
+  }
+  return { score, meta };
+}
+
+export function canRefund(s: GameState): boolean {
+  return s.allocated.some((id) => id !== 'start') && s.decision === null && s.pending.length === 0;
+}
+
+/**
+ * Returns every point spent on the web and clears the build. A full respec
+ * rather than a per-node refund, because refunding one node would orphan
+ * whatever hangs off it.
+ */
+export function refundAll(s: GameState): { score: number; meta: number } | null {
+  if (!canRefund(s)) return null;
+  const refunded = allocatedCost(s);
+  s.score += refunded.score;
+  s.meta += refunded.meta;
+  s.allocated = ['start'];
+
+  // Control state that only existed because of a node that is now gone.
+  s.held = [];
+  s.useHeldNext = null;
+  s.storeNext = false;
+  s.sealedFace = null;
+  s.queue = [];
+  s.stakeAmount = 0;
+  s.riding = 0;
+  s.transient = emptyTransient();
+  syncQueue(s);
+  log(s, 'system', `Refunded ${Math.round(refunded.score)} Score`
+    + (refunded.meta > 0 ? ` and ${Math.round(refunded.meta)} Meta` : ''));
+  return refunded;
+}
+
 /** True once the placeholder discovery gate is open. */
 export function discoveryGateOpen(s: GameState): boolean {
   if (s.discovered.includes('frameworkB')) return false;

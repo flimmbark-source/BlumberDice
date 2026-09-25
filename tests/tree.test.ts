@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { allocate, createGame, getBuild } from '../src/engine/game.ts';
+import {
+  allocate, allocatedCost, canRefund, createGame, currentDistribution, getBuild,
+  manualRoll, refundAll,
+} from '../src/engine/game.ts';
+import { runManualRolls } from '../src/engine/sim.ts';
 import { EDGES, NODES, NODES_BY_ID } from '../src/engine/nodes.ts';
-import { checkAllocation, regionsInvested, resolveBuild } from '../src/engine/tree.ts';
+import { checkAllocation, describeNode, regionsInvested, resolveBuild } from '../src/engine/tree.ts';
 import { ARCHETYPE_REGIONS, type DiscoveryFlag } from '../src/engine/types.ts';
 
 describe('graph integrity', () => {
@@ -253,5 +257,149 @@ describe('build resolution', () => {
     for (const r of ARCHETYPE_REGIONS) {
       expect(NODES.some((n) => n.region === r), `no nodes in ${r}`).toBe(true);
     }
+  });
+});
+
+describe('node descriptions', () => {
+  it('never name a framework in player-facing text', () => {
+    // The player may not know a second framework exists, and once they do the
+    // panel shows only the line for the one in play.
+    const offenders: string[] = [];
+    for (const n of NODES) {
+      for (const fw of ['A', 'B'] as const) {
+        const text = describeNode(n, fw);
+        if (/framework [AB]\b/i.test(text)) offenders.push(`${n.id} (${fw}): ${text}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('gives both frameworks a line, and neither is empty', () => {
+    for (const n of NODES) {
+      for (const fw of ['A', 'B'] as const) {
+        const text = describeNode(n, fw);
+        expect(typeof text, n.id).toBe('string');
+        expect(text.trim().length, `${n.id} (${fw})`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('splits the description wherever a node behaves differently', () => {
+    // Anything that pays Score, wagers, or reads a Score payout is not the
+    // same node under both frameworks, so it must not share one line.
+    const mustSplit = [
+      'hr_upper', 'vl_handful', 'jp_longodds', 'jp_stake', 'jp_hotstreak',
+      'jp_pressure', 'jp_ride', 'jp_oneinsix', 'pt_repeat', 'pt_step',
+      'pt_collector', 'pt_alt', 'pt_doubles', 'pt_run', 'pt_palindrome',
+      'pt_fullset', 'br_peak', 'br_hedge', 'br_tickets', 'ad_transition',
+      'ad_counterweight', 'ad_crossing', 'ad_pendulum', 'ad_reflection',
+    ];
+    for (const id of mustSplit) {
+      const n = NODES_BY_ID.get(id)!;
+      expect(typeof n.description, `${id} should differ by framework`).not.toBe('string');
+      expect(describeNode(n, 'A')).not.toBe(describeNode(n, 'B'));
+    }
+  });
+
+  it('leaves framework-neutral nodes as a single line', () => {
+    for (const id of ['hr_edge', 'vl_quick', 'ct_flip', 'key_loaded', 'pt_memory']) {
+      expect(typeof NODES_BY_ID.get(id)!.description, id).toBe('string');
+    }
+  });
+});
+
+describe('refunding the web', () => {
+  it('returns every point spent and clears the build', () => {
+    const s = createGame(1);
+    s.discovered.push('frameworkB');
+    s.score = 5000;
+    s.meta = 900;
+    for (const id of ['ct_second', 'ct_reserve', 'ct_hold', 'ad_transition']) {
+      expect(allocate(s, id).ok, id).toBe(true);
+    }
+    expect(s.score).toBeLessThan(5000);
+    expect(s.meta).toBeLessThan(900);
+
+    const refunded = refundAll(s);
+    expect(refunded).not.toBeNull();
+    expect(s.score).toBe(5000);
+    expect(s.meta).toBe(900);
+    expect(s.allocated).toEqual(['start']);
+  });
+
+  it('agrees with the cost it reports before refunding', () => {
+    const s = createGame(1);
+    s.score = 5000;
+    allocate(s, 'hr_edge');
+    allocate(s, 'hr_floor');
+    const quoted = allocatedCost(s);
+    expect(refundAll(s)).toEqual(quoted);
+  });
+
+  it('reports what it gave back', () => {
+    const s = createGame(1);
+    s.score = 5000;
+    allocate(s, 'hr_edge');
+    allocate(s, 'hr_floor');
+    const expected = (NODES_BY_ID.get('hr_edge')!.costs.score ?? 0)
+      + (NODES_BY_ID.get('hr_floor')!.costs.score ?? 0);
+    expect(refundAll(s)).toEqual({ score: expected, meta: 0 });
+  });
+
+  it('clears control state that only existed because of a node', () => {
+    const s = createGame(1);
+    s.score = 9000;
+    for (const id of ['ct_second', 'ct_reserve', 'ct_hold', 'ct_flip', 'ct_seal', 'ct_prepared']) {
+      allocate(s, id);
+    }
+    s.held = [4, 2];
+    s.sealedFace = 1;
+    s.storeNext = true;
+    expect(s.queue.length).toBeGreaterThan(0);
+
+    refundAll(s);
+    expect(s.held).toEqual([]);
+    expect(s.queue).toEqual([]);
+    expect(s.sealedFace).toBeNull();
+    expect(s.storeNext).toBe(false);
+    expect(getBuild(s).flags.size).toBe(0);
+  });
+
+  it('refuses when there is nothing to refund', () => {
+    const s = createGame(1);
+    expect(canRefund(s)).toBe(false);
+    expect(refundAll(s)).toBeNull();
+  });
+
+  it('refuses mid-cascade, when a roll is still resolving', () => {
+    const s = createGame(1);
+    s.score = 5000;
+    allocate(s, 'vl_quick');
+    s.cooldownRemaining = 0;
+    manualRoll(s);
+    expect(s.pending.length).toBeGreaterThan(0);
+    expect(canRefund(s)).toBe(false);
+    expect(refundAll(s)).toBeNull();
+  });
+
+  it('leaves the die itself alone, so the game stays playable', () => {
+    const s = createGame(7);
+    s.score = 5000;
+    allocate(s, 'hr_edge');
+    allocate(s, 'hr_heavy6');
+    refundAll(s);
+    const after = runManualRolls(s, 200);
+    expect(after.resolvedRolls).toBe(200);
+    // Back to a fair die.
+    for (const p of currentDistribution(s).probabilities) expect(p).toBeCloseTo(1 / 6, 10);
+  });
+
+  it('lets the player rebuild immediately afterwards', () => {
+    const s = createGame(1);
+    s.score = 5000;
+    allocate(s, 'hr_edge');
+    refundAll(s);
+    expect(allocate(s, 'vl_quick').ok).toBe(true);
+    expect(s.allocated).toEqual(['start', 'vl_quick']);
   });
 });

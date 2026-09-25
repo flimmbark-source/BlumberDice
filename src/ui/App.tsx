@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
-  canRoll, canSwitchFramework, CONFIG, displayStats, getBuild, type GameState,
+  allocatedCost, canRefund, canRoll, canSwitchFramework, CONFIG, displayStats,
+  getBuild, type GameState,
 } from '../engine/game.ts';
 import { NODES } from '../engine/nodes.ts';
 import { checkAllocation, isVisible } from '../engine/tree.ts';
 import type { DiscoveryFlag } from '../engine/types.ts';
 import { actions, store, useGame } from './store.ts';
+import { useCountUp } from './useCountUp.ts';
 import { ControlRail } from './ControlRail.tsx';
 import { DecisionBar } from './DecisionBar.tsx';
 import { DiceTray } from './dice/DiceTray.tsx';
@@ -18,6 +20,7 @@ export function App(): JSX.Element {
   const s = useGame();
   const [tab, setTab] = useState<Tab>('web');
   const knowsB = s.discovered.includes('frameworkB');
+  const spent = allocatedCost(s);
 
   useEffect(() => { if (tab === 'stats') actions.seenStats(); }, [tab]);
 
@@ -54,6 +57,10 @@ export function App(): JSX.Element {
                 discoveredKey={s.discovered.join(',')}
                 score={s.score}
                 meta={s.meta}
+                framework={s.framework}
+                canRefund={canRefund(s)}
+                refundScore={spent.score}
+                refundMeta={spent.meta}
               />
             )}
             {tab === 'stats' && <StatsPanel s={s} />}
@@ -101,9 +108,13 @@ function TopBar({ s, knowsB }: { s: GameState; knowsB: boolean }): JSX.Element {
 }
 
 function Currency({ label, value, alt = false }: { label: string; value: number; alt?: boolean }): JSX.Element {
+  const { value: shown, moving } = useCountUp(value);
+  const rising = moving && value > shown;
   return (
     <div className={`currency${alt ? ' currency--alt' : ''}`}>
-      <span className="currency__value">{Math.floor(value).toLocaleString()}</span>
+      <span className={`currency__value${moving ? (rising ? ' currency__value--up' : ' currency__value--down') : ''}`}>
+        {Math.floor(shown).toLocaleString()}
+      </span>
       <span className="currency__label">{label}</span>
     </div>
   );

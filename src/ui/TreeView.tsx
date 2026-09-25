@@ -1,7 +1,7 @@
 import { memo, useMemo, useRef, useState } from 'react';
 import { EDGES, NODES, NODES_BY_ID } from '../engine/nodes.ts';
-import { checkAllocation, isReachable, isVisible } from '../engine/tree.ts';
-import type { DiscoveryFlag, PassiveNode, Region } from '../engine/types.ts';
+import { checkAllocation, describeNode, isReachable, isVisible } from '../engine/tree.ts';
+import type { DiscoveryFlag, FrameworkId, PassiveNode, Region } from '../engine/types.ts';
 import { actions } from './store.ts';
 
 /**
@@ -30,6 +30,11 @@ interface Props {
   discoveredKey: string;
   score: number;
   meta: number;
+  framework: FrameworkId;
+  canRefund: boolean;
+  /** Primitives, so memo can compare them by value. */
+  refundScore: number;
+  refundMeta: number;
 }
 
 function statusOf(
@@ -44,7 +49,7 @@ function statusOf(
 }
 
 export const TreeView = memo(function TreeView({
-  allocatedKey, discoveredKey, score, meta,
+  allocatedKey, discoveredKey, score, meta, framework, canRefund, refundScore, refundMeta,
 }: Props): JSX.Element {
   const allocated = useMemo(() => new Set(allocatedKey.split(',').filter(Boolean)), [allocatedKey]);
   const discovered = useMemo(
@@ -52,7 +57,10 @@ export const TreeView = memo(function TreeView({
   );
 
   const [view, setView] = useState({ x: 0, y: 0, zoom: 1 });
-  const [hover, setHover] = useState<string | null>(null);
+  // The panel holds the last node the player looked at or pressed, so it does
+  // not empty out the moment the pointer moves away.
+  const [inspected, setInspected] = useState<string | null>(null);
+  const [confirmRefund, setConfirmRefund] = useState(false);
   const drag = useRef<{ x: number; y: number; vx: number; vy: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -78,10 +86,12 @@ export const TreeView = memo(function TreeView({
   };
   const onUp = (): void => { drag.current = null; };
 
-  const hovered = hover ? NODES_BY_ID.get(hover) ?? null : null;
+  const shown = inspected ? NODES_BY_ID.get(inspected) ?? null : null;
+  const shownStatus = shown ? statuses.get(shown.id) ?? null : null;
 
   return (
     <div className="tree">
+      <div className="tree__stage">
       <svg
         ref={svgRef}
         className="tree__svg"
@@ -118,11 +128,15 @@ export const TreeView = memo(function TreeView({
               <g
                 key={n.id}
                 transform={`translate(${n.position.x} ${n.position.y})`}
-                className={`node node--${n.nodeType} node--${st}`}
+                className={`node node--${n.nodeType} node--${st}${inspected === n.id ? ' node--inspected' : ''}`}
                 style={{ ['--hue' as string]: REGION_HUE[n.region] }}
-                onPointerEnter={() => setHover(n.id)}
-                onPointerLeave={() => setHover((h) => (h === n.id ? null : h))}
-                onClick={() => { if (st === 'available') actions.allocate(n.id); }}
+                onPointerEnter={() => setInspected(n.id)}
+                onClick={() => {
+                  setInspected(n.id);
+                  // Touching the web is an answer of sorts: stop asking.
+                  setConfirmRefund(false);
+                  if (st === 'available') actions.allocate(n.id);
+                }}
               >
                 <NodeShape type={n.nodeType} />
                 {(n.nodeType === 'keystone' || n.nodeType === 'notable') && st === 'allocated' && (
@@ -134,8 +148,6 @@ export const TreeView = memo(function TreeView({
         </g>
       </svg>
 
-      {hovered && <Tooltip node={hovered} status={statuses.get(hovered.id)!} score={score} meta={meta} />}
-
       <div className="tree__legend">
         <span><Swatch type="small" /> small</span>
         <span><Swatch type="notable" /> notable</span>
@@ -143,6 +155,25 @@ export const TreeView = memo(function TreeView({
         <span><Swatch type="keystone" /> keystone</span>
         <span className="tree__hint">drag to pan · scroll to zoom</span>
       </div>
+      </div>
+
+      <NodeInfo
+        node={shown}
+        status={shownStatus}
+        framework={framework}
+        score={score}
+        meta={meta}
+        canRefund={canRefund}
+        refundScore={refundScore}
+        refundMeta={refundMeta}
+        confirming={confirmRefund}
+        onRefundClick={() => {
+          if (!confirmRefund) { setConfirmRefund(true); return; }
+          setConfirmRefund(false);
+          actions.refund();
+        }}
+        onRefundCancel={() => setConfirmRefund(false)}
+      />
     </div>
   );
 });
@@ -174,37 +205,85 @@ function Swatch({ type }: { type: PassiveNode['nodeType'] }): JSX.Element {
   );
 }
 
-function Tooltip({ node, status, score, meta }: {
-  node: PassiveNode; status: Status; score: number; meta: number;
+function NodeInfo({
+  node, status, framework, score, meta, canRefund, refundScore, refundMeta,
+  confirming, onRefundClick, onRefundCancel,
+}: {
+  node: PassiveNode | null;
+  status: Status | null;
+  framework: FrameworkId;
+  score: number;
+  meta: number;
+  canRefund: boolean;
+  refundScore: number;
+  refundMeta: number;
+  confirming: boolean;
+  onRefundClick: () => void;
+  onRefundCancel: () => void;
 }): JSX.Element {
-  const costScore = node.costs.score ?? 0;
-  const costMeta = node.costs.meta ?? 0;
+  const costScore = node?.costs.score ?? 0;
+  const costMeta = node?.costs.meta ?? 0;
+
   return (
-    <div className="tip">
-      <div className="tip__head">
-        <span className="tip__name">{node.name}</span>
-        <span className="tip__type">{node.nodeType}</span>
+    <div className="nodeinfo">
+      <div className="nodeinfo__body">
+        {node === null ? (
+          <p className="nodeinfo__empty">Point at a node to read what it does.</p>
+        ) : (
+          <>
+            <div className="nodeinfo__head">
+              <span className="nodeinfo__name">{node.name}</span>
+              <span className="nodeinfo__type">{node.nodeType}</span>
+            </div>
+            <p className="nodeinfo__desc">{describeNode(node, framework)}</p>
+            <div className="nodeinfo__foot">
+              {(costScore > 0 || costMeta > 0) && (
+                <span className="nodeinfo__costs">
+                  {costScore > 0 && (
+                    <span className={costScore > score ? 'cost cost--short' : 'cost'}>
+                      {costScore.toLocaleString()} Score
+                    </span>
+                  )}
+                  {costMeta > 0 && (
+                    <span className={costMeta > meta ? 'cost cost--alt cost--short' : 'cost cost--alt'}>
+                      {costMeta.toLocaleString()} Meta
+                    </span>
+                  )}
+                </span>
+              )}
+              <span className="nodeinfo__status">
+                {status === 'allocated' && 'Allocated'}
+                {status === 'available' && 'Click to allocate'}
+                {status === 'unaffordable' && 'Cannot afford'}
+                {status === 'locked' && 'Connect an adjacent node first'}
+              </span>
+            </div>
+          </>
+        )}
       </div>
-      <p className="tip__desc">{node.description}</p>
-      {(costScore > 0 || costMeta > 0) && (
-        <div className="tip__costs">
-          {costScore > 0 && (
-            <span className={costScore > score ? 'tip__cost tip__cost--short' : 'tip__cost'}>
-              {costScore} Score
-            </span>
-          )}
-          {costMeta > 0 && (
-            <span className={costMeta > meta ? 'tip__cost tip__cost--short' : 'tip__cost'}>
-              {costMeta} Meta
-            </span>
-          )}
-        </div>
-      )}
-      <div className="tip__status">
-        {status === 'allocated' && 'Allocated'}
-        {status === 'available' && 'Click to allocate'}
-        {status === 'unaffordable' && 'Cannot afford'}
-        {status === 'locked' && 'Connect an adjacent node first'}
+
+      <div className="nodeinfo__actions">
+        {confirming ? (
+          <>
+            <button type="button" className="btn btn--risk btn--sm" onClick={onRefundClick}>
+              Refund {Math.round(refundScore).toLocaleString()} Score
+              {refundMeta > 0 && ` + ${Math.round(refundMeta).toLocaleString()} Meta`}
+            </button>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={onRefundCancel}>
+              Keep build
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={onRefundClick}
+            disabled={!canRefund}
+            title="Return every point spent on the web"
+          >
+            Refund Points
+          </button>
+        )}
       </div>
     </div>
   );

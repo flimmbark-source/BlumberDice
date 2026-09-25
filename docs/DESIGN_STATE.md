@@ -204,7 +204,41 @@ Two consequences worth stating:
   so no result exists yet. This turned out to read well: the die hangs in the
   air while you choose.
 
-### 10. Hold is declared before the roll
+### 10. Node tooltips are written per framework
+
+The specification requires mechanical tooltips and progressive disclosure, and
+those pull against each other: a node that pays Score one way and Meta the
+other has to describe both, which names a framework the player may not know
+exists yet.
+
+Resolved by splitting the text. A node's `description` is either one line, or
+one line per framework, and the panel shows only the line for the framework in
+play. No tooltip anywhere names a framework — `tests/tree.test.ts` asserts
+that, and also asserts that every node whose behaviour actually differs has
+been split rather than left sharing a line.
+
+A node that does nothing under the active framework says so plainly ("No
+effect"), rather than being hidden. Knowing a node is inert right now is
+information the player needs to read their own build.
+
+### 11. Points are refundable in full
+
+A "Refund Points" button in the web's info panel returns every point spent and
+clears the build. Per-node refunds are not offered, because refunding one node
+would orphan whatever hangs off it.
+
+This is a deliberate prototype affordance and it has a real cost: free respec
+removes commitment from the passive web, and commitment is part of what makes
+buildcraft mean anything. It is here because the first milestone is "can I
+build multiple interesting dice machines", and answering that question needs
+cheap experimentation far more than it needs permanence. Whether the shipping
+game charges for a respec, limits them, or drops them entirely is a separate
+decision, and not one this prototype should make.
+
+The button asks once before acting, since a mis-click would otherwise destroy
+a build with no undo.
+
+### 12. Hold is declared before the roll
 
 Not specified. A prompt on every roll was intolerable. Base Hold is a pre-roll
 toggle ("store next result") plus playing a held result in place of a roll.

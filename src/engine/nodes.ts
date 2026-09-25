@@ -107,7 +107,10 @@ export const NODES: PassiveNode[] = [
     name: 'Upper Half',
     nodeType: 'notable',
     region: 'high',
-    description: 'While Framework A is active, rolls of 4-6 grant +3 Score.',
+    description: {
+      A: 'Rolls of 4-6 grant +3 Score.',
+      B: 'No effect.',
+    },
     costs: { score: 380 },
     prerequisites: ['hr_momentum'],
     position: { x: 332, y: -547 },
@@ -234,7 +237,10 @@ export const NODES: PassiveNode[] = [
     name: 'Handful',
     nodeType: 'keystone',
     region: 'volume',
-    description: 'Each manual roll produces 3 dice instead of 1. Framework A Score from every roll is multiplied by 0.55.',
+    description: {
+      A: 'Each manual roll produces 3 dice instead of 1. Score from every roll is multiplied by 0.55.',
+      B: 'Each manual roll produces 3 dice instead of 1.',
+    },
     costs: { score: 1700 },
     prerequisites: ['vl_splinter', 'vl_secondwind'],
     position: { x: 255, y: 718 },
@@ -254,7 +260,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'jackpot',
     description:
-      'Enables the jackpot: in Framework A a resolved 6 pays an extra +14 Score. All other Framework A Score is multiplied by 0.85.',
+      {
+        A: 'Enables the jackpot: a resolved 6 pays an extra +14 Score. All other Score is multiplied by 0.85.',
+        B: 'No effect. The jackpot pays nothing here.',
+      },
     costs: { score: 50 },
     prerequisites: ['start'],
     position: { x: -167, y: 118 },
@@ -270,7 +279,10 @@ export const NODES: PassiveNode[] = [
     name: 'Hot Streak',
     nodeType: 'small',
     region: 'jackpot',
-    description: 'Every roll that misses the jackpot adds +1 Pressure (max 25). A jackpot pays its Pressure as bonus Score, then clears it.',
+    description: {
+      A: 'Every roll that misses the jackpot adds +1 Pressure (max 25). A jackpot pays its Pressure as bonus Score, then clears it.',
+      B: 'No effect. Pressure does not build here.',
+    },
     costs: { score: 135 },
     prerequisites: ['jp_longodds'],
     position: { x: -227, y: 279 },
@@ -286,7 +298,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'jackpot',
     description:
-      'Before a manual roll you may wager up to 40 Score. A jackpot returns the wager multiplied by 2.5; any other result loses it.',
+      {
+        A: 'Before a manual roll you may wager up to 40 Score. A jackpot returns the wager multiplied by 2.5; any other result loses it.',
+        B: 'No effect. Wagers are not taken here.',
+      },
     costs: { score: 140 },
     prerequisites: ['jp_longodds'],
     position: { x: -320, y: 166 },
@@ -320,7 +335,10 @@ export const NODES: PassiveNode[] = [
     name: 'Pressure',
     nodeType: 'notable',
     region: 'jackpot',
-    description: 'Jackpot misses add +3 Pressure instead of +1, and the Pressure cap rises by 65.',
+    description: {
+      A: 'Jackpot misses add +3 Pressure instead of +1, and the Pressure cap rises by 65.',
+      B: 'No effect.',
+    },
     costs: { score: 520 },
     prerequisites: ['jp_hotstreak', 'jp_stake'],
     position: { x: -392, y: 319 },
@@ -336,7 +354,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'jackpot',
     description:
-      'After a Framework A roll pays 15 Score or more, choose to bank it or ride it. Riding stakes the payout on the next roll: a jackpot returns it at 3x, anything else loses it.',
+      {
+        A: 'After a roll pays 15 Score or more, choose to bank it or ride it. Riding stakes the payout on the next roll: a jackpot returns it at 3x, anything else loses it.',
+        B: 'No effect.',
+      },
     costs: { score: 610 },
     prerequisites: ['jp_pressure'],
     position: { x: -497, y: 404 },
@@ -349,7 +370,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'jackpot',
     description:
-      'In Framework A only a 6 grants Score. A 6 grants 9x its value before other modifiers, and jackpot payouts are multiplied by 1.5.',
+      {
+        A: 'Only a 6 grants Score. A 6 grants 9x its value before other modifiers, and jackpot payouts are multiplied by 1.5.',
+        B: 'No effect.',
+      },
     costs: { score: 1900 },
     prerequisites: ['jp_ride', 'jp_nearmiss'],
     position: { x: -421, y: 483 },
@@ -366,7 +390,10 @@ export const NODES: PassiveNode[] = [
     name: 'Repeat',
     nodeType: 'small',
     region: 'pattern',
-    description: 'Two identical results in a row grant +3 Score in Framework A.',
+    description: {
+      A: 'Two identical results in a row grant +3 Score.',
+      B: 'No effect.',
+    },
     costs: { score: 45 },
     prerequisites: ['start'],
     position: { x: 201, y: 42 },
@@ -384,7 +411,10 @@ export const NODES: PassiveNode[] = [
     name: 'Step',
     nodeType: 'small',
     region: 'pattern',
-    description: 'A result exactly one higher or one lower than the previous one grants +2 Score in Framework A.',
+    description: {
+      A: 'A result exactly one higher or one lower than the previous one grants +2 Score.',
+      B: 'No effect.',
+    },
     costs: { score: 115 },
     prerequisites: ['pt_repeat'],
     position: { x: 359, y: 25 },
@@ -402,7 +432,10 @@ export const NODES: PassiveNode[] = [
     name: 'Collector',
     nodeType: 'small',
     region: 'pattern',
-    description: 'The first time each face appears in the current set window it grants +2 Score in Framework A, or +1 Meta in Framework B.',
+    description: {
+      A: 'The first time each face appears in the current set window it grants +2 Score.',
+      B: 'The first time each face appears in the current set window it grants +1 Meta.',
+    },
     costs: { score: 130 },
     prerequisites: ['pt_repeat'],
     position: { x: 320, y: 166 },
@@ -420,7 +453,10 @@ export const NODES: PassiveNode[] = [
     name: 'Alternating Current',
     nodeType: 'small',
     region: 'pattern',
-    description: 'Four results alternating between 1-3 and 4-6 grant +5 Score in Framework A, or +1 Meta in Framework B.',
+    description: {
+      A: 'Four results alternating between 1-3 and 4-6 grant +5 Score.',
+      B: 'Four results alternating between 1-3 and 4-6 grant +1 Meta.',
+    },
     costs: { score: 245 },
     prerequisites: ['pt_step', 'pt_collector'],
     position: { x: 419, y: 118 },
@@ -439,7 +475,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'pattern',
     description:
-      'Two identical results in a row grant +6 Score in Framework A, or +1 Meta in Framework B. Three in a row grant +20 Score, or +2 Meta.',
+      {
+        A: 'Two identical results in a row grant +6 Score. Three in a row grant +20 Score.',
+        B: 'Two identical results in a row grant +1 Meta. Three in a row grant +2 Meta.',
+      },
     costs: { score: 370 },
     prerequisites: ['pt_step'],
     position: { x: 494, y: 103 },
@@ -463,7 +502,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'pattern',
     description:
-      'Three consecutive ascending or descending results grant +8 Score in Framework A, or +1 Meta in Framework B, and a bonus roll.',
+      {
+        A: 'Three consecutive ascending or descending results grant +8 Score and a bonus roll.',
+        B: 'Three consecutive ascending or descending results grant +1 Meta and a bonus roll.',
+      },
     costs: { score: 430 },
     prerequisites: ['pt_collector'],
     position: { x: 448, y: 232 },
@@ -485,7 +527,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'pattern',
     description:
-      'A result matching the one from two rolls ago, with a different value between them, grants +7 Score in Framework A, or +1 Meta in Framework B.',
+      {
+        A: 'A result matching the one from two rolls ago, with a different value between them, grants +7 Score.',
+        B: 'A result matching the one from two rolls ago, with a different value between them, grants +1 Meta.',
+      },
     costs: { score: 470 },
     prerequisites: ['pt_doubles'],
     position: { x: 627, y: 130 },
@@ -504,7 +549,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'pattern',
     description:
-      'Rolling all six faces since the last Full Set grants +30 Score in Framework A, or +4 Meta in Framework B, then starts a new set.',
+      {
+        A: 'Rolling all six faces since the last Full Set grants +30 Score, then starts a new set.',
+        B: 'Rolling all six faces since the last Full Set grants +4 Meta, then starts a new set.',
+      },
     costs: { score: 560 },
     prerequisites: ['pt_run', 'pt_alt'],
     position: { x: 595, y: 235 },
@@ -659,7 +707,10 @@ export const NODES: PassiveNode[] = [
     region: 'jackpot',
     bridges: ['volume', 'jackpot'],
     description:
-      'Each roll that misses the jackpot gives face 6 +0.08 weight, stacking up to 20 times. A jackpot clears the stacks.',
+      {
+        A: 'Each roll that misses the jackpot gives face 6 +0.08 weight, stacking up to 20 times. A jackpot clears the stacks.',
+        B: 'Existing stacks still apply, but no new ones build.',
+      },
     costs: { score: 560 },
     prerequisites: ['vl_quick', 'jp_hotstreak'],
     position: { x: -73, y: 353 },
@@ -682,7 +733,7 @@ export const NODES: PassiveNode[] = [
   },
 
   // -------------------------------------------------------------------------
-  // INNER RING — connective territory. Available once Framework B is known.
+  // INNER RING — connective territory. Available once Meta is known.
   // -------------------------------------------------------------------------
   {
     id: 'ad_transition',
@@ -690,7 +741,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'adaptive',
     description:
-      'The first roll after changing framework grants 2.5x Score in Framework A, or loses only 40% of its value in Framework B.',
+      {
+        A: 'The first roll after changing framework grants 2.5x Score.',
+        B: 'The first roll after changing framework costs only 40% of its value.',
+      },
     costs: { score: 200, meta: 40 },
     prerequisites: ['ct_second'],
     position: { x: -339, y: -121 },
@@ -725,7 +779,10 @@ export const NODES: PassiveNode[] = [
     name: 'Counterweight',
     nodeType: 'small',
     region: 'adaptive',
-    description: 'While Score is below 60, bonus roll chance is increased by 25%. While Score is above 400, Framework A Score is multiplied by 1.2.',
+    description: {
+      A: 'While Score is below 60, bonus roll chance is increased by 25%. While Score is above 400, Score gained is multiplied by 1.2.',
+      B: 'While Score is below 60, bonus roll chance is increased by 25%.',
+    },
     costs: { score: 420, meta: 35 },
     prerequisites: ['jp_longodds'],
     position: { x: -352, y: 73 },
@@ -742,7 +799,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'adaptive',
     description:
-      'While Score is below 40, Framework A rolls grant +6 Score. While Score is above 350, every resolved roll has a 20% chance to grant a bonus roll.',
+      {
+        A: 'While Score is below 40, rolls grant +6 Score. While Score is above 350, every resolved roll has a 20% chance to grant a bonus roll.',
+        B: 'While Score is above 350, every resolved roll has a 20% chance to grant a bonus roll.',
+      },
     costs: { score: 520, meta: 130 },
     prerequisites: ['ad_transition', 'ad_counterweight'],
     position: { x: -504, y: -35 },
@@ -759,7 +819,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'adaptive',
     description:
-      'Each roll adds 1 Pendulum, up to 25. Changing framework spends it: the next 3 rolls each grant Pendulum / 5 Score in Framework A, or Pendulum / 10 Meta in Framework B.',
+      {
+        A: 'Each roll adds 1 Pendulum, up to 25. Changing framework spends it: the next 3 rolls each grant Pendulum / 5 Score.',
+        B: 'Each roll adds 1 Pendulum, up to 25. Changing framework spends it: the next 3 rolls each grant Pendulum / 10 Meta.',
+      },
     costs: { score: 560, meta: 150 },
     prerequisites: ['ad_carryover'],
     position: { x: -603, y: -214 },
@@ -773,7 +836,10 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'adaptive',
     description:
-      'If the first result after changing framework equals the last result before it, grant 2 bonus rolls and +60 Score in Framework A, or +4 Meta in Framework B.',
+      {
+        A: 'If the first result after changing framework equals the last result before it, grant 2 bonus rolls and +60 Score.',
+        B: 'If the first result after changing framework equals the last result before it, grant 2 bonus rolls and +4 Meta.',
+      },
     costs: { score: 820, meta: 90 },
     prerequisites: ['ad_counterweight'],
     position: { x: -494, y: 103 },
@@ -823,7 +889,10 @@ export const NODES: PassiveNode[] = [
     region: 'jackpot',
     bridges: ['jackpot', 'control'],
     description:
-      'A lost wager refunds 50% of its Score. You may swap a held result in after seeing the rolled face rather than before.',
+      {
+        A: 'A lost wager refunds 50% of its Score. You may swap a held result in after seeing the rolled face rather than before.',
+        B: 'You may swap a held result in after seeing the rolled face rather than before.',
+      },
     costs: { score: 660, meta: 95 },
     prerequisites: ['jp_stake'],
     position: { x: -448, y: 232 },
@@ -839,7 +908,10 @@ export const NODES: PassiveNode[] = [
     region: 'high',
     bridges: ['pattern', 'high'],
     description:
-      'A pattern ending on a 5 or 6 grants +6 Score in Framework A, or +1 Meta in Framework B, and gives face 6 +0.8 weight on the next roll.',
+      {
+        A: 'A pattern ending on a 5 or 6 grants +6 Score and gives face 6 +0.8 weight on the next roll.',
+        B: 'A pattern ending on a 5 or 6 grants +1 Meta and gives face 6 +0.8 weight on the next roll.',
+      },
     costs: { score: 600, meta: 75 },
     prerequisites: ['pt_step', 'hr_edge'],
     position: { x: 330, y: -143 },

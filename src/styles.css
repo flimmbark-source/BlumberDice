@@ -46,7 +46,11 @@ button:disabled { cursor: default; }
 .currency__value {
   font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums;
   color: var(--score);
+  transition: color 0.18s, text-shadow 0.18s;
 }
+.currency__value--up { text-shadow: 0 0 14px currentColor; }
+.currency__value--down { color: var(--risk); }
+.currency--alt .currency__value--down { color: var(--risk); }
 .currency--alt .currency__value { color: var(--meta); }
 .currency__label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
 
@@ -227,7 +231,11 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 
 /* ------------------------------------------------------------ passive tree */
 
-.tree { position: relative; flex: 1; min-height: 0; background: var(--bg-2); }
+.tree {
+  position: relative; flex: 1; min-height: 0; background: var(--bg-2);
+  display: flex; flex-direction: column;
+}
+.tree__stage { position: relative; flex: 1 1 auto; min-height: 0; }
 .tree__svg { width: 100%; height: 100%; touch-action: none; cursor: grab; display: block; }
 .tree__svg:active { cursor: grabbing; }
 
@@ -258,6 +266,7 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 .node--available:hover .node__shape { fill: hsl(var(--hue) 40% 22%); }
 .node--allocated .node__shape { fill: hsl(var(--hue) 45% 34%); stroke: hsl(var(--hue) 65% 66%); }
 .node--allocated .node__inner { fill: hsl(var(--hue) 70% 76%); }
+.node--inspected .node__shape { stroke: #fff; }
 .node--hidden { fill: #26303b; }
 
 .node--keystone .node__shape { stroke-width: 4; }
@@ -272,21 +281,36 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 .tree__legend span { display: inline-flex; align-items: center; gap: 4px; }
 .tree__hint { margin-left: 6px; opacity: 0.7; }
 
-.tip {
-  position: absolute; right: 14px; top: 14px; width: 290px;
-  padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius);
-  background: rgba(20, 25, 32, 0.97); pointer-events: none;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+.nodeinfo {
+  flex: 0 0 auto;
+  display: flex; align-items: stretch; gap: 14px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--line);
+  background: rgba(13, 16, 20, 0.6);
+  min-height: 92px;
 }
-.tip__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.tip__name { font-weight: 650; }
-.tip__type { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-.tip__desc { margin: 8px 0 10px; font-size: 12.5px; color: #c3ccd8; }
-.tip__costs { display: flex; gap: 12px; font-size: 12.5px; font-weight: 600; }
-.tip__cost { color: var(--score); }
-.tip__cost:last-child:not(:first-child), .tip__costs span:nth-child(2) { color: var(--meta); }
-.tip__cost--short { color: var(--risk); }
-.tip__status { margin-top: 8px; font-size: 11.5px; color: var(--muted); }
+.nodeinfo__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.nodeinfo__empty { margin: auto 0; color: var(--muted); font-size: 12.5px; }
+.nodeinfo__head { display: flex; align-items: baseline; gap: 10px; }
+.nodeinfo__name { font-weight: 650; font-size: 14px; }
+.nodeinfo__type {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
+}
+.nodeinfo__desc { margin: 0; font-size: 12.5px; line-height: 1.45; color: #c3ccd8; }
+.nodeinfo__foot { margin-top: auto; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.nodeinfo__costs { display: inline-flex; gap: 12px; font-size: 12.5px; font-weight: 600; }
+.cost { color: var(--score); }
+.cost--alt { color: var(--meta); }
+.cost--short { color: var(--risk); }
+.nodeinfo__status { font-size: 11.5px; color: var(--muted); }
+
+.nodeinfo__actions {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end;
+  gap: 7px;
+}
+.btn--sm { padding: 5px 11px; font-size: 12px; border-radius: 7px; }
+.btn--sm:disabled { opacity: 0.4; }
+.btn--sm:disabled:hover { border-color: var(--line); background: var(--bg-3); }
 
 /* ------------------------------------------------------------ stats panel */
 

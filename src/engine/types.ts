@@ -201,6 +201,13 @@ export interface StatModifier {
 // Node data model
 // ---------------------------------------------------------------------------
 
+/**
+ * A node's tooltip. Nodes whose behaviour differs between the two frameworks
+ * carry one line each, and only the line for the active framework is shown —
+ * so the text never has to name a framework the player may not know about.
+ */
+export type NodeDescription = string | Record<FrameworkId, string>;
+
 export interface PassiveNode {
   id: string;
   name: string;
@@ -208,7 +215,7 @@ export interface PassiveNode {
   region: Region;
   /** Secondary region for bridges — used for layout and Duality accounting. */
   bridges?: [Region, Region];
-  description: string;
+  description: NodeDescription;
   costs: { score?: number; meta?: number };
   prerequisites: string[];
   position: { x: number; y: number };
