@@ -166,13 +166,24 @@ only taking the queued one consumes the queue.
 
 ### 9. Dice are thrown, not displayed
 
-Not specified. The main interaction is a physics tray: clicking a die pops it
-up, tumbles it and lands it. The simulation (`ui/dice/physics.ts`) decides
-nothing — the engine has already resolved the roll, and the die lands on the
-face it was handed. Its randomness is cosmetic and deliberately *not* drawn
-from the seeded game RNG, so watching dice can never perturb a reproducible
-run. `tests/dice-physics.test.ts` asserts a die settles on exactly the face it
-was given, for every face.
+Not specified. The main interaction is a set of 3D cubes on an isometric
+surface: clicking one pops it up, tumbles it through the air and rolls it to a
+stop. It is a genuine rigid-body simulation — quaternion orientation, contact
+impulses, friction — drawn with a hand-rolled isometric projection rather than
+a 3D library.
+
+It decides nothing. The engine has already resolved the roll, and the cube is
+eased onto the face it was handed by the shortest rotation that puts that face
+up. The randomness is cosmetic and deliberately *not* drawn from the seeded
+game RNG, so watching dice can never perturb a reproducible run.
+`tests/dice-physics.test.ts` asserts a die comes to rest with exactly the given
+face up, for every face, and that it lands flat rather than on an edge.
+
+One honest note: free physics cannot be trusted to land on a chosen face, so
+the last fraction of the roll is steered. The correction is the *nearest* valid
+orientation and runs over 240ms while the cube is already nearly still, which
+is why it does not read as a cheat — but it is a cheat, and it is the price of
+letting the engine stay authoritative.
 
 Two consequences worth stating:
 

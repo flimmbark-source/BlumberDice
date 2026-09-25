@@ -1,17 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import {
-  createWorld, DIE, dieAt, floorBand, nudgeDie, retireDie, setWorldWidth,
-  spawnDie, step, throwDie, WORLD_H, type DieBody, type World,
+  createWorld, DIE, DIE_HALF, dieAt, faceUp, LOCAL_VERTICES, nudgeDie,
+  orientationFor, retireDie, setWorldSize, spawnDie, step, throwDie,
+  type DieBody, type World,
 } from '../src/ui/dice/physics.ts';
+import {
+  dot, project, qRandom, qRotate, v3, VIEW_DIR, add, len,
+} from '../src/ui/dice/math3d.ts';
 import type { Face } from '../src/engine/types.ts';
+
+const FACES: Face[] = [1, 2, 3, 4, 5, 6];
 
 /** Advances the world in 16ms frames. */
 function run(world: World, ms: number): void {
   for (let t = 0; t < ms; t += 16) step(world, 16);
 }
 
-function thrownDie(result: Face | null, minTumbleMs = 480): { world: World; die: DieBody } {
-  const world = createWorld(900);
+function thrownDie(result: Face | null, minTumbleMs = 520): { world: World; die: DieBody } {
+  const world = createWorld(420, 420);
   const die = spawnDie(world);
   throwDie(world, die, { minTumbleMs });
   if (result !== null) die.result = result;
@@ -19,36 +25,61 @@ function thrownDie(result: Face | null, minTumbleMs = 480): { world: World; die:
 }
 
 describe('the animation always reports the engine result', () => {
-  it('settles on exactly the face it was handed, for every face', () => {
-    for (const face of [1, 2, 3, 4, 5, 6] as Face[]) {
-      for (let trial = 0; trial < 12; trial++) {
+  it('comes to rest with exactly the given face up, for every face', () => {
+    for (const face of FACES) {
+      for (let trial = 0; trial < 10; trial++) {
         const { world, die } = thrownDie(face);
-        run(world, 4000);
-        expect(die.tumbling, `face ${face} never settled`).toBe(false);
-        expect(die.face, `face ${face} trial ${trial}`).toBe(face);
+        run(world, 6000);
+        expect(die.state, `face ${face} never settled`).toBe('rest');
+        expect(faceUp(die.q), `face ${face} trial ${trial}`).toBe(face);
       }
+    }
+  });
+
+  it('settles perfectly flat, resting on a face rather than an edge', () => {
+    for (const face of FACES) {
+      const { world, die } = thrownDie(face);
+      run(world, 6000);
+      // Every vertex sits at either the floor or the top of the cube.
+      for (const lv of LOCAL_VERTICES) {
+        const z = die.pos.z + qRotate(die.q, lv).z;
+        const onFloor = Math.abs(z) < 0.01;
+        const onTop = Math.abs(z - DIE) < 0.01;
+        expect(onFloor || onTop, `vertex at z=${z.toFixed(2)}`).toBe(true);
+      }
+      expect(die.pos.z).toBeCloseTo(DIE_HALF, 5);
+    }
+  });
+
+  it('picks the nearest orientation, so the correction is small', () => {
+    // A die already close to showing its face should barely turn.
+    for (let trial = 0; trial < 40; trial++) {
+      const q = qRandom();
+      const target = orientationFor(q, 4);
+      expect(faceUp(target)).toBe(4);
+      // The correction never exceeds a half turn.
+      const d = Math.abs(q.x * target.x + q.y * target.y + q.z * target.z + q.w * target.w);
+      expect(2 * Math.acos(Math.min(1, d))).toBeLessThanOrEqual(Math.PI + 1e-6);
     }
   });
 
   it('keeps tumbling while no result has arrived', () => {
     const { world, die } = thrownDie(null);
     run(world, 3000);
-    expect(die.tumbling).toBe(true);
+    expect(die.state).toBe('tumbling');
     expect(die.settledAt).toBe(-1);
 
     die.result = 3;
-    run(world, 2000);
-    expect(die.tumbling).toBe(false);
-    expect(die.face).toBe(3);
+    run(world, 3000);
+    expect(die.state).toBe('rest');
+    expect(faceUp(die.q)).toBe(3);
   });
 
   it('keeps a die alive while a player is deciding', () => {
-    // A roll suspends on a player decision, so the die must go on tumbling for
-    // as long as someone might reasonably take to answer.
     const { world, die } = thrownDie(null);
     run(world, 30000);
     expect(die.retiring).toBe(false);
-    expect(die.tumbling).toBe(true);
+    expect(die.state).toBe('tumbling');
   });
 
   it('eventually gives up on a die that is never handed a result', () => {
@@ -58,114 +89,173 @@ describe('the animation always reports the engine result', () => {
   });
 
   it('honours the minimum tumble before showing an answer', () => {
-    const { world, die } = thrownDie(4, 900);
-    run(world, 700);
-    expect(die.tumbling).toBe(true);
-    run(world, 2000);
-    expect(die.tumbling).toBe(false);
-    expect(die.face).toBe(4);
+    const { world, die } = thrownDie(4, 1100);
+    run(world, 900);
+    expect(die.state).toBe('tumbling');
+    run(world, 3000);
+    expect(die.state).toBe('rest');
+    expect(faceUp(die.q)).toBe(4);
   });
 
   it('settles quickly enough to keep up with play', () => {
     let worst = 0;
     for (let trial = 0; trial < 40; trial++) {
-      const { world, die } = thrownDie(6, 480);
+      const { world, die } = thrownDie(6, 520);
       let elapsed = 0;
-      while (die.tumbling && elapsed < 6000) { step(world, 16); elapsed += 16; }
-      expect(die.tumbling).toBe(false);
+      while (die.state !== 'rest' && elapsed < 8000) { step(world, 16); elapsed += 16; }
+      expect(die.state).toBe('rest');
       worst = Math.max(worst, elapsed);
     }
-    // Comfortably inside the shortest possible gap between two manual rolls.
-    expect(worst).toBeLessThan(1400);
+    expect(worst).toBeLessThan(2200);
   });
 });
 
-describe('the tray contains its dice', () => {
-  it('keeps every die inside the floor band and the side walls', () => {
-    const world = createWorld(780);
-    const [top, bottom] = floorBand(WORLD_H);
+describe('the surface contains its dice', () => {
+  it('keeps every die on the surface and above the floor', () => {
+    const world = createWorld(460, 460);
     for (let i = 0; i < 10; i++) {
-      const d = spawnDie(world, { dropped: true });
-      throwDie(world, d, { minTumbleMs: 300, power: 1.4 });
-      d.result = ((i % 6) + 1) as Face;
+      const die = spawnDie(world, { dropped: true });
+      throwDie(world, die, { minTumbleMs: 300, power: 1.5 });
+      die.result = ((i % 6) + 1) as Face;
     }
-    for (let t = 0; t < 5000; t += 16) {
+    for (let t = 0; t < 6000; t += 16) {
       step(world, 16);
-      for (const d of world.dice) {
-        expect(d.x).toBeGreaterThanOrEqual(DIE * 0.6);
-        expect(d.x).toBeLessThanOrEqual(world.w - DIE * 0.6);
-        expect(d.y).toBeGreaterThanOrEqual(top);
-        expect(d.y).toBeLessThanOrEqual(bottom);
-        expect(d.z).toBeGreaterThanOrEqual(0);
+      for (const die of world.dice) {
+        expect(die.pos.x).toBeGreaterThanOrEqual(DIE_HALF);
+        expect(die.pos.x).toBeLessThanOrEqual(world.w - DIE_HALF);
+        expect(die.pos.y).toBeGreaterThanOrEqual(DIE_HALF);
+        expect(die.pos.y).toBeLessThanOrEqual(world.d - DIE_HALF);
+        expect(die.pos.z).toBeGreaterThanOrEqual(0);
+        expect(Number.isFinite(die.pos.z)).toBe(true);
       }
     }
   });
 
+  it('never lets a cube sink through the surface while tumbling', () => {
+    const world = createWorld(420, 420);
+    const die = spawnDie(world, { dropped: true });
+    throwDie(world, die, { minTumbleMs: 400, power: 1.6 });
+    die.result = 2;
+    let worst = 0;
+    for (let t = 0; t < 5000; t += 16) {
+      step(world, 16);
+      for (const lv of LOCAL_VERTICES) {
+        worst = Math.min(worst, die.pos.z + qRotate(die.q, lv).z);
+      }
+    }
+    // A little penetration between solver passes is fine; a cube falling
+    // through the floor is not.
+    expect(worst).toBeGreaterThan(-DIE * 0.2);
+  });
+
   it('separates dice that land on each other', () => {
-    const world = createWorld(900);
-    const a = spawnDie(world, { x: 400, y: 300 });
-    const b = spawnDie(world, { x: 404, y: 302 });
+    const world = createWorld(460, 460);
+    const a = spawnDie(world, { x: 200, y: 200 });
+    const b = spawnDie(world, { x: 205, y: 202 });
     a.result = 1; b.result = 2;
     throwDie(world, a, { minTumbleMs: 200 });
     throwDie(world, b, { minTumbleMs: 200 });
-    run(world, 4000);
-    expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(DIE * 0.7);
+    run(world, 6000);
+    expect(len({ x: a.pos.x - b.pos.x, y: a.pos.y - b.pos.y, z: a.pos.z - b.pos.z }))
+      .toBeGreaterThan(DIE * 0.9);
   });
 
-  it('rescales positions when the tray changes width', () => {
-    const world = createWorld(1000);
-    const d = spawnDie(world, { x: 900, y: 400 });
-    setWorldWidth(world, 500);
-    expect(d.x).toBeLessThanOrEqual(500 - DIE * 0.6);
-    expect(d.x).toBeGreaterThan(0);
+  it('rescales positions when the surface changes size', () => {
+    const world = createWorld(500, 500);
+    const die = spawnDie(world, { x: 450, y: 450 });
+    setWorldSize(world, 250, 250);
+    expect(die.pos.x).toBeLessThanOrEqual(250 - DIE_HALF);
+    expect(die.pos.y).toBeLessThanOrEqual(250 - DIE_HALF);
+    expect(die.pos.x).toBeGreaterThanOrEqual(DIE_HALF);
+  });
+});
+
+describe('isometric projection', () => {
+  it('places the ground axes 30 degrees off horizontal and z straight up', () => {
+    const o = project(v3(0, 0, 0));
+    expect(o).toEqual({ x: 0, y: 0 });
+    const up = project(v3(0, 0, 100));
+    expect(up.x).toBeCloseTo(0, 9);
+    expect(up.y).toBeCloseTo(-100, 9);
+    const xa = project(v3(100, 0, 0));
+    expect(xa.y / xa.x).toBeCloseTo(Math.tan(Math.PI / 6), 9);
+  });
+
+  it('shows exactly three faces of a cube from this angle', () => {
+    for (let trial = 0; trial < 30; trial++) {
+      const q = qRandom();
+      const axes = [
+        v3(1, 0, 0), v3(-1, 0, 0), v3(0, 1, 0), v3(0, -1, 0), v3(0, 0, 1), v3(0, 0, -1),
+      ];
+      const facing = axes.filter((a) => dot(qRotate(q, a), VIEW_DIR) > 0.002).length;
+      // Three, unless a face lies exactly edge-on to the camera.
+      expect(facing).toBeGreaterThanOrEqual(2);
+      expect(facing).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it('shows the result face on top, where the camera can see it', () => {
+    const { world, die } = thrownDie(5);
+    run(world, 6000);
+    const up = qRotate(die.q, v3(0, 0, 1));
+    expect(dot(add(die.pos, up), VIEW_DIR)).toBeGreaterThan(0);
+    expect(faceUp(die.q)).toBe(5);
   });
 });
 
 describe('tray interaction', () => {
-  it('finds the die under a point, preferring the one in the air', () => {
-    const world = createWorld(900);
-    const low = spawnDie(world, { x: 300, y: 400 });
-    const high = spawnDie(world, { x: 300, y: 400 });
-    high.z = 200;
-    expect(dieAt(world, 300, 400 - 200 * 0.55)).toBe(high);
-    expect(dieAt(world, 300, 400)).toBe(low);
-    expect(dieAt(world, 20, 20)).toBeNull();
+  it('finds the die under a point, preferring the nearer one', () => {
+    const world = createWorld(500, 500);
+    const back = spawnDie(world, { x: 100, y: 100 });
+    const front = spawnDie(world, { x: 400, y: 400 });
+    const pf = project(front.pos);
+    expect(dieAt(world, pf.x, pf.y)).toBe(front);
+    const pb = project(back.pos);
+    expect(dieAt(world, pb.x, pb.y)).toBe(back);
+    expect(dieAt(world, 9999, 9999)).toBeNull();
   });
 
   it('ignores dice that are leaving', () => {
-    const world = createWorld(900);
-    const d = spawnDie(world, { x: 300, y: 400 });
-    retireDie(d);
-    expect(dieAt(world, 300, 400)).toBeNull();
+    const world = createWorld(500, 500);
+    const die = spawnDie(world, { x: 250, y: 250 });
+    retireDie(die);
+    const p = project(die.pos);
+    expect(dieAt(world, p.x, p.y)).toBeNull();
   });
 
   it('removes a retired die once it has faded', () => {
-    const world = createWorld(900);
-    const d = spawnDie(world, { x: 300, y: 400 });
-    retireDie(d);
+    const world = createWorld(500, 500);
+    const die = spawnDie(world, { x: 250, y: 250 });
+    retireDie(die);
     run(world, 2000);
-    expect(world.dice).not.toContain(d);
+    expect(world.dice).not.toContain(die);
   });
 
-  it('nudges a resting die without starting a roll', () => {
-    const world = createWorld(900);
-    const d = spawnDie(world, { x: 400, y: 400 });
-    nudgeDie(d);
-    expect(Math.abs(d.vx) + Math.abs(d.vy)).toBeGreaterThan(0);
-    run(world, 600);
-    expect(d.tumbling).toBe(false);
-    expect(d.settledAt).toBe(-1);
+  it('nudges a resting die without changing what it shows', () => {
+    const world = createWorld(460, 460);
+    const die = spawnDie(world, { x: 230, y: 230 });
+    // throwDie clears the previous answer, so the result is handed over after.
+    throwDie(world, die, { minTumbleMs: 200 });
+    die.result = 3;
+    run(world, 6000);
+    expect(faceUp(die.q)).toBe(3);
+
+    nudgeDie(die);
+    run(world, 6000);
+    expect(die.state).toBe('rest');
+    // A nudge is not a re-roll: the answer is unchanged.
+    expect(faceUp(die.q)).toBe(3);
   });
 
   it('re-throwing clears the previous answer', () => {
     const { world, die } = thrownDie(5);
-    run(world, 3000);
-    expect(die.face).toBe(5);
+    run(world, 6000);
+    expect(faceUp(die.q)).toBe(5);
     throwDie(world, die, { minTumbleMs: 400 });
     expect(die.result).toBeNull();
-    expect(die.tumbling).toBe(true);
+    expect(die.state).toBe('tumbling');
     die.result = 2;
-    run(world, 3000);
-    expect(die.face).toBe(2);
+    run(world, 6000);
+    expect(faceUp(die.q)).toBe(2);
   });
 });

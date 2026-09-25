@@ -1,143 +1,193 @@
 import type { Face } from '../../engine/types.ts';
+import {
+  add, cross, dot, len, normalize, project, qFromTo, qIntegrate, qMul, qNormalize,
+  qRandom, qRotate, qSlerp, scale, sub, v3,
+  type Quat, type Vec3,
+} from './math3d.ts';
 
 /**
- * Presentation physics for the dice tray.
+ * Rigid-body dice on an isometric surface.
  *
- * This decides nothing. The engine has already resolved every roll; a body
- * tumbles through random faces and then lands on the face it was handed. The
- * randomness in here is cosmetic and deliberately not drawn from the seeded
- * game RNG, so watching dice can never perturb a reproducible run.
+ * This decides nothing. The engine has already resolved every roll; a cube
+ * tumbles freely and is then eased onto the face it was handed, by the
+ * shortest rotation that puts that face up. The randomness here is cosmetic
+ * and deliberately not drawn from the seeded game RNG, so watching dice can
+ * never perturb a reproducible run.
  *
- * Space is a fixed logical tray (WORLD_W x WORLD_H) that the renderer scales.
- * `z` is height above the tray: the renderer lifts the die up-screen and grows
- * its shadow, which reads as depth without a 3D pipeline.
+ * Coordinates are a right-handed world with +z up. The surface is the
+ * rectangle [0,w] x [0,d] at z = 0; see math3d.ts for the projection.
  */
 
-/** Logical tray height. Width follows the container's aspect so nothing is cropped. */
-export const WORLD_H = 600;
-export const DIE = 94;
-export const floorBand = (h: number): [number, number] => [h * FLOOR_TOP, h * FLOOR_BOTTOM];
+export const DIE = 66;
+const H = DIE / 2;
 
-const GRAVITY = 5200;
-const FLOOR_BOUNCE = 0.44;
-const WALL_BOUNCE = 0.56;
-const AIR_DRAG = 0.4;
-const FLOOR_DRAG = 3.4;
-const SPIN_DRAG = 2.6;
-/** On the tray, a die stops turning quickly; in the air it keeps its spin. */
-const GROUND_SPIN_DRAG = 14;
-const SLEEP_SPEED = 30;
-const SLEEP_SPIN = 1.4;
-/** However unlucky the bounces, a die stops this long after its minimum tumble. */
-const SETTLE_DEADLINE = 320;
-/** Dice rest in the lower band; the space above it is the throw's headroom. */
-const FLOOR_TOP = 0.34;
-const FLOOR_BOTTOM = 0.94;
+const GRAVITY = 4200;
+const FLOOR_RESTITUTION = 0.34;
+const WALL_RESTITUTION = 0.44;
+const FRICTION = 0.42;
+const LINEAR_DRAG = 0.5;
+const ANGULAR_DRAG = 0.55;
+/** Extra damping once the cube is lying on the surface, so it beds down. */
+const GROUND_ANGULAR_DRAG = 3.6;
+const SLEEP_SPEED = 26;
+const SLEEP_SPIN = 1.5;
+const SOLVER_ITERATIONS = 3;
+/** Contacts shallower than this are solved but not pushed apart. */
+const PENETRATION_SLOP = 0.4;
+/** Below this approach speed a contact is treated as resting, not bouncing. */
+const RESTITUTION_CUTOFF = 110;
+/** Milliseconds spent easing onto the result face. */
+const ALIGN_MS = 240;
+const SETTLE_DEADLINE = 420;
+const ORPHAN_TIMEOUT = 45000;
+
+/** Opposite faces sum to seven. */
+export const FACE_AXIS: Record<Face, Vec3> = {
+  1: v3(0, 0, 1),
+  6: v3(0, 0, -1),
+  2: v3(0, 1, 0),
+  5: v3(0, -1, 0),
+  3: v3(1, 0, 0),
+  4: v3(-1, 0, 0),
+};
+
+export const LOCAL_VERTICES: Vec3[] = [
+  v3(-H, -H, -H), v3(H, -H, -H), v3(H, H, -H), v3(-H, H, -H),
+  v3(-H, -H, H), v3(H, -H, H), v3(H, H, H), v3(-H, H, H),
+];
+
+export type DieState = 'idle' | 'tumbling' | 'aligning' | 'rest';
 
 export interface DieBody {
   key: number;
-  x: number; y: number; z: number;
-  vx: number; vy: number; vz: number;
-  rot: number; spin: number;
-  flip: number; flipSpin: number;
-  /** Face currently shown; random while tumbling, the result once settled. */
-  face: Face;
-  /** The engine's answer. Null while the die is still waiting for one. */
+  pos: Vec3;
+  vel: Vec3;
+  q: Quat;
+  omega: Vec3;
+
   result: Face | null;
   rollId: number | null;
   action: number;
   scoreDelta: number;
   metaDelta: number;
   isBonus: boolean;
-  tumbling: boolean;
-  settledAt: number;
-  /** Earliest time the die is allowed to stop, so a roll always reads. */
+
+  state: DieState;
   minTumbleUntil: number;
   bornAt: number;
-  /** Fades to 0 as the die leaves the tray. */
+  settledAt: number;
+
+  alignFrom: Quat;
+  alignTo: Quat;
+  alignT: number;
+  alignZ0: number;
+
   alpha: number;
   retiring: boolean;
-  /** Impact flashes, drawn as expanding rings. */
-  impacts: { t: number; strength: number }[];
   hover: boolean;
-  /** Small idle bob so a resting tray still feels alive. */
-  bobPhase: number;
-  /** How long this die's result floats above it, in ms. */
+  /** Landing rings, drawn on the surface. */
+  impacts: { t: number; strength: number; x: number; y: number }[];
   ghostLife: number;
 }
 
 export interface World {
   t: number;
+  /** Surface extent along the two ground axes. */
   w: number;
-  h: number;
+  d: number;
   dice: DieBody[];
   nextKey: number;
   shake: number;
 }
 
 const rnd = (a: number, b: number): number => a + Math.random() * (b - a);
-const randomFace = (): Face => (1 + Math.floor(Math.random() * 6)) as Face;
+const INV_MASS = 1;
+/** Uniform cube: the inertia tensor is a scalar, which keeps the solver short. */
+const INV_INERTIA = 6 / (DIE * DIE);
 
-export function createWorld(w = 1000): World {
-  return { t: 0, w, h: WORLD_H, dice: [], nextKey: 1, shake: 0 };
+export function createWorld(w = 420, d = 420): World {
+  return { t: 0, w, d, dice: [], nextKey: 1, shake: 0 };
 }
 
-/** Resizes the tray, keeping every die inside it. */
-export function setWorldWidth(world: World, w: number): void {
-  const prev = world.w;
+export function setWorldSize(world: World, w: number, d: number): void {
+  const kx = world.w > 0 ? w / world.w : 1;
+  const ky = world.d > 0 ? d / world.d : 1;
   world.w = w;
-  if (prev > 0 && Math.abs(prev - w) > 0.5) {
-    const k = w / prev;
-    for (const d of world.dice) d.x = Math.min(w - DIE * 0.6, Math.max(DIE * 0.6, d.x * k));
+  world.d = d;
+  for (const die of world.dice) {
+    die.pos.x = Math.min(w - H, Math.max(H, die.pos.x * kx));
+    die.pos.y = Math.min(d - H, Math.max(H, die.pos.y * ky));
   }
 }
 
-export function spawnDie(world: World, opts: { x?: number; y?: number; dropped?: boolean } = {}): DieBody {
+/** The face currently pointing up. */
+export function faceUp(q: Quat): Face {
+  let best: Face = 1;
+  let bestZ = -Infinity;
+  for (const f of [1, 2, 3, 4, 5, 6] as Face[]) {
+    const z = qRotate(q, FACE_AXIS[f]).z;
+    if (z > bestZ) { bestZ = z; best = f; }
+  }
+  return best;
+}
+
+/** Orientation nearest to `q` that puts `face` up. */
+export function orientationFor(q: Quat, face: Face): Quat {
+  const world = qRotate(q, FACE_AXIS[face]);
+  return qNormalize(qMul(qFromTo(world, v3(0, 0, 1)), q));
+}
+
+export function spawnDie(
+  world: World, opts: { x?: number; y?: number; dropped?: boolean } = {},
+): DieBody {
   const die: DieBody = {
     key: world.nextKey++,
-    x: opts.x ?? rnd(world.w * 0.22, world.w * 0.78),
-    y: opts.y ?? rnd(world.h * (FLOOR_TOP + 0.12), world.h * (FLOOR_BOTTOM - 0.06)),
-    z: opts.dropped ? rnd(300, 430) : 0,
-    vx: 0, vy: 0, vz: 0,
-    rot: rnd(-0.3, 0.3), spin: 0,
-    flip: 0, flipSpin: 0,
-    face: randomFace(),
+    pos: v3(
+      opts.x ?? rnd(world.w * 0.25, world.w * 0.75),
+      opts.y ?? rnd(world.d * 0.25, world.d * 0.75),
+      opts.dropped ? rnd(DIE * 4, DIE * 6) : H,
+    ),
+    vel: v3(0, 0, 0),
+    q: opts.dropped ? qRandom() : orientationFor(qRandom(), (1 + Math.floor(Math.random() * 6)) as Face),
+    omega: v3(0, 0, 0),
     result: null,
     rollId: null,
     action: -1,
     scoreDelta: 0,
     metaDelta: 0,
     isBonus: false,
-    tumbling: false,
-    settledAt: -1,
+    state: 'idle',
     minTumbleUntil: 0,
     bornAt: world.t,
+    settledAt: -1,
+    alignFrom: die_identity(),
+    alignTo: die_identity(),
+    alignT: 0,
+    alignZ0: H,
     alpha: opts.dropped ? 0 : 1,
     retiring: false,
-    impacts: [],
     hover: false,
-    bobPhase: Math.random() * Math.PI * 2,
+    impacts: [],
     ghostLife: 1400,
   };
   world.dice.push(die);
   return die;
 }
 
-/** Launches a die into a tumble. It will not settle before `minTumbleMs`. */
+function die_identity(): Quat {
+  return { x: 0, y: 0, z: 0, w: 1 };
+}
+
 export function throwDie(
   world: World,
   die: DieBody,
-  opts: { minTumbleMs: number; power?: number; fromClick?: boolean } = { minTumbleMs: 600 },
+  opts: { minTumbleMs: number; power?: number; fromClick?: boolean } = { minTumbleMs: 520 },
 ): void {
   const power = opts.power ?? 1;
-  die.vz = rnd(1080, 1290) * power;
-  const ang = rnd(0, Math.PI * 2);
-  const speed = rnd(110, 300) * power;
-  die.vx = Math.cos(ang) * speed;
-  die.vy = Math.sin(ang) * speed * 0.6;
-  die.spin = rnd(-12, 12);
-  die.flipSpin = rnd(17, 27) * (Math.random() < 0.5 ? -1 : 1);
-  die.tumbling = true;
+  die.vel = v3(rnd(-150, 150) * power, rnd(-150, 150) * power, rnd(880, 1080) * power);
+  die.omega = v3(rnd(-15, 15), rnd(-15, 15), rnd(-15, 15));
+  if (len(die.omega) < 7) die.omega = scale(normalize(die.omega), 9);
+  die.state = 'tumbling';
   die.result = null;
   die.rollId = null;
   die.settledAt = -1;
@@ -146,7 +196,7 @@ export function throwDie(
   die.minTumbleUntil = world.t + opts.minTumbleMs;
   die.bornAt = world.t;
   if (opts.fromClick) {
-    die.vz *= 1.12;
+    die.vel.z *= 1.1;
     world.shake = Math.min(world.shake + 3, 9);
   }
 }
@@ -155,170 +205,219 @@ export function retireDie(die: DieBody): void {
   die.retiring = true;
 }
 
-function collide(a: DieBody, b: DieBody): void {
-  // Height separation means they simply pass each other.
-  if (Math.abs(a.z - b.z) > DIE * 0.85) return;
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const dist = Math.hypot(dx, dy);
-  const min = DIE * 0.92;
-  if (dist >= min || dist === 0) return;
-
-  const nx = dx / dist;
-  const ny = dy / dist;
-  const overlap = (min - dist) / 2;
-  a.x -= nx * overlap; a.y -= ny * overlap;
-  b.x += nx * overlap; b.y += ny * overlap;
-
-  const rvx = b.vx - a.vx;
-  const rvy = b.vy - a.vy;
-  const sep = rvx * nx + rvy * ny;
-  if (sep > 0) return;
-  const imp = -(1 + 0.5) * sep / 2;
-  a.vx -= imp * nx; a.vy -= imp * ny;
-  b.vx += imp * nx; b.vy += imp * ny;
-  a.spin += rnd(-2.5, 2.5);
-  b.spin += rnd(-2.5, 2.5);
+export function nudgeDie(die: DieBody): void {
+  die.vel = add(die.vel, v3(rnd(-120, 120), rnd(-120, 120), rnd(120, 220)));
+  die.omega = add(die.omega, v3(rnd(-4, 4), rnd(-4, 4), rnd(-4, 4)));
+  if (die.state === 'rest' || die.state === 'idle') die.state = 'tumbling';
+  // A nudge is not a roll: whatever it was showing is still its answer.
+  die.minTumbleUntil = 0;
 }
+
+interface Plane { n: Vec3; c: number; restitution: number }
+
+function planesFor(world: World): Plane[] {
+  return [
+    { n: v3(0, 0, 1), c: 0, restitution: FLOOR_RESTITUTION },
+    { n: v3(1, 0, 0), c: 0, restitution: WALL_RESTITUTION },
+    { n: v3(-1, 0, 0), c: -world.w, restitution: WALL_RESTITUTION },
+    { n: v3(0, 1, 0), c: 0, restitution: WALL_RESTITUTION },
+    { n: v3(0, -1, 0), c: -world.d, restitution: WALL_RESTITUTION },
+  ];
+}
+
+/**
+ * Velocity-only contact solve for one vertex against one plane: a normal
+ * impulse plus Coulomb friction. Position is corrected separately, because
+ * pushing the body out once per penetrating vertex over-corrects badly — a
+ * cube resting flat has four contacts, and summing their corrections pumps
+ * energy in until it never settles.
+ */
+function solveContactVelocity(
+  die: DieBody, world: World, plane: Plane, vertex: Vec3, record: boolean,
+): void {
+  const p = add(die.pos, vertex);
+  const dist = dot(plane.n, p) - plane.c;
+  if (dist > PENETRATION_SLOP) return;
+
+  const r = vertex;
+  const pointVel = add(die.vel, cross(die.omega, r));
+  const vn = dot(pointVel, plane.n);
+  if (vn >= 0) return;
+
+  // Treat a slow contact as resting, so a settled cube does not buzz.
+  const e = -vn > RESTITUTION_CUTOFF ? plane.restitution : 0;
+  const rn = cross(r, plane.n);
+  const denom = INV_MASS + INV_INERTIA * dot(rn, rn);
+  const j = (-(1 + e) * vn) / denom;
+  die.vel = add(die.vel, scale(plane.n, j * INV_MASS));
+  die.omega = add(die.omega, scale(cross(r, scale(plane.n, j)), INV_INERTIA));
+
+  if (record && plane.n.z > 0.5 && -vn > 170) {
+    world.shake = Math.min(world.shake + Math.min(1, -vn / 900) * 4, 10);
+    die.impacts.push({ t: 0, strength: Math.min(1, -vn / 900), x: p.x, y: p.y });
+  }
+
+  const tangentVel = sub(pointVel, scale(plane.n, vn));
+  const tLen = len(tangentVel);
+  if (tLen < 1e-4) return;
+  const tDir = scale(tangentVel, -1 / tLen);
+  const rt = cross(r, tDir);
+  const tDenom = INV_MASS + INV_INERTIA * dot(rt, rt);
+  const jt = Math.min(tLen / tDenom, FRICTION * j);
+  die.vel = add(die.vel, scale(tDir, jt * INV_MASS));
+  die.omega = add(die.omega, scale(cross(r, scale(tDir, jt)), INV_INERTIA));
+}
+
+/** Pushes the body out of each plane once, by its deepest penetration. */
+function correctPenetration(die: DieBody, planes: Plane[]): void {
+  for (const plane of planes) {
+    let deepest = 0;
+    for (const lv of LOCAL_VERTICES) {
+      const p = add(die.pos, qRotate(die.q, lv));
+      deepest = Math.min(deepest, dot(plane.n, p) - plane.c);
+    }
+    if (deepest < 0) die.pos = add(die.pos, scale(plane.n, -deepest));
+  }
+}
+
+function separate(a: DieBody, b: DieBody): void {
+  const R = DIE * 0.62;
+  const delta = sub(b.pos, a.pos);
+  const dist = len(delta);
+  if (dist >= R * 2 || dist < 1e-6) return;
+  const n = scale(delta, 1 / dist);
+  const push = (R * 2 - dist) / 2;
+  a.pos = add(a.pos, scale(n, -push));
+  b.pos = add(b.pos, scale(n, push));
+
+  const rel = dot(sub(b.vel, a.vel), n);
+  if (rel > 0) return;
+  const j = (-(1 + 0.4) * rel) / 2;
+  a.vel = add(a.vel, scale(n, -j));
+  b.vel = add(b.vel, scale(n, j));
+  a.omega = add(a.omega, v3(rnd(-2, 2), rnd(-2, 2), rnd(-2, 2)));
+  b.omega = add(b.omega, v3(rnd(-2, 2), rnd(-2, 2), rnd(-2, 2)));
+}
+
+function lowestVertexHeight(die: DieBody): number {
+  let lowest = Infinity;
+  for (const lv of LOCAL_VERTICES) {
+    const z = die.pos.z + qRotate(die.q, lv).z;
+    if (z < lowest) lowest = z;
+  }
+  return lowest;
+}
+
+function beginAlign(die: DieBody, world: World): void {
+  die.state = 'aligning';
+  die.alignFrom = die.q;
+  die.alignTo = orientationFor(die.q, die.result!);
+  die.alignT = 0;
+  die.alignZ0 = die.pos.z;
+  die.vel = v3(0, 0, 0);
+  die.omega = v3(0, 0, 0);
+  void world;
+}
+
+const easeOutCubic = (t: number): number => 1 - (1 - t) ** 3;
 
 export function step(world: World, dtMs: number): void {
   const dt = Math.min(dtMs, 34) / 1000;
   world.t += dtMs;
   world.shake = Math.max(0, world.shake - dtMs * 0.03);
+  const planes = planesFor(world);
 
-  for (const d of world.dice) {
-    if (d.alpha < 1 && !d.retiring) d.alpha = Math.min(1, d.alpha + dt * 5);
-    if (d.retiring) d.alpha = Math.max(0, d.alpha - dt * 2.6);
+  for (const die of world.dice) {
+    if (die.alpha < 1 && !die.retiring) die.alpha = Math.min(1, die.alpha + dt * 5);
+    if (die.retiring) die.alpha = Math.max(0, die.alpha - dt * 2.6);
+    for (const im of die.impacts) im.t += dtMs;
+    die.impacts = die.impacts.filter((im) => im.t < 520);
 
-    d.bobPhase += dt * 1.7;
-    for (const im of d.impacts) im.t += dtMs;
-    d.impacts = d.impacts.filter((im) => im.t < 520);
-
-    if (!d.tumbling) {
-      // Resting: ease toward the tray, keep a whisper of motion.
-      d.vx *= 0.82; d.vy *= 0.82;
-      d.x += d.vx * dt; d.y += d.vy * dt;
-      d.spin *= 0.84;
-      d.rot += d.spin * dt;
+    if (die.state === 'aligning') {
+      die.alignT = Math.min(1, die.alignT + dtMs / ALIGN_MS);
+      const e = easeOutCubic(die.alignT);
+      die.q = qSlerp(die.alignFrom, die.alignTo, e);
+      die.pos.z = die.alignZ0 + (H - die.alignZ0) * e;
+      if (die.alignT >= 1) {
+        die.q = die.alignTo;
+        die.pos.z = H;
+        die.state = 'rest';
+        die.settledAt = world.t;
+      }
       continue;
     }
 
-    d.vz -= GRAVITY * dt;
-    d.z += d.vz * dt;
-    d.x += d.vx * dt;
-    d.y += d.vy * dt;
+    if (die.state !== 'tumbling') continue;
 
-    const drag = d.z > 1 ? AIR_DRAG : FLOOR_DRAG;
-    const damp = Math.max(0, 1 - drag * dt);
-    d.vx *= damp;
-    d.vy *= damp;
+    die.vel.z -= GRAVITY * dt;
+    die.pos = add(die.pos, scale(die.vel, dt));
+    die.q = qIntegrate(die.q, die.omega, dt);
 
-    // Floor
-    if (d.z <= 0) {
-      d.z = 0;
-      if (d.vz < -70) {
-        const strength = Math.min(1, -d.vz / 1200);
-        d.vz = -d.vz * FLOOR_BOUNCE;
-        d.spin *= 0.7;
-        d.flipSpin *= 0.62;
-        d.impacts.push({ t: 0, strength });
-        world.shake = Math.min(world.shake + strength * 5, 10);
-      } else {
-        d.vz = 0;
+    const grounded = lowestVertexHeight(die) < 1.5;
+    const linDamp = Math.max(0, 1 - LINEAR_DRAG * dt);
+    const angDamp = Math.max(0, 1 - (grounded ? GROUND_ANGULAR_DRAG : ANGULAR_DRAG) * dt);
+    die.vel.x *= linDamp;
+    die.vel.y *= linDamp;
+    die.omega = scale(die.omega, angDamp);
+
+    for (let iter = 0; iter < SOLVER_ITERATIONS; iter++) {
+      for (const plane of planes) {
+        for (const lv of LOCAL_VERTICES) {
+          solveContactVelocity(die, world, plane, qRotate(die.q, lv), iter === 0);
+        }
       }
     }
+    correctPenetration(die, planes);
 
-    // Walls
-    const m = DIE * 0.6;
-    const top = world.h * FLOOR_TOP;
-    const bottom = world.h * FLOOR_BOTTOM;
-    if (d.x < m) { d.x = m; d.vx = Math.abs(d.vx) * WALL_BOUNCE; d.spin += 3; }
-    if (d.x > world.w - m) { d.x = world.w - m; d.vx = -Math.abs(d.vx) * WALL_BOUNCE; d.spin -= 3; }
-    if (d.y < top) { d.y = top; d.vy = Math.abs(d.vy) * WALL_BOUNCE; d.spin -= 3; }
-    if (d.y > bottom) { d.y = bottom; d.vy = -Math.abs(d.vy) * WALL_BOUNCE; d.spin += 3; }
+    const speed = len(die.vel);
+    const spin = len(die.omega);
+    const lowest = lowestVertexHeight(die);
+    const calm = speed < SLEEP_SPEED && spin < SLEEP_SPIN && lowest < 2;
+    const overdue = world.t > die.minTumbleUntil + SETTLE_DEADLINE && lowest < DIE * 0.9;
 
-    d.rot += d.spin * dt;
-    const prevFlip = d.flip;
-    d.flip += d.flipSpin * dt;
-    const onFloor = d.z <= 0.5 && Math.abs(d.vz) < 60;
-    const spinDrag = onFloor ? GROUND_SPIN_DRAG : SPIN_DRAG;
-    d.spin *= Math.max(0, 1 - spinDrag * dt);
-    d.flipSpin *= Math.max(0, 1 - spinDrag * 0.8 * dt);
-
-    // Each half turn hides the face, which is where it can change.
-    if (Math.floor(prevFlip / Math.PI) !== Math.floor(d.flip / Math.PI)) {
-      d.face = randomFace();
-    }
-
-    const speed = Math.hypot(d.vx, d.vy);
-    const restEnough = d.z <= 0.5
-      && Math.abs(d.vz) < 40
-      && speed < SLEEP_SPEED
-      && Math.abs(d.flipSpin) < 3.6
-      && Math.abs(d.spin) < SLEEP_SPIN;
-    // A die that has had its time and is back on the tray stops regardless of
-    // how the bounces went, so a roll never drags on.
-    const overdue = d.z <= 1 && world.t > d.minTumbleUntil + SETTLE_DEADLINE;
-    const canStop = restEnough || overdue;
-
-    if (canStop && d.result !== null && world.t >= d.minTumbleUntil) {
-      d.tumbling = false;
-      d.settledAt = world.t;
-      d.face = d.result;
-      d.z = 0; d.vz = 0; d.vx = 0; d.vy = 0;
-      d.flip = 0; d.flipSpin = 0;
-      // Land on a lightly random tilt rather than perfectly square.
-      d.rot = Math.round(d.rot / (Math.PI / 2)) * (Math.PI / 2) + rnd(-0.05, 0.05);
-      d.spin = 0;
-    } else if (restEnough) {
-      if (world.t - d.bornAt > 45000 && d.result === null) {
-        // Nothing is coming for this die. Rather than hop forever, bow out.
-        // Generous, because a die keeps tumbling while a player thinks about
-        // a decision, and a replacement is thrown if a result arrives later.
-        d.retiring = true;
-        d.tumbling = false;
+    if (die.result !== null && world.t >= die.minTumbleUntil && (calm || overdue)) {
+      beginAlign(die, world);
+    } else if (calm) {
+      if (world.t - die.bornAt > ORPHAN_TIMEOUT && die.result === null) {
+        // Nothing is coming for this die. Generous, because a roll suspends
+        // while a player thinks, and a replacement is thrown if one arrives.
+        die.retiring = true;
+        die.state = 'rest';
       } else {
-        // Waiting on a result, or on the minimum tumble: keep it alive.
-        d.vz = rnd(260, 380);
-        d.flipSpin = rnd(10, 16) * (Math.random() < 0.5 ? -1 : 1);
-        d.spin = rnd(-5, 5);
+        // Waiting on a result, or on the minimum tumble: keep it moving.
+        die.vel.z = rnd(210, 300);
+        die.omega = v3(rnd(-6, 6), rnd(-6, 6), rnd(-6, 6));
       }
     }
   }
 
   for (let i = 0; i < world.dice.length; i++) {
-    for (let j = i + 1; j < world.dice.length; j++) collide(world.dice[i], world.dice[j]);
+    for (let j = i + 1; j < world.dice.length; j++) separate(world.dice[i], world.dice[j]);
   }
 
-  // Separating overlapping dice can shove one through a wall, so the bounds
-  // are enforced last rather than mid-step.
-  const m = DIE * 0.6;
-  const top = world.h * FLOOR_TOP;
-  const bottom = world.h * FLOOR_BOTTOM;
-  for (const d of world.dice) {
-    d.x = Math.min(world.w - m, Math.max(m, d.x));
-    d.y = Math.min(bottom, Math.max(top, d.y));
-    if (d.z < 0) d.z = 0;
+  // Separating dice can shove one through a wall, so bounds are enforced last.
+  for (const die of world.dice) {
+    die.pos.x = Math.min(world.w - H, Math.max(H, die.pos.x));
+    die.pos.y = Math.min(world.d - H, Math.max(H, die.pos.y));
+    if (die.state !== 'tumbling' && die.pos.z < H) die.pos.z = H;
+    if (die.pos.z < 0) die.pos.z = 0;
   }
 
-  world.dice = world.dice.filter((d) => !(d.retiring && d.alpha <= 0));
+  world.dice = world.dice.filter((die) => !(die.retiring && die.alpha <= 0));
 }
 
-/** Nudges a resting die, for a click that cannot start a roll. */
-export function nudgeDie(die: DieBody): void {
-  die.vx += rnd(-190, 190);
-  die.vy += rnd(-120, 120);
-  die.spin += rnd(-6, 6);
-}
-
-export function dieAt(world: World, x: number, y: number): DieBody | null {
+/** Frontmost die whose projected centre is near the given screen point. */
+export function dieAt(world: World, sx: number, sy: number): DieBody | null {
   let best: DieBody | null = null;
-  for (const d of world.dice) {
-    if (d.retiring) continue;
-    const sy = d.y - d.z * 0.55;
-    if (Math.abs(x - d.x) < DIE * 0.75 && Math.abs(y - sy) < DIE * 0.75) {
-      if (!best || d.z > best.z) best = d;
-    }
+  let bestDepth = -Infinity;
+  for (const die of world.dice) {
+    if (die.retiring) continue;
+    const p = project(die.pos);
+    if (Math.hypot(sx - p.x, sy - p.y) > DIE * 0.8) continue;
+    const depth = die.pos.x + die.pos.y + die.pos.z;
+    if (depth > bestDepth) { bestDepth = depth; best = die; }
   }
   return best;
 }
+
+export { H as DIE_HALF };

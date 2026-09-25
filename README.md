@@ -6,7 +6,7 @@ resolving a roll.
 ```bash
 npm install
 npm run dev        # play it
-npm test           # 139 deterministic tests
+npm test           # 145 deterministic tests
 npm run typecheck
 npm run build
 ```
@@ -18,8 +18,8 @@ reveal the second framework, hard reset).
 
 ## How it plays
 
-Click the die. It pops up, tumbles across the tray, bounces, settles, and
-floats its result above itself. You gain Score. Score buys nodes on a passive
+Click the die. It pops off an isometric surface, tumbles through the air,
+bounces, rolls to a stop, and floats its result above itself. You gain Score. Score buys nodes on a passive
 web, and the nodes change what a roll *is* — how the distribution is shaped, how
 often extra rolls appear, what sequences are worth, what you can do to a result
 after seeing it.
@@ -50,27 +50,50 @@ src/engine/
   sim.ts        headless harness for fixtures and balance runs
 
 src/ui/         store, HUD, passive web, stats, decisions, control rail, debug
-src/ui/dice/    physics tray: simulation, canvas painting, React glue
+src/ui/dice/    3D dice: vector/quaternion maths, rigid-body simulation,
+                isometric canvas painting, React glue
 tests/          framework, probability, tree, builds, interactions, save,
                 layout, dice-physics
 scripts/        radial.ts (generates the web layout), balance.ts, audit.ts,
                 measure.ts, layoutlib.ts
 ```
 
-### The dice tray
+### The dice
 
-`ui/dice/physics.ts` is a small rigid-body simulation — gravity, restitution,
-wall and die-to-die collision, angular damping — over a logical tray whose
-width follows the container. Height above the tray lifts a die up-screen and
-grows its shadow, and `|cos|` of a tumble phase squashes the face, which reads
-as a die turning over without a 3D pipeline.
+Real cubes, in a real 3D world, drawn in isometric projection on a canvas —
+no 3D library.
 
-It decides nothing. The engine resolves every roll first; a die tumbles through
-random faces and then lands on the face it was handed, so the animation can
-never disagree with the game state. Its randomness is deliberately not drawn
-from the seeded RNG, so watching dice cannot perturb a reproducible run.
-`tests/dice-physics.test.ts` pins that: a die settles on exactly its result,
-stays inside the tray, and always stops within 1.4s.
+`ui/dice/math3d.ts` holds vectors, quaternions and the projection. The camera
+is a true isometric one: the ground axes lean 30 degrees apart, z runs straight
+up the screen, and the view direction works out to -(1,1,1), which doubles as
+the depth key for sorting.
+
+`ui/dice/physics.ts` is a rigid-body simulation. Each die is a cube with an
+orientation quaternion and an angular velocity, integrated under gravity. Its
+eight vertices are solved against five planes — the surface and four walls —
+with a normal impulse and Coulomb friction per contact. A uniform cube has a
+scalar inertia tensor, which keeps that solver short. Velocity and position are
+solved in separate passes: pushing the body out once per penetrating vertex
+over-corrects badly, because a cube resting flat has four contacts, and summing
+their corrections pumps in energy until it never settles.
+
+`ui/dice/render.ts` paints it. Back faces are culled against the view
+direction, the remaining three are depth-sorted and flat-shaded from a single
+light, and pips are drawn in each face's own 2D frame, so the projection places
+them exactly. Shadows are the convex hull of the eight vertices cast down the
+light ray onto the surface, blurred by height.
+
+It decides nothing. The engine resolves every roll first; a cube tumbles freely
+and is then eased onto the face it was handed, by the shortest rotation that
+puts that face up — so the correction is small enough to be invisible, and the
+animation can never disagree with the game state. Its randomness is
+deliberately not drawn from the seeded RNG, so watching dice cannot perturb a
+reproducible run.
+
+`tests/dice-physics.test.ts` pins all of it: a die comes to rest with exactly
+the given face up for every face, sits perfectly flat rather than on an edge,
+never sinks through the surface, stays inside the walls, and always stops
+within 2.2s.
 
 ### The passive web
 
@@ -148,7 +171,7 @@ tests/builds.test.ts         fixtures for all six archetypes and six hybrids
 tests/interactions.test.ts   keystone composition, hold, flip, seal, wagering, adaptive
 tests/save.test.ts           round-trip, migration, in-flight cascades
 tests/layout.test.ts         no crossing connections, no overlaps, link length
-tests/dice-physics.test.ts   the animation always reports the engine's result
+tests/dice-physics.test.ts   3D settling, the result face, containment, projection
 ```
 
 The build tests assert *distinctness*, not target numbers: that High Roller
