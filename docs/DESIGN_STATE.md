@@ -223,7 +223,7 @@ information the player needs to read their own build.
 
 ### 11. Points are refundable in full
 
-A "Refund Points" button in the web's info panel returns every point spent and
+A "Refund Points" button in the corner of the web returns every point spent and
 clears the build. Per-node refunds are not offered, because refunding one node
 would orphan whatever hangs off it.
 

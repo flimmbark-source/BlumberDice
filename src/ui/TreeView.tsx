@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { EDGES, NODES, NODES_BY_ID } from '../engine/nodes.ts';
 import { checkAllocation, describeNode, isReachable, isVisible } from '../engine/tree.ts';
 import type { DiscoveryFlag, FrameworkId, PassiveNode, Region } from '../engine/types.ts';
@@ -10,14 +10,47 @@ import { actions } from './store.ts';
  */
 
 /** Viewport fitted to the real node bounds, so the whole web is visible at 1x. */
-const VIEWBOX = (() => {
+const VB = (() => {
   const pad = 80;
   const xs = NODES.map((n) => n.position.x);
   const ys = NODES.map((n) => n.position.y);
   const minX = Math.min(...xs) - pad;
   const minY = Math.min(...ys) - pad;
-  return `${minX} ${minY} ${Math.max(...xs) + pad - minX} ${Math.max(...ys) + pad - minY}`;
+  return { minX, minY, w: Math.max(...xs) + pad - minX, h: Math.max(...ys) + pad - minY };
 })();
+const VIEWBOX = `${VB.minX} ${VB.minY} ${VB.w} ${VB.h}`;
+
+const NODE_RADIUS: Record<PassiveNode['nodeType'], number> = {
+  keystone: 34, notable: 22, bridge: 21, small: 13,
+};
+
+const POPUP_WIDTH = 296;
+
+/**
+ * Where a node sits in the container, in pixels.
+ *
+ * Computed rather than read back from the DOM: the transform is known exactly
+ * (an SVG viewBox letterboxed by `xMidYMid meet`, then the pan and zoom applied
+ * to the inner group), and doing the arithmetic keeps the popup in step with a
+ * drag without a second render pass per frame.
+ */
+function nodeScreenPos(
+  node: PassiveNode,
+  view: { x: number; y: number; zoom: number },
+  size: { w: number; h: number },
+): { x: number; y: number; radius: number } {
+  const fit = Math.min(size.w / VB.w, size.h / VB.h);
+  const offX = (size.w - VB.w * fit) / 2 - VB.minX * fit;
+  const offY = (size.h - VB.h * fit) / 2 - VB.minY * fit;
+  // transform="scale(zoom) translate(x y)" maps p to zoom * (p + t).
+  const ux = (node.position.x + view.x) * view.zoom;
+  const uy = (node.position.y + view.y) * view.zoom;
+  return {
+    x: ux * fit + offX,
+    y: uy * fit + offY,
+    radius: NODE_RADIUS[node.nodeType] * view.zoom * fit,
+  };
+}
 
 const REGION_HUE: Record<Region, number> = {
   core: 45, high: 18, volume: 150, jackpot: 330, control: 205, pattern: 265, adaptive: 90,
@@ -57,12 +90,27 @@ export const TreeView = memo(function TreeView({
   );
 
   const [view, setView] = useState({ x: 0, y: 0, zoom: 1 });
+  const [size, setSize] = useState({ w: 0, h: 0 });
   // The panel holds the last node the player looked at or pressed, so it does
   // not empty out the moment the pointer moves away.
   const [inspected, setInspected] = useState<string | null>(null);
   const [confirmRefund, setConfirmRefund] = useState(false);
   const drag = useRef<{ x: number; y: number; vx: number; vy: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = (): void => {
+      const r = el.getBoundingClientRect();
+      setSize((s) => (s.w === r.width && s.h === r.height ? s : { w: r.width, h: r.height }));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const statuses = useMemo(() => {
     const m = new Map<string, Status>();
@@ -89,9 +137,10 @@ export const TreeView = memo(function TreeView({
   const shown = inspected ? NODES_BY_ID.get(inspected) ?? null : null;
   const shownStatus = shown ? statuses.get(shown.id) ?? null : null;
 
+  const anchor = shown && size.w > 0 ? nodeScreenPos(shown, view, size) : null;
+
   return (
-    <div className="tree">
-      <div className="tree__stage">
+    <div className="tree" ref={wrapRef}>
       <svg
         ref={svgRef}
         className="tree__svg"
@@ -148,6 +197,18 @@ export const TreeView = memo(function TreeView({
         </g>
       </svg>
 
+      {shown && anchor && (
+        <NodePopup
+          node={shown}
+          status={shownStatus}
+          framework={framework}
+          score={score}
+          meta={meta}
+          anchor={anchor}
+          size={size}
+        />
+      )}
+
       <div className="tree__legend">
         <span><Swatch type="small" /> small</span>
         <span><Swatch type="notable" /> notable</span>
@@ -155,25 +216,38 @@ export const TreeView = memo(function TreeView({
         <span><Swatch type="keystone" /> keystone</span>
         <span className="tree__hint">drag to pan · scroll to zoom</span>
       </div>
-      </div>
 
-      <NodeInfo
-        node={shown}
-        status={shownStatus}
-        framework={framework}
-        score={score}
-        meta={meta}
-        canRefund={canRefund}
-        refundScore={refundScore}
-        refundMeta={refundMeta}
-        confirming={confirmRefund}
-        onRefundClick={() => {
-          if (!confirmRefund) { setConfirmRefund(true); return; }
-          setConfirmRefund(false);
-          actions.refund();
-        }}
-        onRefundCancel={() => setConfirmRefund(false)}
-      />
+      <div className="tree__tools">
+        {confirmRefund ? (
+          <>
+            <button
+              type="button"
+              className="btn btn--risk btn--sm"
+              onClick={() => { setConfirmRefund(false); actions.refund(); }}
+            >
+              Refund {Math.round(refundScore).toLocaleString()} Score
+              {refundMeta > 0 && ` + ${Math.round(refundMeta).toLocaleString()} Meta`}
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => setConfirmRefund(false)}
+            >
+              Keep build
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={() => setConfirmRefund(true)}
+            disabled={!canRefund}
+            title="Return every point spent on the web"
+          >
+            Refund Points
+          </button>
+        )}
+      </div>
     </div>
   );
 });
@@ -205,85 +279,58 @@ function Swatch({ type }: { type: PassiveNode['nodeType'] }): JSX.Element {
   );
 }
 
-function NodeInfo({
-  node, status, framework, score, meta, canRefund, refundScore, refundMeta,
-  confirming, onRefundClick, onRefundCancel,
-}: {
-  node: PassiveNode | null;
+/**
+ * Anchored above the last node the player pointed at or pressed. Floating
+ * rather than docked, because a panel in the layout changed height with every
+ * description and shoved the web around underneath the pointer.
+ */
+function NodePopup({ node, status, framework, score, meta, anchor, size }: {
+  node: PassiveNode;
   status: Status | null;
   framework: FrameworkId;
   score: number;
   meta: number;
-  canRefund: boolean;
-  refundScore: number;
-  refundMeta: number;
-  confirming: boolean;
-  onRefundClick: () => void;
-  onRefundCancel: () => void;
+  anchor: { x: number; y: number; radius: number };
+  size: { w: number; h: number };
 }): JSX.Element {
-  const costScore = node?.costs.score ?? 0;
-  const costMeta = node?.costs.meta ?? 0;
+  const costScore = node.costs.score ?? 0;
+  const costMeta = node.costs.meta ?? 0;
+
+  const gap = anchor.radius + 14;
+  // Sit under the node instead when there is no room above it.
+  const below = anchor.y - gap < 150;
+  const half = POPUP_WIDTH / 2;
+  const left = Math.min(Math.max(anchor.x, half + 10), Math.max(half + 10, size.w - half - 10));
 
   return (
-    <div className="nodeinfo">
-      <div className="nodeinfo__body">
-        {node === null ? (
-          <p className="nodeinfo__empty">Point at a node to read what it does.</p>
-        ) : (
-          <>
-            <div className="nodeinfo__head">
-              <span className="nodeinfo__name">{node.name}</span>
-              <span className="nodeinfo__type">{node.nodeType}</span>
-            </div>
-            <p className="nodeinfo__desc">{describeNode(node, framework)}</p>
-            <div className="nodeinfo__foot">
-              {(costScore > 0 || costMeta > 0) && (
-                <span className="nodeinfo__costs">
-                  {costScore > 0 && (
-                    <span className={costScore > score ? 'cost cost--short' : 'cost'}>
-                      {costScore.toLocaleString()} Score
-                    </span>
-                  )}
-                  {costMeta > 0 && (
-                    <span className={costMeta > meta ? 'cost cost--alt cost--short' : 'cost cost--alt'}>
-                      {costMeta.toLocaleString()} Meta
-                    </span>
-                  )}
-                </span>
-              )}
-              <span className="nodeinfo__status">
-                {status === 'allocated' && 'Allocated'}
-                {status === 'available' && 'Click to allocate'}
-                {status === 'unaffordable' && 'Cannot afford'}
-                {status === 'locked' && 'Connect an adjacent node first'}
-              </span>
-            </div>
-          </>
-        )}
+    <div
+      className={`nodepop${below ? ' nodepop--below' : ''}`}
+      style={{ left, top: anchor.y + (below ? gap : -gap), width: POPUP_WIDTH }}
+    >
+      <div className="nodepop__head">
+        <span className="nodepop__name">{node.name}</span>
+        <span className="nodepop__type">{node.nodeType}</span>
       </div>
-
-      <div className="nodeinfo__actions">
-        {confirming ? (
-          <>
-            <button type="button" className="btn btn--risk btn--sm" onClick={onRefundClick}>
-              Refund {Math.round(refundScore).toLocaleString()} Score
-              {refundMeta > 0 && ` + ${Math.round(refundMeta).toLocaleString()} Meta`}
-            </button>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={onRefundCancel}>
-              Keep build
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            onClick={onRefundClick}
-            disabled={!canRefund}
-            title="Return every point spent on the web"
-          >
-            Refund Points
-          </button>
-        )}
+      <p className="nodepop__desc">{describeNode(node, framework)}</p>
+      {(costScore > 0 || costMeta > 0) && (
+        <div className="nodepop__costs">
+          {costScore > 0 && (
+            <span className={costScore > score ? 'cost cost--short' : 'cost'}>
+              {costScore.toLocaleString()} Score
+            </span>
+          )}
+          {costMeta > 0 && (
+            <span className={costMeta > meta ? 'cost cost--alt cost--short' : 'cost cost--alt'}>
+              {costMeta.toLocaleString()} Meta
+            </span>
+          )}
+        </div>
+      )}
+      <div className="nodepop__status">
+        {status === 'allocated' && 'Allocated'}
+        {status === 'available' && 'Click to allocate'}
+        {status === 'unaffordable' && 'Cannot afford'}
+        {status === 'locked' && 'Connect an adjacent node first'}
       </div>
     </div>
   );

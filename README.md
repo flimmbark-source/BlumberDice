@@ -166,10 +166,13 @@ what the player currently thinks a roll is for.
 most deep nodes have several routes in. Build identity is carried by shape, size
 and connection structure; there are no branch labels.
 
-The info panel below the web holds the last node you pointed at or pressed, so
-it does not empty out as the pointer moves, and it carries the **Refund Points**
-button — a full respec, since refunding a single node would orphan whatever
-hangs off it.
+Node information appears in a popup anchored above the last node you pointed at
+or pressed, so it stays readable while you look elsewhere and follows that node
+as you pan. It floats over the web rather than sitting in the layout — a docked
+panel changed height with every description and shoved the web around under the
+pointer — and it never takes a pointer event, so the node beneath stays
+hoverable. **Refund Points** sits in the corner of the web: a full respec, since
+refunding a single node would orphan whatever hangs off it.
 
 A node whose behaviour differs between the two frameworks carries one line of
 text for each, and only the line for the framework in play is shown. No tooltip

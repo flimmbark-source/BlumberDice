@@ -233,9 +233,8 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 
 .tree {
   position: relative; flex: 1; min-height: 0; background: var(--bg-2);
-  display: flex; flex-direction: column;
+  overflow: hidden;
 }
-.tree__stage { position: relative; flex: 1 1 auto; min-height: 0; }
 .tree__svg { width: 100%; height: 100%; touch-action: none; cursor: grab; display: block; }
 .tree__svg:active { cursor: grabbing; }
 
@@ -281,32 +280,45 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 .tree__legend span { display: inline-flex; align-items: center; gap: 4px; }
 .tree__hint { margin-left: 6px; opacity: 0.7; }
 
-.nodeinfo {
-  flex: 0 0 auto;
-  display: flex; align-items: stretch; gap: 14px;
-  padding: 11px 14px;
-  border-top: 1px solid var(--line);
-  background: rgba(13, 16, 20, 0.6);
-  min-height: 92px;
+.nodepop {
+  position: absolute; z-index: 5;
+  transform: translate(-50%, -100%);
+  padding: 11px 13px 10px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: rgba(18, 23, 30, 0.97);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  /* Never eat a pointer event: the web underneath stays hoverable. */
+  pointer-events: none;
 }
-.nodeinfo__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-.nodeinfo__empty { margin: auto 0; color: var(--muted); font-size: 12.5px; }
-.nodeinfo__head { display: flex; align-items: baseline; gap: 10px; }
-.nodeinfo__name { font-weight: 650; font-size: 14px; }
-.nodeinfo__type {
+.nodepop--below { transform: translate(-50%, 0); }
+
+/* A small tail pointing back at the node. */
+.nodepop::after {
+  content: ''; position: absolute; left: 50%; margin-left: -7px;
+  border: 7px solid transparent;
+}
+.nodepop:not(.nodepop--below)::after {
+  top: 100%; border-top-color: rgba(18, 23, 30, 0.97);
+}
+.nodepop--below::after {
+  bottom: 100%; border-bottom-color: rgba(18, 23, 30, 0.97);
+}
+
+.nodepop__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.nodepop__name { font-weight: 650; font-size: 13.5px; }
+.nodepop__type {
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
 }
-.nodeinfo__desc { margin: 0; font-size: 12.5px; line-height: 1.45; color: #c3ccd8; }
-.nodeinfo__foot { margin-top: auto; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.nodeinfo__costs { display: inline-flex; gap: 12px; font-size: 12.5px; font-weight: 600; }
+.nodepop__desc { margin: 7px 0 0; font-size: 12.5px; line-height: 1.45; color: #c3ccd8; }
+.nodepop__costs { display: flex; gap: 12px; margin-top: 9px; font-size: 12.5px; font-weight: 600; }
 .cost { color: var(--score); }
 .cost--alt { color: var(--meta); }
 .cost--short { color: var(--risk); }
-.nodeinfo__status { font-size: 11.5px; color: var(--muted); }
+.nodepop__status { margin-top: 7px; font-size: 11.5px; color: var(--muted); }
 
-.nodeinfo__actions {
-  flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end;
-  gap: 7px;
+.tree__tools {
+  position: absolute; right: 12px; bottom: 9px; z-index: 4;
+  display: flex; align-items: center; gap: 7px;
 }
 .btn--sm { padding: 5px 11px; font-size: 12px; border-radius: 7px; }
 .btn--sm:disabled { opacity: 0.4; }
