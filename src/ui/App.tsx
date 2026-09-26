@@ -142,6 +142,7 @@ export function App(): JSX.Element {
                   expanded={expanded}
                   setExpanded={setExpanded}
                   focus={focus}
+                  onFocusConsumed={() => setFocus(null)}
                   embedded
                 />
                 {hasGoalDisplay && (
