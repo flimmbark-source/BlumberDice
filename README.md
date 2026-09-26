@@ -222,6 +222,13 @@ The popup's three classes are told apart before a word is read — a Small is
 blue, a Notable violet, a Keystone gold, a Bridge teal — because the class is
 what says whether a node is a number, a new rule, or a change to the game.
 
+House style for node copy: say the number, never a vague quantifier; *roll*
+for something that happened and *result* for a stored or candidate value;
+×N for multiplication; active voice; second person only where the player
+makes a choice; and no pipeline vocabulary — a node never mentions
+*resolving*. A node inert under the framework in play states the condition
+that would revive it rather than saying "no effect".
+
 `scripts/sheet.html` renders every card as a contact sheet for eyeballing
 the whole vocabulary at once: `npx vite`, then `node scripts/sheet-shot.mjs
 out.png`.

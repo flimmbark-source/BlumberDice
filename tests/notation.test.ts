@@ -193,15 +193,43 @@ describe('the vocabulary is shared rather than per-node', () => {
 
 describe('prose stays the precision layer, not the explanation', () => {
   it('keeps every description to a couple of sentences', () => {
+    // One cap for everything. Keystones used to get 46 words on the theory
+    // that they do more, but the longest one needs 24: complexity belongs in
+    // the notation and the clause, not in a longer paragraph.
     const wordy: string[] = [];
     for (const n of NODES) {
       for (const fw of FRAMEWORKS) {
         const words = describeNode(n, fw).split(/\s+/).length;
-        const cap = n.nodeType === 'keystone' ? 46 : 34;
-        if (words > cap) wordy.push(`${n.id}/${fw}: ${words} words`);
+        if (words > 28) wordy.push(`${n.id}/${fw}: ${words} words`);
       }
     }
     expect(wordy).toEqual([]);
+  });
+
+  it('writes for a player, not for the engine', () => {
+    // "Resolve" is a stage of the roll pipeline. It leaked into fourteen
+    // tooltips, where it meant nothing a player could act on, and it blunted
+    // the one node (Hold) where the distinction actually matters.
+    const enginese = /\b(resolv\w*|sampling pool|manual roll|modifier applies to)\b/i;
+    // "No effect" says a node is inert without saying what would revive it.
+    const deadEnd = /\bno effect\b/i;
+    for (const n of NODES) {
+      for (const fw of FRAMEWORKS) {
+        const d = describeNode(n, fw);
+        expect(enginese.test(d), `${n.id}/${fw}: ${d}`).toBe(false);
+        expect(deadEnd.test(d), `${n.id}/${fw}: ${d}`).toBe(false);
+      }
+    }
+  });
+
+  it('spells multiplication one way', () => {
+    // "2.5x", "multiplied by 1.2" and "at 3x" were all in use at once.
+    for (const n of NODES) {
+      for (const fw of FRAMEWORKS) {
+        const d = describeNode(n, fw);
+        expect(/\d\s*x\b|multiplied by/i.test(d), `${n.id}/${fw}: ${d}`).toBe(false);
+      }
+    }
   });
 
   it('names its systems with the shared keywords', () => {

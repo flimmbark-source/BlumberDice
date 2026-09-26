@@ -52,7 +52,7 @@ export const NODES: PassiveNode[] = [
     name: 'Raised Floor',
     nodeType: 'small',
     region: 'high',
-    description: 'A rolled 1 has a 30% chance to become a 2 before resolving.',
+    description: 'A rolled 1 becomes a 2 30% of the time.',
     notation: [[die(1, 'dim'), to('30%'), die(2)]],
     costs: { score: 120 },
     prerequisites: ['hr_edge'],
@@ -81,7 +81,7 @@ export const NODES: PassiveNode[] = [
     name: 'Momentum',
     nodeType: 'small',
     region: 'high',
-    description: 'After resolving 4 or higher, faces 5 and 6 each gain +0.5 weight on the next roll.',
+    description: 'After rolling 4 or higher, faces 5 and 6 each gain +0.5 weight on the next roll.',
     notation: [[die(4), die(5), die(6), to(), die(5), die(6), weight('+0.5'), note('1 roll')]],
     costs: { score: 240 },
     prerequisites: ['hr_floor', 'hr_heavy6'],
@@ -119,8 +119,8 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'high',
     description: {
-      A: 'Rolls of 4-6 grant +3 Score.',
-      B: 'No effect.',
+      A: 'Rolls of 4–6 grant +3 Score.',
+      B: 'Pays only while rolls add Score.',
     },
     notation: {
       A: [[die(4), die(5), die(6), to(), score('+3')]],
@@ -144,7 +144,7 @@ export const NODES: PassiveNode[] = [
     name: 'No Going Back',
     nodeType: 'notable',
     region: 'high',
-    description: 'The roll after a 6 cannot resolve as a 1; it is resampled from the other five faces.',
+    description: 'The roll after a 6 is never a 1; it rerolls among the other five faces.',
     notation: [[die(6), op('then'), die(1, 'out'), to(), note('any other face')]],
     costs: { score: 460 },
     prerequisites: ['hr_climb'],
@@ -161,7 +161,7 @@ export const NODES: PassiveNode[] = [
     name: 'Quick Hands',
     nodeType: 'small',
     region: 'volume',
-    description: 'Every resolved roll has a 12% chance to grant a bonus roll.',
+    description: 'Every roll has a 12% chance to grant a bonus roll.',
     notation: [[val('12%'), to(), roll()]],
     costs: { score: 45 },
     prerequisites: ['start'],
@@ -174,7 +174,7 @@ export const NODES: PassiveNode[] = [
     name: 'Low Gear',
     nodeType: 'small',
     region: 'volume',
-    description: 'Resolving a 1 or 2 has a 22% chance to grant a bonus roll.',
+    description: 'Rolling a 1 or 2 has a 22% chance to grant a bonus roll.',
     notation: [[die(1), die(2), to('22%'), roll()]],
     costs: { score: 115 },
     prerequisites: ['vl_quick'],
@@ -193,8 +193,8 @@ export const NODES: PassiveNode[] = [
     name: 'Rapid Cycle',
     nodeType: 'small',
     region: 'volume',
-    description: 'Manual roll cooldown is reduced by 22%.',
-    notation: [[note('cooldown'), op('×'), val('0.78', 'accent')]],
+    description: 'Cuts the roll cooldown by 22%.',
+    notation: [[note('cooldown'), val('−22%', 'accent')]],
     costs: { score: 125 },
     prerequisites: ['vl_quick'],
     position: { x: 192, y: 304 },
@@ -219,7 +219,7 @@ export const NODES: PassiveNode[] = [
     name: 'Echo',
     nodeType: 'notable',
     region: 'volume',
-    description: 'Resolving a 6 grants a bonus roll.',
+    description: 'Rolling a 6 grants a bonus roll.',
     notation: [[die(6), to(), roll()]],
     costs: { score: 400 },
     prerequisites: ['vl_cycle'],
@@ -234,7 +234,7 @@ export const NODES: PassiveNode[] = [
     name: 'Splinter',
     nodeType: 'notable',
     region: 'volume',
-    description: 'Every resolved roll has a 10% chance to split into 2 further independently resolved rolls.',
+    description: 'Every roll has a 10% chance to become 2 rolls, each scoring separately.',
     notation: [[val('10%'), to(), roll('+2')]],
     costs: { score: 520 },
     prerequisites: ['vl_follow'],
@@ -247,7 +247,7 @@ export const NODES: PassiveNode[] = [
     name: 'Second Wind',
     nodeType: 'notable',
     region: 'volume',
-    description: 'After 8 consecutive rolls without a bonus roll, the next resolved roll grants one.',
+    description: 'After 8 rolls in a row without a bonus roll, the next roll grants one.',
     notation: [[pips(8, 0, 'dry rolls'), to(), roll()]],
     costs: { score: 430 },
     prerequisites: ['vl_cycle'],
@@ -261,8 +261,8 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'volume',
     description: {
-      A: 'Each manual roll produces 3 dice instead of 1. Every roll is worth less in exchange.',
-      B: 'Each manual roll produces 3 dice instead of 1.',
+      A: 'Each click throws 3 dice instead of 1. Every roll is worth less in exchange.',
+      B: 'Each click throws 3 dice instead of 1.',
     },
     notation: {
       A: [[note('per click'), to(), any(), any(), any()],
@@ -289,8 +289,8 @@ export const NODES: PassiveNode[] = [
     region: 'jackpot',
     description:
       {
-        A: 'Enables the jackpot: a resolved 6 pays an extra +14 Score. All other Score is multiplied by 0.85.',
-        B: 'No effect. The jackpot pays nothing here.',
+        A: 'Opens the jackpot: a 6 pays an extra +14 Score. Everything else pays ×0.85.',
+        B: 'The jackpot pays only while rolls add Score.',
       },
     notation: {
       A: [[die(6), to(), score('+14')],
@@ -309,12 +309,12 @@ export const NODES: PassiveNode[] = [
   },
   {
     id: 'jp_hotstreak',
-    name: 'Hot Streak',
+    name: 'Pressure',
     nodeType: 'small',
     region: 'jackpot',
     description: {
-      A: 'Every roll that misses the jackpot adds Pressure. A jackpot pays the accumulated Pressure as bonus Score.',
-      B: 'No effect. Pressure does not build here.',
+      A: 'Every roll that misses the jackpot adds +1 Pressure, up to 25.',
+      B: 'Pressure builds only while rolls add Score.',
     },
     notation: {
       A: [[note('miss'), to(), val('+1', 'accent'), meter(0, 'Pressure · 25')],
@@ -337,8 +337,8 @@ export const NODES: PassiveNode[] = [
     region: 'jackpot',
     description:
       {
-        A: 'Before a manual roll you may wager up to 40 Score. A jackpot returns the wager multiplied by 2.5; any other result loses it.',
-        B: 'No effect. Wagers are not taken here.',
+        A: 'Before a roll you may wager up to 40 Score. A jackpot returns it ×2.5; anything else loses it.',
+        B: 'Wagers are only taken while rolls add Score.',
       },
     notation: {
       A: [[note('wager'), score('≤40'), to(), die(6), op('×'), score('2.5')],
@@ -360,7 +360,7 @@ export const NODES: PassiveNode[] = [
     name: 'Near Miss',
     nodeType: 'notable',
     region: 'jackpot',
-    description: 'Resolving a 5 gives face 6 +1.4 weight on the next roll.',
+    description: 'Rolling a 5 gives face 6 +1.4 weight on the next roll.',
     notation: [[die(5), to(), die(6), weight('+1.4'), note('1 roll')]],
     costs: { score: 390 },
     prerequisites: ['jp_hotstreak'],
@@ -376,12 +376,12 @@ export const NODES: PassiveNode[] = [
   },
   {
     id: 'jp_pressure',
-    name: 'Pressure',
+    name: 'Boiling Point',
     nodeType: 'notable',
     region: 'jackpot',
     description: {
-      A: 'Jackpot misses add +3 Pressure instead of +1, and the Pressure cap rises by 65.',
-      B: 'No effect.',
+      A: 'Each miss adds +3 Pressure instead of +1, and the cap rises by 65.',
+      B: 'Pressure builds only while rolls add Score.',
     },
     notation: {
       A: [[note('miss'), to(), val('+3', 'accent'), note('Pressure · cap +65')]],
@@ -403,8 +403,8 @@ export const NODES: PassiveNode[] = [
     region: 'jackpot',
     description:
       {
-        A: 'After a roll pays 15 Score or more, choose to bank it or ride it. Riding stakes the payout on the next roll: a jackpot returns it at 3x, anything else loses it.',
-        B: 'No effect.',
+        A: 'After a roll pays 15 Score or more, bank it or ride it. Riding stakes it on the next roll: ×3 on a jackpot, nothing otherwise.',
+        B: 'Riding is only offered while rolls add Score.',
       },
     notation: {
       A: [[score('≥15'), to(), note('bank'), op('/'), note('ride')],
@@ -424,8 +424,8 @@ export const NODES: PassiveNode[] = [
     region: 'jackpot',
     description:
       {
-        A: 'Only a 6 grants Score, and it is multiplied before any other modifier applies.',
-        B: 'No effect.',
+        A: 'Only a 6 pays Score, and its multiplier applies before anything else.',
+        B: 'Pays only while rolls add Score.',
       },
     notation: {
       A: [[die(1, 'out'), die(2, 'out'), die(3, 'out'), die(4, 'out'), die(5, 'out'), to(), score('0')],
@@ -449,8 +449,8 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'pattern',
     description: {
-      A: 'Two identical results in a row grant +3 Score.',
-      B: 'No effect.',
+      A: 'Two identical rolls in a row grant +3 Score.',
+      B: 'Pays only while rolls add Score.',
     },
     notation: {
       A: [[die(3), die(3), to(), score('+3')]],
@@ -474,8 +474,8 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'pattern',
     description: {
-      A: 'A result exactly one higher or one lower than the previous one grants +2 Score.',
-      B: 'No effect.',
+      A: 'A roll exactly one above or below the previous one grants +2 Score.',
+      B: 'Pays only while rolls add Score.',
     },
     notation: {
       A: [[die(3), die(4), to(), score('+2')]],
@@ -524,8 +524,8 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'pattern',
     description: {
-      A: 'Four results alternating between 1-3 and 4-6 grant +5 Score.',
-      B: 'Four results alternating between 1-3 and 4-6 grant +1 Meta.',
+      A: 'Four rolls alternating between 1–3 and 4–6 grant +5 Score.',
+      B: 'Four rolls alternating between 1–3 and 4–6 grant +1 Meta.',
     },
     notation: {
       A: [[die(5), die(2), die(4), die(1), to(), score('+5')]],
@@ -550,8 +550,8 @@ export const NODES: PassiveNode[] = [
     region: 'pattern',
     description:
       {
-        A: 'Two identical results in a row grant +6 Score.',
-        B: 'Two identical results in a row grant +1 Meta.',
+        A: 'Adds a further +6 Score to every pair.',
+        B: 'Adds a further +1 Meta to every pair.',
       },
     notation: {
       A: [[die(3), die(3), to(), score('+6')],
@@ -583,8 +583,8 @@ export const NODES: PassiveNode[] = [
     region: 'pattern',
     description:
       {
-        A: 'Three consecutive ascending or descending results grant +8 Score and a bonus roll.',
-        B: 'Three consecutive ascending or descending results grant +1 Meta and a bonus roll.',
+        A: 'Three consecutive ascending or descending rolls grant +8 Score and a bonus roll.',
+        B: 'Three consecutive ascending or descending rolls grant +1 Meta and a bonus roll.',
       },
     notation: {
       A: [[die(2), die(3), die(4), to(), score('+8'), roll()]],
@@ -612,8 +612,8 @@ export const NODES: PassiveNode[] = [
     region: 'pattern',
     description:
       {
-        A: 'A result matching the one from two rolls ago, with a different value between them, grants +7 Score.',
-        B: 'A result matching the one from two rolls ago, with a different value between them, grants +1 Meta.',
+        A: 'A roll matching the one from two rolls back, with a different value between, grants +7 Score.',
+        B: 'A roll matching the one from two rolls back, with a different value between, grants +1 Meta.',
       },
     notation: {
       A: [[die(4), op('≠'), die(4), to(), score('+7')]],
@@ -663,7 +663,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'pattern',
     description:
-      'Roll history widens from 4 to 10. Four-long runs and five-long palindromes are detected, alternating sequences are checked over 6 rolls, and all pattern rewards are multiplied by 1.4.',
+      'Roll history widens from 4 to 10, so runs of 4, palindromes of 5 and alternations of 6 all count.',
     notation: [[note('history'), val('4'), to(), val('10', 'accent')],
       clause('score', note('pattern reward'), op('×'), val('1.4', 'accent'))],
     costs: { score: 1500 },
@@ -685,7 +685,7 @@ export const NODES: PassiveNode[] = [
     name: 'Second Look',
     nodeType: 'small',
     region: 'control',
-    description: 'A rolled 1 has a 45% chance to be rerolled once.',
+    description: 'A rolled 1 rerolls once, 45% of the time.',
     notation: [[die(1, 'dim'), to('45%'), op('⟲'), any()]],
     costs: { score: 45 },
     prerequisites: ['start'],
@@ -698,7 +698,7 @@ export const NODES: PassiveNode[] = [
     name: 'Reserve',
     nodeType: 'small',
     region: 'control',
-    description: 'Hold capacity increased by 1.',
+    description: 'Hold one more result.',
     notation: [[note('Hold'), val('+1'), slot()]],
     costs: { score: 150 },
     prerequisites: ['ct_second'],
@@ -712,7 +712,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'control',
     description:
-      'Stores 1 result and swaps it in before a later roll. Storing it is what costs you: a held result never resolves.',
+      'Stores 1 result and swaps it in before a later roll. While held it pays nothing — no Score, no Meta.',
     notation: [[die(4), to(), slot(true), pips(1, 0, 'held')],
       clause('deny', note('no Score, no Meta while held'))],
     costs: { score: 360 },
@@ -728,7 +728,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'control',
     description:
-      'Once every 5 rolls you may replace the rolled face with its opposite: 1 becomes 6, 2 becomes 5, 3 becomes 4, and the reverse.',
+      'Once every 5 rolls you may flip the rolled face to its opposite: 1↔6, 2↔5, 3↔4.',
     notation: [[die(2), to(), die(5), note('every 5')]],
     costs: { score: 420 },
     prerequisites: ['ct_reserve'],
@@ -742,7 +742,7 @@ export const NODES: PassiveNode[] = [
     name: 'Seal',
     nodeType: 'notable',
     region: 'control',
-    description: 'Remove one face of your choice from the sampling pool. Its weight is redistributed across the remaining faces.',
+    description: 'Remove one face from the die for good. Its weight spreads across the five that remain.',
     notation: [[any(), op('✕'), to(), note('weight spread over the rest')]],
     costs: { score: 480 },
     prerequisites: ['ct_hold'],
@@ -756,7 +756,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'control',
     description:
-      'A queue of the next 3 results is generated and shown. Rolls consume the queue from the front.',
+      'Shows your next 3 results. Rolls take from the front of the queue.',
     notation: [[note('queue'), die(3), die(1), die(6), to(), note('next roll')],
       clause('swap', note('swap adjacent'))],
     costs: { score: 1600 },
@@ -776,7 +776,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'control',
     bridges: ['high', 'control'],
-    description: 'Every roll generates two candidate results. You choose which one resolves; the other is discarded.',
+    description: 'Every roll offers two results. You pick one; the other is discarded.',
     notation: [[die(2), op('/'), die(5), to(), note('you pick one')]],
     costs: { score: 1450 },
     prerequisites: ['hr_floor', 'ct_hold'],
@@ -790,7 +790,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'bridge',
     region: 'high',
     bridges: ['high', 'volume'],
-    description: 'Resolving a 5 or 6 has a 28% chance to grant a bonus roll.',
+    description: 'Rolling a 5 or 6 has a 28% chance to grant a bonus roll.',
     notation: [[die(5), die(6), to('28%'), roll()]],
     costs: { score: 520 },
     prerequisites: ['hr_heavy6'],
@@ -832,7 +832,7 @@ export const NODES: PassiveNode[] = [
     region: 'pattern',
     bridges: ['control', 'pattern'],
     description:
-      'Held results and queued results enter the roll history when they resolve. Prepared Roll may swap any two queued results instead of only adjacent ones.',
+      'Held and queued results count toward patterns once played, and the queue may swap any two results, not just neighbours.',
     notation: [[slot(true), op('·'), note('queue'), to(), note('enter the pattern history')]],
     costs: { score: 580 },
     prerequisites: ['ct_reserve'],
@@ -851,7 +851,7 @@ export const NODES: PassiveNode[] = [
     region: 'adaptive',
     description:
       {
-        A: 'The first roll after changing framework grants 2.5x Score.',
+        A: 'The first roll after changing framework grants ×2.5 Score.',
         B: 'The first roll after changing framework costs only 40% of its value.',
       },
     notation: {
@@ -894,8 +894,8 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'adaptive',
     description: {
-      A: 'While Score is below 60, bonus roll chance is increased by 25%. While Score is above 400, Score gained is multiplied by 1.2.',
-      B: 'While Score is below 60, bonus roll chance is increased by 25%.',
+      A: 'Below 60 Score, bonus roll chance +25%. Above 400 Score, Score gained ×1.2.',
+      B: 'Below 60 Score, bonus roll chance +25%.',
     },
     notation: {
       A: [[score('<60'), to(), roll('+25%')],
@@ -919,8 +919,8 @@ export const NODES: PassiveNode[] = [
     region: 'adaptive',
     description:
       {
-        A: 'While Score is below 40, rolls grant +6 Score. While Score is above 350, every resolved roll has a 20% chance to grant a bonus roll.',
-        B: 'While Score is above 350, every resolved roll has a 20% chance to grant a bonus roll.',
+        A: 'Below 40 Score, every roll grants +6 Score. Above 350 Score, every roll has a 20% chance to grant a bonus roll.',
+        B: 'Above 350 Score, every roll has a 20% chance to grant a bonus roll.',
       },
     notation: {
       A: [[score('<40'), to(), score('+6'), note('per roll')],
@@ -967,8 +967,8 @@ export const NODES: PassiveNode[] = [
     region: 'adaptive',
     description:
       {
-        A: 'If the first result after changing framework equals the last result before it, grant 2 bonus rolls and +60 Score.',
-        B: 'If the first result after changing framework equals the last result before it, grant 2 bonus rolls and +4 Meta.',
+        A: 'If the first roll after changing framework matches the last one before it, grant 2 bonus rolls and +60 Score.',
+        B: 'If the first roll after changing framework matches the last one before it, grant 2 bonus rolls and +4 Meta.',
       },
     notation: {
       A: [[die(3), op('⇄'), die(3), to(), score('+60'), roll('+2')]],
@@ -987,7 +987,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'adaptive',
     description:
-      'Count the archetype regions where you have allocated 2 or more nodes. Changing framework grants that many bonus rolls, clears the Flip cooldown, and doubles Reflection and Pendulum payouts.',
+      'Changing framework grants one bonus roll per region where you hold 2 or more nodes, clears the Flip cooldown, and doubles Reflection and Pendulum.',
     notation: [[note('regions with 2+'), op('='), val('R', 'accent')],
       clause('roll', op('⇄'), to(), roll('+R'), op('·'), note('Reflection · Pendulum'), val('×2', 'accent'))],
     costs: { score: 1500, meta: 650 },
@@ -1027,8 +1027,8 @@ export const NODES: PassiveNode[] = [
     bridges: ['jackpot', 'control'],
     description:
       {
-        A: 'A lost wager refunds 50% of its Score. You may swap a held result in after seeing the rolled face rather than before.',
-        B: 'You may swap a held result in after seeing the rolled face rather than before.',
+        A: 'A lost wager refunds 50%. You may swap a held result in after seeing the face, not before.',
+        B: 'You may swap a held result in after seeing the face, not before.',
       },
     notation: {
       A: [[note('lost wager'), to(), score('50%'), note('back')],
@@ -1099,7 +1099,7 @@ export const NODES: PassiveNode[] = [
     region: 'volume',
     bridges: ['adaptive', 'volume'],
     description:
-      'Bonus rolls created within 3 rolls of changing framework resolve as the last face rolled before the change.',
+      'For 3 rolls after changing framework, every bonus roll comes up as the last face before the change.',
     notation: [[op('⇄'), note('≤3 rolls'), to(), roll('bonus'), op('='), note('last face before')]],
     costs: { score: 640, meta: 110 },
     prerequisites: ['vl_quick'],

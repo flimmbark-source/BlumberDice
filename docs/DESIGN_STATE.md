@@ -381,6 +381,50 @@ Not fixed, and worth deciding rather than drifting:
   the progressive disclosure the specification asks for. Path of Exile can do
   this because its tree is the pitch; here it is 49 unreachable dots.
 
+### 17. The tooltips were written in engine vocabulary
+
+A pass over the copy alone. Two of the findings were misinformation rather
+than style.
+
+- **Repeat and Doubles both fire on a pair, and stack.** Their tooltips were
+  the same sentence with a different number — "Two identical results in a row
+  grant +3 Score" and "…grant +6 Score" — which reads as an upgrade
+  replacing its predecessor, the usual convention. A pair with both allocated
+  pays 9. Doubles now says "Adds a further +6 Score to every pair"; the word
+  *further* is the whole fix.
+- **The node that introduces Pressure was called Hot Streak, and the one that
+  merely scales it was called Pressure.** A player met the term in a tooltip
+  belonging to a different node. Worse, Hot Streak counts *misses* — the name
+  promised a reward for winning and delivered one for losing. The introducer
+  is now **Pressure** and the amplifier **Boiling Point**, which is also the
+  order they are learned in.
+
+The rest was register:
+
+- **"Resolve" is a stage of the roll pipeline**, and it had leaked into
+  fourteen tooltips where it meant nothing a player could act on. It also
+  blunted the one node where the distinction matters — Hold, whose held
+  result genuinely does not resolve — because by then the word had been
+  skimmed past thirteen times. The player's word is *roll*.
+- **"No effect." appeared nine times.** It says a node is inert without
+  saying what would revive it, and the notation already marks it off. Those
+  lines now state the condition: "Pays only while rolls add Score." No
+  framework is named, so progressive disclosure holds.
+- **Passive constructions** ("it is resampled", "its weight is
+  redistributed", "cooldown is reduced by") became active.
+- **Multiplication was spelled three ways** at once — "2.5x", "multiplied by
+  1.2", "at 3x" — now always ×N.
+- **"Roll" for something that happened, "result" for a stored or candidate
+  value.** The pattern nodes were using both for the former.
+- Rapid Cycle's notation said ×0.78 while its prose said 22%: one fact, two
+  numbers, and a player left to check whether they were the same thing.
+
+Longest description fell from 33 words to 26, so the caps came down from
+34/46 to a single 28 — keystones had 46 on the theory that they do more, but
+the longest needs 24. Complexity belongs in the notation and the clause, not
+in a longer paragraph. Three tests now hold the line: the word cap, a ban on
+engine vocabulary and "no effect", and one spelling of multiplication.
+
 ---
 
 ## Unresolved — deliberately not implemented
