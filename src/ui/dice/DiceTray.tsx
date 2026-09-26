@@ -172,7 +172,7 @@ export function DiceTray({ s, rollRef }: {
       // Keep a busy surface readable, but never truncate a mechanical proc:
       // those labels teach the player why the build fired.
       const baseGhostLife = backlog > 8 ? 620 : backlog > 3 ? 950 : 1400;
-      const procLife = target.procs.length > 0 ? 900 + (target.procs.length - 1) * 620 : 0;
+      const procLife = target.procs.length > 0 ? target.procs.length * 820 : 0;
       target.ghostLife = Math.max(baseGhostLife, procLife);
     };
 
