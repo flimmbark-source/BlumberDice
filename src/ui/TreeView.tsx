@@ -59,6 +59,8 @@ interface Props {
   setExpanded: (v: boolean) => void;
   /** A node to pan onto. `n` rises each request, so repeats still land. */
   focus: { id: string; n: number } | null;
+  /** Clears a focus request after this view has consumed it. */
+  onFocusConsumed?: () => void;
   /** Removes duplicate chrome when the tree lives inside a desktop window. */
   embedded?: boolean;
 }
@@ -76,7 +78,7 @@ function statusOf(
 
 export const TreeView = memo(function TreeView({
   allocatedKey, discoveredKey, score, meta, framework, pinned, inspected, setInspected,
-  expanded, setExpanded, focus, embedded = false,
+  expanded, setExpanded, focus, onFocusConsumed, embedded = false,
 }: Props): JSX.Element {
   const allocated = useMemo(() => new Set(allocatedKey.split(',').filter(Boolean)), [allocatedKey]);
   const discovered = useMemo(
@@ -164,6 +166,10 @@ export const TreeView = memo(function TreeView({
       x: (VB.minX + VB.w / 2) / v.zoom - node.position.x,
       y: (VB.minY + VB.h / 2) / v.zoom - node.position.y,
     }));
+    // A focus request is an action, not persistent state. Leaving it hanging
+    // around meant any later remount/layout rebuild could replay an old jump
+    // (often back to the root, "The Die").
+    onFocusConsumed?.();
   }, [focus?.n]);
 
   /** Zoom about the middle of the panel, which is where the eye already is. */
