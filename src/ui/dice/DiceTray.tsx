@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { useEffect, useRef, type MutableRefObject } from 'react';
 import {
-  canRoll, effectiveDice, type GameState, type LogEntry, type RollRecord,
+  canRoll, effectiveDice, type GameState, type RollRecord,
 } from '../../engine/game.ts';
 import { prefersReducedMotion } from '../motion.ts';
 import { actions, store } from '../store.ts';
@@ -167,6 +167,7 @@ export function DiceTray({ s, rollRef }: {
       target.rollId = rec.id;
       target.heldScore = rec.score;
       target.heldMeta = rec.meta;
+      target.procs = rec.procs?.slice() ?? [];
       target.minTumbleUntil = Math.min(target.minTumbleUntil, world.t + tumbleFor(backlog));
       // Keep a busy surface readable: results linger only while there is room.
       target.ghostLife = backlog > 8 ? 620 : backlog > 3 ? 950 : 1400;
@@ -308,91 +309,6 @@ export function DiceTray({ s, rollRef }: {
       {resolving && s.pending.length > 3 && (
         <div className="tray__queue">{s.pending.length} rolls resolving</div>
       )}
-      <ProcVisuals log={s.log} />
-    </div>
-  );
-}
-
-type ProcVisual = {
-  id: number;
-  kind: 'jackpot' | 'pattern' | 'bonus';
-  title: string;
-  detail: string;
-};
-
-function visualFor(entry: LogEntry): ProcVisual | null {
-  if (entry.kind === 'jackpot') {
-    if (entry.text.startsWith('Jackpot ')) {
-      return {
-        id: entry.id,
-        kind: 'jackpot',
-        title: 'JACKPOT',
-        detail: entry.text.slice('Jackpot '.length),
-      };
-    }
-    if (entry.text.startsWith('Ride paid ')) {
-      return {
-        id: entry.id,
-        kind: 'jackpot',
-        title: 'RIDE HIT',
-        detail: entry.text.slice('Ride paid '.length),
-      };
-    }
-    // "Riding..." and wager bookkeeping are states/results, not the headline
-    // event itself, so they stay in the Log without stealing the screen.
-    return null;
-  }
-
-  if (entry.kind === 'pattern') {
-    return { id: entry.id, kind: 'pattern', title: 'PATTERN', detail: entry.text };
-  }
-
-  if (entry.kind === 'bonus') {
-    return { id: entry.id, kind: 'bonus', title: 'BONUS ROLL', detail: entry.text };
-  }
-
-  return null;
-}
-
-/**
- * Big game events belong in the arena, not only in the text log.
- *
- * The engine log is the source of truth; this layer is presentation only.
- * Events queue rather than overwrite each other during a cascade.
- */
-function ProcVisuals({ log }: { log: LogEntry[] }): JSX.Element | null {
-  const newestId = log.length > 0 ? log[log.length - 1].id : 0;
-  const seen = useRef(newestId);
-  const queue = useRef<ProcVisual[]>([]);
-  const [active, setActive] = useState<ProcVisual | null>(null);
-
-  useEffect(() => {
-    if (newestId <= seen.current) return;
-    const fresh = log.filter((entry) => entry.id > seen.current);
-    seen.current = newestId;
-    const visuals = fresh.map(visualFor).filter((v): v is ProcVisual => v !== null);
-    if (visuals.length === 0) return;
-    queue.current.push(...visuals);
-    setActive((current) => current ?? queue.current.shift() ?? null);
-  }, [newestId, log]);
-
-  useEffect(() => {
-    if (!active) return;
-    const ms = active.kind === 'jackpot' ? 1750 : 1100;
-    const timer = window.setTimeout(() => {
-      setActive(queue.current.shift() ?? null);
-    }, ms);
-    return () => window.clearTimeout(timer);
-  }, [active]);
-
-  if (!active) return null;
-
-  return (
-    <div className="tray__procLayer" aria-live="polite" aria-atomic="true">
-      <div key={active.id} className={`tray__proc tray__proc--${active.kind}`}>
-        <span className="tray__procTitle">{active.title}</span>
-        <span className="tray__procDetail">{active.detail}</span>
-      </div>
     </div>
   );
 }
