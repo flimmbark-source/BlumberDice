@@ -151,6 +151,116 @@ button:disabled { cursor: default; }
   pointer-events: none;
 }
 
+/* Major procs are game events, so they announce themselves in the arena
+   instead of existing only as a line in Log. */
+.tray__procLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  overflow: hidden;
+}
+.tray__proc {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  min-width: min(82%, 430px);
+  transform: translate(-50%, -50%);
+  text-align: center;
+  animation: procAppear 1.1s cubic-bezier(0.18, 0.8, 0.2, 1) both;
+}
+.tray__procTitle {
+  position: relative;
+  z-index: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(24px, 5vw, 58px);
+  line-height: 0.95;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.tray__procDetail {
+  position: relative;
+  z-index: 1;
+  padding: 4px 9px;
+  border: 1px solid currentColor;
+  background: rgba(12, 16, 22, 0.82);
+  font-size: clamp(12px, 1.6vw, 17px);
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tray__proc--jackpot {
+  color: var(--score);
+  animation-duration: 1.75s;
+}
+.tray__proc--jackpot::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: min(54vw, 330px);
+  aspect-ratio: 1;
+  border: 3px solid currentColor;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.25);
+  opacity: 0;
+  animation: jackpotRing 1.75s ease-out both;
+}
+.tray__proc--jackpot::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: min(76vw, 520px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      currentColor 0deg 2deg,
+      transparent 2deg 20deg
+    );
+  -webkit-mask: radial-gradient(circle, transparent 0 31%, #000 32% 54%, transparent 55%);
+  mask: radial-gradient(circle, transparent 0 31%, #000 32% 54%, transparent 55%);
+  opacity: 0;
+  animation: jackpotBurst 1.75s ease-out both;
+}
+.tray__proc--pattern {
+  top: 34%;
+  color: var(--meta);
+}
+.tray__proc--pattern .tray__procTitle {
+  font-size: clamp(18px, 3.5vw, 34px);
+}
+.tray__proc--bonus {
+  top: 34%;
+  color: var(--accent);
+}
+.tray__proc--bonus .tray__procTitle {
+  font-size: clamp(18px, 3.5vw, 34px);
+}
+@keyframes procAppear {
+  0% { opacity: 0; transform: translate(-50%, -42%) scale(0.82); }
+  16% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+  28%, 72% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -58%) scale(0.98); }
+}
+@keyframes jackpotRing {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.18); }
+  18% { opacity: 0.72; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.45); }
+}
+@keyframes jackpotBurst {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(-4deg); }
+  18% { opacity: 0.2; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.18) rotate(5deg); }
+}
+
 /* --- readiness ----------------------------------------------------------- */
 
 .cooldown { position: relative; height: 3px; background: var(--bg-2); flex: 0 0 auto; }
@@ -1232,4 +1342,15 @@ button.chain__btn:hover { border-color: var(--accent); }
     min-height: min(62vh, 620px);
     flex: 0 0 min(62vh, 620px);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tray__proc,
+  .tray__proc--jackpot::before,
+  .tray__proc--jackpot::after {
+    animation: none;
+  }
+  .tray__proc { opacity: 1; }
+  .tray__proc--jackpot::before,
+  .tray__proc--jackpot::after { display: none; }
 }
