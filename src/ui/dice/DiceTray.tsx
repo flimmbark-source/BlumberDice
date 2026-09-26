@@ -10,7 +10,7 @@ import {
   sweepSpent,
   spawnDie, step, throwDie, type DieBody, type World,
 } from './physics.ts';
-import { drawBackdrop, drawWorld, THEME_A, THEME_B } from './render.ts';
+import { drawBackdrop, drawProcOverlay, drawWorld, THEME_A, THEME_B } from './render.ts';
 
 const MAX_DICE = 9;
 /** Surface side in world units. Fixed, so the dice always read the same size. */
@@ -210,6 +210,7 @@ export function DiceTray({ s, rollRef }: {
       ctx.scale(zoom, zoom);
       drawWorld(ctx, world, theme);
       ctx.restore();
+      drawProcOverlay(ctx, world, theme, originX, originY, zoom);
 
       raf = requestAnimationFrame(frame);
     };
