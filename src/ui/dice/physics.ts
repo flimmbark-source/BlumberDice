@@ -1,3 +1,4 @@
+import type { RollProc } from '../../engine/game.ts';
 import type { Face } from '../../engine/types.ts';
 import {
   add, cross, dot, len, normalize, project, qFromTo, qIntegrate, qMul, qNormalize,
@@ -88,6 +89,8 @@ export interface DieBody {
   /** What that roll did to each currency, withheld until its number fades. */
   heldScore: number;
   heldMeta: number;
+  /** Mechanical events caused by this roll, rendered at this die. */
+  procs: RollProc[];
 
   state: DieState;
   minTumbleUntil: number;
@@ -122,6 +125,7 @@ export interface ResultGhost {
   ghostLife: number;
   heldScore: number;
   heldMeta: number;
+  procs: RollProc[];
   alpha: number;
 }
 
@@ -191,6 +195,7 @@ export function spawnDie(
     rollId: null,
     heldScore: 0,
     heldMeta: 0,
+    procs: [],
     state: 'idle',
     minTumbleUntil: 0,
     bornAt: world.t,
@@ -261,12 +266,14 @@ function detachReveal(world: World, die: DieBody): void {
       ghostLife: die.ghostLife,
       heldScore: die.heldScore,
       heldMeta: die.heldMeta,
+      procs: die.procs.slice(),
       alpha: die.alpha,
     });
   }
   die.rollId = null;
   die.heldScore = 0;
   die.heldMeta = 0;
+  die.procs = [];
 }
 
 export function retireDie(die: DieBody): void {
