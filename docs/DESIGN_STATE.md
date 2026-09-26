@@ -558,6 +558,35 @@ The keyword opts back into pointer events for itself alone: the node popup
 sets `pointer-events: none` so the web underneath stays hoverable, and
 without that exception the pointer could never reach a term.
 
+### 22. A roll no longer sweeps away a result nobody has read
+
+Reported bug: a bonus die lands, the player clicks again, and it vanishes
+before its number can be read.
+
+Both paths through the old throw did it. `live.slice(0, dice)` re-threw the
+first settled die, which may have been the bonus die — and `throwDie` clears
+`rollId`, so the number went with it. `live.slice(dice)` retired the rest,
+mid-reveal and all. Neither checked whether a die had been read.
+
+The selection is now a pure function, `planThrow`, so it can be tested apart
+from the render loop. A die with `rollId` still set has not been read —
+`releaseFadedGhosts` clears that field when the ghost expires — and such a
+die is neither re-thrown nor retired. The throw spawns a fresh die instead.
+At a normal pace with a bonus-roll build, 27 reveals were on screen when a
+click landed and none were cut short.
+
+The exception is a full surface. Past nine live dice the longest-settled
+reveals are given up anyway, because an unreadable pile helps nobody. No
+Score is lost either way: a fading die keeps withholding its payout until it
+leaves the world, and the HUD counts it then.
+
+Protecting reveals broke the cap, which the first stress run caught: fifteen
+dice on a surface that allows nine. `planThrow` was counting only settled
+dice, so the ones still in the air and the ones it was about to spawn did
+not count against the limit — harmless while every throw swept the surface
+clean, fatal once protected dice could accumulate. It counts everything
+standing after the throw now.
+
 ---
 
 ## Unresolved — deliberately not implemented

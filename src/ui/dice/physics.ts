@@ -515,6 +515,54 @@ export function releaseFadedGhosts(world: World): { score: number; meta: number 
   return { score, meta };
 }
 
+/**
+ * True while a die still owes the player a look at its number.
+ *
+ * `rollId` is cleared by `releaseFadedGhosts` once the ghost above the die
+ * has run its course, so this is exactly "the result has not been read yet".
+ */
+export function owesReveal(die: DieBody): boolean {
+  return die.rollId !== null;
+}
+
+/**
+ * Which dice a new throw reuses, and which it clears away.
+ *
+ * A die that is still showing its number has not been read. Re-throwing it
+ * or sweeping it off cuts that short — which is what made a bonus die vanish
+ * the instant the player rolled again. Those dice are left alone here and
+ * retire on a later throw, once their ghost has expired.
+ *
+ * The exception is a full surface: past `max` live dice the oldest reveals
+ * are given up anyway, because an unreadable pile helps nobody. Retiring
+ * never loses the roll's Score — a fading die keeps withholding it until it
+ * leaves the world, and the HUD counts it then.
+ */
+export function planThrow(world: World, count: number, max = 9): {
+  reuse: DieBody[];
+  retire: DieBody[];
+} {
+  const settled = world.dice.filter((die) => !die.retiring && die.state !== 'tumbling');
+  const spent = settled.filter((die) => !owesReveal(die));
+  const showing = settled.filter(owesReveal);
+
+  const reuse = spent.slice(0, count);
+  const retire = spent.slice(count);
+
+  // Only once the surface is genuinely crowded, and oldest reveal first.
+  // Counted against everything that will be on it after this throw: dice
+  // still in the air hold a place, and so do the ones about to be spawned
+  // to make up the shortfall. Leaving those out let the surface grow without
+  // bound as protected reveals piled up.
+  const standing = world.dice.filter((die) => !die.retiring).length;
+  const spawning = Math.max(0, count - reuse.length);
+  const over = standing - retire.length + spawning - max;
+  if (over > 0) {
+    retire.push(...[...showing].sort((a, b) => a.settledAt - b.settledAt).slice(0, over));
+  }
+  return { reuse, retire };
+}
+
 /** Frontmost die whose projected centre is near the given screen point. */
 export function dieAt(world: World, sx: number, sy: number): DieBody | null {
   let best: DieBody | null = null;

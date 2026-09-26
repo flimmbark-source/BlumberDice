@@ -4,7 +4,7 @@ import { prefersReducedMotion } from '../motion.ts';
 import { actions, store } from '../store.ts';
 import { ISO_X, ISO_Y, project, v3 } from './math3d.ts';
 import {
-  createWorld, dieAt, DIE, nudgeDie, releaseFadedGhosts, retireDie, setWorldSize,
+  createWorld, dieAt, DIE, nudgeDie, planThrow, releaseFadedGhosts, retireDie, setWorldSize,
   spawnDie, step, throwDie, type DieBody, type World,
 } from './physics.ts';
 import { drawWorld, THEME_A, THEME_B } from './render.ts';
@@ -181,11 +181,12 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
       }
 
       const dice = Math.max(1, Math.floor(displayStats(game).handfulDice));
-      const live = world.dice.filter((die) => !die.retiring && die.state !== 'tumbling');
-      // Clear anything left from the previous action beyond what we re-throw.
-      for (const die of live.slice(dice)) retireDie(die);
+      // Dice still showing a number are left where they are: a bonus roll
+      // that has just landed should not be swept away by the next click.
+      const { reuse, retire } = planThrow(world, dice, MAX_DICE);
+      for (const die of retire) retireDie(die);
 
-      const throwing = live.slice(0, dice);
+      const throwing = [...reuse];
       while (throwing.length < dice) throwing.push(spawnDie(world, { dropped: true }));
       // The die under the cursor leads, so a click reads as launching that one.
       if (hit && throwing.includes(hit)) {

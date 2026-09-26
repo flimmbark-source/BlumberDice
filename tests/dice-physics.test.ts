@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   createWorld, DIE, DIE_HALF, dieAt, faceUp, LOCAL_VERTICES, nudgeDie,
-  orientationFor, releaseFadedGhosts, retireDie, setWorldSize, spawnDie, step,
-  throwDie, type DieBody, type World,
+  orientationFor, owesReveal, planThrow, releaseFadedGhosts, retireDie, setWorldSize,
+  spawnDie, step, throwDie, type DieBody, type World,
 } from '../src/ui/dice/physics.ts';
 import {
   dot, project, qRandom, qRotate, v3, VIEW_DIR, add, len,
@@ -442,5 +442,120 @@ describe('holding the score back until the number fades', () => {
     }
     expect(releaseFadedGhosts(quick.world).score).toBe(0);
     expect(releaseFadedGhosts(slow.world).score).toBe(9);
+  });
+});
+
+/** A die sitting on the surface, still showing the number it rolled. */
+function settledShowing(world: World, rollId: number, settledAt = world.t): DieBody {
+  const die = spawnDie(world, { dropped: true });
+  die.state = 'rest';
+  die.result = 4;
+  die.rollId = rollId;
+  die.heldScore = 4;
+  die.settledAt = settledAt;
+  die.ghostLife = 1400;
+  return die;
+}
+
+/** The same die, once its number has finished fading. */
+function settledSpent(world: World): DieBody {
+  const die = settledShowing(world, 1);
+  die.rollId = null;
+  return die;
+}
+
+describe('a roll does not cut short a result the player has not read', () => {
+  it('leaves a die that is still showing its number alone', () => {
+    // The bug: a bonus roll lands, the player clicks again, and the bonus
+    // die is swept off mid-reveal.
+    const world = createWorld(420, 420);
+    const bonus = settledShowing(world, 7);
+    const plan = planThrow(world, 1);
+    expect(plan.retire).not.toContain(bonus);
+    expect(plan.reuse).not.toContain(bonus);
+  });
+
+  it('spawns a fresh die rather than re-throwing one mid-reveal', () => {
+    const world = createWorld(420, 420);
+    settledShowing(world, 7);
+    const plan = planThrow(world, 1);
+    // Nothing reusable, so the caller has to spawn: the showing die is safe.
+    expect(plan.reuse).toEqual([]);
+    expect(plan.retire).toEqual([]);
+  });
+
+  it('still clears away dice whose number has been read', () => {
+    const world = createWorld(420, 420);
+    const spentA = settledSpent(world);
+    const spentB = settledSpent(world);
+    const plan = planThrow(world, 1);
+    expect(plan.reuse).toEqual([spentA]);
+    expect(plan.retire).toEqual([spentB]);
+  });
+
+  it('prefers a spent die over spawning, and protects the showing one', () => {
+    const world = createWorld(420, 420);
+    const showing = settledShowing(world, 7);
+    const spent = settledSpent(world);
+    const plan = planThrow(world, 1);
+    expect(plan.reuse).toEqual([spent]);
+    expect(plan.retire).toEqual([]);
+    expect(showing.retiring).toBe(false);
+  });
+
+  it('gives up the oldest reveals only when the surface is full', () => {
+    const world = createWorld(420, 420);
+    const showing: DieBody[] = [];
+    for (let i = 0; i < 6; i++) showing.push(settledShowing(world, 10 + i, i * 100));
+    // Six standing plus the one this throw must spawn, against a cap of 4.
+    const plan = planThrow(world, 1, 4);
+    expect(plan.retire).toEqual([showing[0], showing[1], showing[2]]);
+    expect(plan.retire).not.toContain(showing[5]);
+  });
+
+  it('counts dice still in the air against the cap', () => {
+    // They are coming down onto the same surface, so a plan that ignores
+    // them lets the pile grow without bound.
+    const world = createWorld(420, 420);
+    const showing: DieBody[] = [];
+    for (let i = 0; i < 4; i++) showing.push(settledShowing(world, 20 + i, i * 100));
+    const flying = spawnDie(world);
+    throwDie(world, flying, { minTumbleMs: 300 });
+    const plan = planThrow(world, 1, 4);
+    // 4 settled + 1 flying + 1 spawned = 6 against a cap of 4.
+    expect(plan.retire.length).toBe(2);
+    expect(plan.retire).not.toContain(flying);
+  });
+
+  it('never touches a die that is still in the air', () => {
+    const world = createWorld(420, 420);
+    const flying = spawnDie(world);
+    throwDie(world, flying, { minTumbleMs: 300 });
+    const plan = planThrow(world, 1);
+    expect(plan.reuse).not.toContain(flying);
+    expect(plan.retire).not.toContain(flying);
+  });
+
+  it('keeps withholding the Score of a die retired mid-reveal', () => {
+    // Retiring is allowed to interrupt a reveal when the surface is full,
+    // but it must not swallow the roll: the HUD counts it as the die leaves.
+    const world = createWorld(420, 420);
+    const die = settledShowing(world, 7);
+    retireDie(die);
+    expect(releaseFadedGhosts(world).score).toBe(4);
+    run(world, 900);
+    expect(world.dice).not.toContain(die);
+    expect(releaseFadedGhosts(world).score).toBe(0);
+  });
+
+  it('reports a reveal as owed until the ghost expires', () => {
+    const world = createWorld(420, 420);
+    const die = settledShowing(world, 7);
+    expect(owesReveal(die)).toBe(true);
+    world.t += die.ghostLife + 1;
+    releaseFadedGhosts(world);
+    expect(owesReveal(die)).toBe(false);
+    // Now it is fair game for the next throw.
+    expect(planThrow(world, 1).reuse).toEqual([die]);
   });
 });
