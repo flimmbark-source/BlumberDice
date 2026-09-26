@@ -75,11 +75,21 @@ export type DecisionPolicy = {
 
 export type RollStage = 'generate' | 'loadedChoice' | 'hold' | 'flip' | 'finalize' | 'ride';
 
+export interface RollProc {
+  kind: 'jackpot' | 'pattern' | 'bonus';
+  /** Short mechanical name shown at the die that caused it. */
+  label: string;
+  /** Compact result text, e.g. "+14 Score" or "+1 Bonus Roll". */
+  detail?: string;
+}
+
 export interface RollIntent {
   id: number;
   isBonus: boolean;
   depth: number;
   stage: RollStage;
+  /** Presentation events caused by this roll, emitted with its RollRecord. */
+  procs: RollProc[];
   candidates?: Face[];
   face?: Face;
   staked: number;
@@ -123,6 +133,8 @@ export interface RollRecord {
   score: number;
   meta: number;
   framework: FrameworkId;
+  /** Mechanical events that should resolve visually from this die. */
+  procs?: RollProc[];
 }
 
 export interface LogEntry {
@@ -394,27 +406,31 @@ function log(s: GameState, kind: LogEntry['kind'], text: string): void {
 // Effects
 // ---------------------------------------------------------------------------
 
-function queueBonusRolls(s: GameState, count: number, depth: number): void {
+function queueBonusRolls(s: GameState, count: number, depth: number): number {
+  let queued = 0;
   for (let i = 0; i < count; i++) {
-    if (s.actionBudget <= 0) return;
-    if (s.pending.length >= CONFIG.maxPendingRolls) return;
-    if (depth >= CONFIG.maxBonusDepth) return;
+    if (s.actionBudget <= 0) break;
+    if (s.pending.length >= CONFIG.maxPendingRolls) break;
+    if (depth >= CONFIG.maxBonusDepth) break;
     s.actionBudget -= 1;
     s.pending.push({
       id: s.nextIntentId++,
       isBonus: true,
       depth: depth + 1,
       stage: 'generate',
+      procs: [],
       staked: 0,
       payout: 0,
       scoreBefore: 0,
       metaBefore: 0,
     });
+    queued += 1;
     s.stats.bonusRolls += 1;
     // The roll resolves now, and also leaves a die behind for a while.
     if (s.bonusDice.length < CONFIG.maxBonusDice) s.bonusDice.push(CONFIG.bonusDieMs);
   }
-  s.transient.rollsSinceBonus = 0;
+  if (queued > 0) s.transient.rollsSinceBonus = 0;
+  return queued;
 }
 
 function grantScore(s: GameState, amount: number): void {
@@ -434,25 +450,42 @@ function applyEffects(
   effects: RuntimeEffect[],
   _ctx: RollCtx,
   opts: { depth: number; rewardMult: number },
-): void {
+): string[] {
+  const details: string[] = [];
   for (const e of effects) {
     switch (e.kind) {
-      case 'bonusRoll':
-        queueBonusRolls(s, e.count, opts.depth);
+      case 'bonusRoll': {
+        const queued = queueBonusRolls(s, e.count, opts.depth);
+        if (queued > 0) details.push(`+${queued} Bonus Roll${queued === 1 ? '' : 's'}`);
         break;
+      }
       case 'reward': {
         // Framework-shaped payout. Never scaled by the rolled value.
         if (s.framework === 'A') {
           const amt = Math.round(e.score * opts.rewardMult);
-          if (amt > 0) { grantScore(s, amt); log(s, 'pattern', `+${amt} Score`); }
+          if (amt > 0) {
+            grantScore(s, amt);
+            log(s, 'pattern', `+${amt} Score`);
+            details.push(`+${amt} Score`);
+          }
         } else {
           const amt = Math.round(e.meta * opts.rewardMult);
-          if (amt > 0) { grantMeta(s, amt); log(s, 'pattern', `+${amt} Meta`); }
+          if (amt > 0) {
+            grantMeta(s, amt);
+            log(s, 'pattern', `+${amt} Meta`);
+            details.push(`+${amt} Meta`);
+          }
         }
         break;
       }
-      case 'score': grantScore(s, e.amount); break;
-      case 'meta': grantMeta(s, e.amount); break;
+      case 'score':
+        grantScore(s, e.amount);
+        if (e.amount > 0) details.push(`+${e.amount} Score`);
+        break;
+      case 'meta':
+        grantMeta(s, e.amount);
+        if (e.amount > 0) details.push(`+${e.amount} Meta`);
+        break;
       case 'weightFor':
         s.transient.weightPush.push({ face: e.face, value: e.add, expiresAt: s.totalRolls + 1 + e.rolls });
         break;
@@ -472,6 +505,7 @@ function applyEffects(
         break;
     }
   }
+  return details;
 }
 
 function fireTriggers(
@@ -480,13 +514,28 @@ function fireTriggers(
   event: TriggerEvent,
   ctx: RollCtx,
   opts: { depth: number; rewardMult: number },
-): void {
+): string[] {
+  const details: string[] = [];
   for (const t of build.triggers) {
     if (t.on !== event) continue;
     if (!evalAll(s, t.when, ctx)) continue;
-    applyEffects(s, t.effects, ctx, opts);
+    details.push(...applyEffects(s, t.effects, ctx, opts));
   }
+  return details;
 }
+
+const PATTERN_LABEL: Record<PatternName, string> = {
+  pair: 'DOUBLES',
+  triple: 'TRIPLE',
+  step: 'STEP',
+  run: 'RUN',
+  longRun: 'LONG RUN',
+  palindrome: 'PALINDROME',
+  longPalindrome: 'LONG PALINDROME',
+  alternating: 'ALTERNATING',
+  fullSet: 'FULL SET',
+  newFace: 'NEW FACE',
+};
 
 // ---------------------------------------------------------------------------
 // Roll pipeline
@@ -696,6 +745,7 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
       const won = Math.round(s.riding * CONFIG.letItRideMult);
       grantScore(s, won);
       log(s, 'jackpot', `Ride paid +${won} Score`);
+      intent.procs.push({ kind: 'jackpot', label: 'RIDE HIT', detail: `+${won} Score` });
     } else {
       log(s, 'loss', `Ride lost ${Math.round(s.riding)} Score`);
     }
@@ -789,6 +839,11 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
       s.transient.counters.tickets = 0;
       s.stats.jackpots += 1;
       log(s, 'jackpot', `Jackpot +${Math.round(payout)} Score`);
+      intent.procs.push({
+        kind: 'jackpot',
+        label: 'JACKPOT',
+        detail: `+${Math.round(payout)} Score`,
+      });
     } else if (jackpotEnabled) {
       s.transient.counters.pressure = Math.min(
         (s.transient.counters.pressure ?? 0) + stats.pressurePerMiss,
@@ -863,22 +918,38 @@ function completeRoll(
   }
   for (const hit of hits) {
     const hitCtx: RollCtx = { ...ctx, pattern: hit.name, patternEnd: hit.faces[hit.faces.length - 1] };
-    fireTriggers(s, build, 'onPattern', hitCtx, opts);
+    const details = fireTriggers(s, build, 'onPattern', hitCtx, opts);
+    if (details.length > 0) {
+      intent.procs.push({
+        kind: 'pattern',
+        label: PATTERN_LABEL[hit.name],
+        detail: details.join(' · '),
+      });
+    }
   }
 
   // --- Volume -------------------------------------------------------------
   let bonusChance = stats.bonusRollChance;
   if (intent.isBonus) bonusChance += stats.bonusFromBonusChance;
-  if (bonusChance > 0 && chance(s.rng, bonusChance)) queueBonusRolls(s, 1, depth);
+  if (bonusChance > 0 && chance(s.rng, bonusChance)) {
+    const queued = queueBonusRolls(s, 1, depth);
+    if (queued > 0) intent.procs.push({ kind: 'bonus', label: 'BONUS ROLL', detail: '+1' });
+  }
 
   if (stats.splinterChance > 0 && chance(s.rng, stats.splinterChance)) {
-    queueBonusRolls(s, 2, depth);
+    const queued = queueBonusRolls(s, 2, depth);
+    if (queued > 0) intent.procs.push({
+      kind: 'bonus',
+      label: 'BONUS ROLLS',
+      detail: `+${queued}`,
+    });
   }
 
   s.transient.rollsSinceBonus += 1;
   const threshold = Math.floor(stats.secondWindThreshold);
   if (threshold > 0 && s.transient.rollsSinceBonus >= threshold) {
-    queueBonusRolls(s, 1, depth);
+    const queued = queueBonusRolls(s, 1, depth);
+    if (queued > 0) intent.procs.push({ kind: 'bonus', label: 'SECOND WIND', detail: '+1 Bonus Roll' });
   }
 
   // --- Bookkeeping --------------------------------------------------------
@@ -890,6 +961,7 @@ function completeRoll(
     score: Math.round((s.score - intent.scoreBefore) * 100) / 100,
     meta: Math.round((s.meta - intent.metaBefore) * 100) / 100,
     framework: s.framework,
+    procs: intent.procs.length > 0 ? intent.procs.slice() : undefined,
   });
   if (s.rollLog.length > 48) s.rollLog.splice(0, s.rollLog.length - 48);
   s.totalRolls += 1;
@@ -934,6 +1006,7 @@ export function manualRoll(s: GameState): void {
       isBonus: false,
       depth: 0,
       stage: 'generate',
+      procs: [],
       staked: i === 0 ? staked : 0,
       payout: 0,
       scoreBefore: 0,
