@@ -90,6 +90,24 @@ export const TreeView = memo(function TreeView({
   const userZoomed = useRef(false);
 
   const [size, setSize] = useState({ w: 0, h: 0 });
+
+  /**
+   * A node that was just bought, for the spark that marks the purchase.
+   * Driven off `allocatedKey` so it fires wherever the buy came from — the
+   * web, the upgrade panel, or a keyboard press.
+   */
+  const [burst, setBurst] = useState<string | null>(null);
+  const seen = useRef(allocatedKey);
+  useEffect(() => {
+    const before = new Set(seen.current.split(',').filter(Boolean));
+    seen.current = allocatedKey;
+    const added = allocatedKey.split(',').filter((id) => id && !before.has(id));
+    // Only a single new node: a refund adds nothing and a reload adds many.
+    if (added.length !== 1 || before.size === 0) return;
+    setBurst(added[0]);
+    const timer = setTimeout(() => setBurst(null), 700);
+    return () => clearTimeout(timer);
+  }, [allocatedKey]);
   // Keep the smallest node hittable. `scale(z) translate(t)` maps a node at p
   // to z*(p+t), so holding `start` in the middle of the viewBox means t = C/z.
   useEffect(() => {
@@ -278,6 +296,7 @@ export const TreeView = memo(function TreeView({
               </g>
             );
           })}
+          {burst && NODES_BY_ID.has(burst) && <Spark node={NODES_BY_ID.get(burst)!} />}
         </g>
       </svg>
 
@@ -345,6 +364,41 @@ function nodeLabel(n: PassiveNode, st: Status, isGoal: boolean, terms: boolean):
   // every one of fifty-four labels.
   const terms_ = terms ? ' Press question mark for the terms used here.' : '';
   return `${n.name}, ${n.nodeType}${cost ? `, ${cost}` : ''}. ${state}.${act}${terms_}`;
+}
+
+/**
+ * The mark a purchase leaves: a ring of short lines thrown outward from the
+ * node. It is decoration, so it never takes a pointer event, and the motion
+ * is dropped for anyone who asked for less of it.
+ */
+function Spark({ node }: { node: PassiveNode }): JSX.Element {
+  const rays = 12;
+  const r0 = NODE_RADIUS[node.nodeType] + 3;
+  return (
+    <g
+      className="spark"
+      transform={`translate(${node.position.x} ${node.position.y})`}
+      style={{ ['--hue' as string]: REGION_HUE[node.region] }}
+      pointerEvents="none"
+      aria-hidden
+    >
+      <circle className="spark__ring" r={r0} />
+      {/* One group, so the rays fly out from the node. Scaling each line on
+          its own would scale it about its own middle and go nowhere. */}
+      <g className="spark__rays">
+        {Array.from({ length: rays }, (_, i) => {
+          const a = (i / rays) * Math.PI * 2;
+          return (
+            <line
+              key={i}
+              x1={Math.cos(a) * r0} y1={Math.sin(a) * r0}
+              x2={Math.cos(a) * (r0 + 11)} y2={Math.sin(a) * (r0 + 11)}
+            />
+          );
+        })}
+      </g>
+    </g>
+  );
 }
 
 /**

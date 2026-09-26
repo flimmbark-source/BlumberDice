@@ -1,5 +1,7 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
-import { canRoll, displayStats, type GameState, type RollRecord } from '../../engine/game.ts';
+import {
+  canRoll, effectiveDice, type GameState, type RollRecord,
+} from '../../engine/game.ts';
 import { prefersReducedMotion } from '../motion.ts';
 import { actions, store } from '../store.ts';
 import { ISO_X, ISO_Y, project, v3 } from './math3d.ts';
@@ -86,7 +88,7 @@ export function DiceTray({ s, rollRef }: {
     ro.observe(wrap);
 
     // Start the tray with the dice the current build actually rolls.
-    const wanted = Math.max(1, Math.floor(displayStats(stateRef.current).handfulDice));
+    const wanted = effectiveDice(stateRef.current);
     for (let i = 0; i < wanted; i++) {
       const spread = (i - (wanted - 1) / 2) * DIE * 1.35;
       spawnDie(world, { x: world.w / 2 + spread, y: world.d / 2 - spread * 0.5 });
@@ -149,7 +151,7 @@ export function DiceTray({ s, rollRef }: {
 
       step(world, dt);
       // Keep the surface to what the next throw will actually use.
-      sweepSpent(world, Math.max(1, Math.floor(displayStats(game).handfulDice)));
+      sweepSpent(world, effectiveDice(game));
       // The HUD counts a roll only once its number has faded off the die.
       store.heldBack = releaseFadedGhosts(world);
 
@@ -191,7 +193,7 @@ export function DiceTray({ s, rollRef }: {
         return;
       }
 
-      const dice = Math.max(1, Math.floor(displayStats(game).handfulDice));
+      const dice = effectiveDice(game);
       // Dice still showing a number are left where they are: a bonus roll
       // that has just landed should not be swept away by the next click.
       const { reuse, retire } = planThrow(world, dice, MAX_DICE);
@@ -253,7 +255,7 @@ export function DiceTray({ s, rollRef }: {
     };
   }, []);
 
-  const dice = Math.max(1, Math.floor(displayStats(s).handfulDice));
+  const dice = effectiveDice(s);
   const ready = canRoll(s);
   const resolving = s.pending.length > 0;
 

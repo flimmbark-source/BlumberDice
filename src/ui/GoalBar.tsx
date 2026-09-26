@@ -16,7 +16,8 @@ import { useCountUp } from './useCountUp.ts';
  */
 export function GoalBar({ s, onOpenTree }: {
   s: GameState;
-  onOpenTree: () => void;
+  /** Opens the web, selecting the node this is about when there is one. */
+  onOpenTree: (nodeId?: string) => void;
 }): JSX.Element | null {
   const goal = currentGoal(s);
   // Follows the same eased total as the HUD, so the bar and the number agree.
@@ -44,7 +45,9 @@ export function GoalBar({ s, onOpenTree }: {
           <p className="goal__lead">
             {goal.available === 1 ? '1 upgrade available' : `${goal.available} upgrades available`}
           </p>
-          <button type="button" className="goal__open" onClick={onOpenTree}>Open the web</button>
+          <button type="button" className="goal__open" onClick={() => onOpenTree()}>
+            Open in Web
+          </button>
         </>
       )}
 
@@ -70,9 +73,7 @@ export function GoalBar({ s, onOpenTree }: {
             </div>
           )}
 
-          {goal.affordable ? (
-            <button type="button" className="goal__open" onClick={onOpenTree}>Open the web</button>
-          ) : (
+          {!goal.affordable && (
             <>
               {/* Never one blended percentage: the player has to see which
                   currency is the one holding them up. */}
@@ -90,6 +91,11 @@ export function GoalBar({ s, onOpenTree }: {
               )}
             </>
           )}
+          {/* Always offered while a goal is set: the point is reaching the
+              node, which matters as much while saving as when able to buy. */}
+          <button type="button" className="goal__open" onClick={() => onOpenTree(goal.node.id)}>
+            Open in Web
+          </button>
         </>
       )}
     </div>

@@ -1,4 +1,7 @@
-import { CONFIG, currentDistribution, discoveryGateOpen, displayStats, getBuild, type GameState } from '../engine/game.ts';
+import {
+  CONFIG, currentDistribution, discoveryGateOpen, displayStats, effectiveDice, getBuild,
+  type GameState,
+} from '../engine/game.ts';
 import { expectedValue } from '../engine/dice.ts';
 import { missingFaces } from '../engine/patterns.ts';
 import { regionsInvested } from '../engine/tree.ts';
@@ -40,7 +43,7 @@ export function StatsPanel({ s }: { s: GameState }): JSX.Element {
 
       <Section title="Pacing">
         <Row label="Roll cooldown" value={`${(cooldown / 1000).toFixed(2)}s`} />
-        <Row label="Dice per action" value={String(Math.max(1, Math.floor(stats.handfulDice)))} />
+        <Row label="Dice per action" value={String(effectiveDice(s))} />
         <Row label="Bonus roll chance" value={`${(bonus * 100).toFixed(1)}%`} />
         {stats.bonusFromBonusChance > 0 && (
           <Row label="…from a bonus roll" value={`${((bonus + stats.bonusFromBonusChance) * 100).toFixed(1)}%`} />

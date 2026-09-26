@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   drain, getBuild, manualRoll, resolveDecision, setSeal, setStoreNext, setStake,
-  setUseHeld, switchFramework, syncAllowed, type GameState,
+  setUseHeld, switchFramework, syncAllowed, CONFIG, effectiveDice, tick, type GameState,
 } from '../src/engine/game.ts';
 import { makeBuild, runManualRolls } from '../src/engine/sim.ts';
 import type { Face } from '../src/engine/types.ts';
@@ -455,5 +455,56 @@ describe('build flags only switch on when allocated', () => {
     drain(s);
     expect(s.allowed).toEqual([]);
     expect(s.held).toEqual([]);
+  });
+});
+
+describe("Handful's extra dice are borrowed, not owned", () => {
+  const handful = ['vl_quick', 'vl_lowgear', 'vl_cycle', 'vl_follow', 'vl_echo',
+    'vl_splinter', 'vl_secondwind', 'vl_handful'];
+
+  it('throws one die until a roll has granted the extras', () => {
+    const s = makeBuild({ seed: 5, nodes: handful });
+    expect(effectiveDice(s)).toBe(1);
+    s.cooldownRemaining = 0;
+    manualRoll(s);
+    // The roll that lights them throws one; the next throws the handful.
+    expect(s.pending.length).toBe(1);
+    expect(effectiveDice(s)).toBe(3);
+  });
+
+  it('throws the whole handful while the five seconds are running', () => {
+    const s = makeBuild({ seed: 5, nodes: handful });
+    s.cooldownRemaining = 0; manualRoll(s);
+    drain(s, false);
+    s.pending.length = 0;
+    s.cooldownRemaining = 0; manualRoll(s);
+    expect(s.pending.length).toBe(3);
+  });
+
+  it('loses them after five seconds without a roll', () => {
+    const s = makeBuild({ seed: 5, nodes: handful });
+    s.cooldownRemaining = 0; manualRoll(s);
+    tick(s, CONFIG.extraDiceMs - 100);
+    expect(effectiveDice(s)).toBe(3);
+    tick(s, 200);
+    expect(effectiveDice(s)).toBe(1);
+  });
+
+  it('refreshes the five seconds on every roll', () => {
+    const s = makeBuild({ seed: 5, nodes: handful });
+    s.cooldownRemaining = 0; manualRoll(s);
+    tick(s, 4000);
+    s.pending.length = 0;
+    s.cooldownRemaining = 0; manualRoll(s);
+    expect(s.extraDiceMs).toBe(CONFIG.extraDiceMs);
+  });
+
+  it('leaves a build without the keystone on one die throughout', () => {
+    const s = makeBuild({ seed: 5, nodes: ['vl_quick', 'vl_cycle'] });
+    s.cooldownRemaining = 0; manualRoll(s);
+    expect(effectiveDice(s)).toBe(1);
+    tick(s, 100);
+    expect(effectiveDice(s)).toBe(1);
+    expect(s.extraDiceMs).toBe(0);
   });
 });

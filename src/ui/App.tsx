@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   allocatedCost, canRefund, canRoll, canSwitchFramework, CONFIG, displayStats,
-  getBuild, type GameState,
+  effectiveDice, getBuild, type GameState,
 } from '../engine/game.ts';
 import { NODES } from '../engine/nodes.ts';
 import { checkAllocation, isVisible } from '../engine/tree.ts';
@@ -53,7 +53,15 @@ export function App(): JSX.Element {
       <main className="main">
         {/* The game column is first in the DOM so Tab reaches Roll before
             fifty-four tree nodes; grid-column puts it back in the middle. */}
-        <GamePanel s={s} onOpenTree={() => setTab('web')} />
+        <GamePanel
+          s={s}
+          onOpenTree={(id) => {
+            setTab('web');
+            // Selecting, never buying: the panel fills in and the node lights
+            // up in the web, and allocating stays an explicit second act.
+            if (id) setInspected(id);
+          }}
+        />
 
         <section className="col col--left">
           {tab === 'web' && (
@@ -200,22 +208,20 @@ function Currency({ label, value, alt = false }: { label: string; value: number;
   );
 }
 
-function GamePanel({ s, onOpenTree }: { s: GameState; onOpenTree: () => void }): JSX.Element {
+function GamePanel({ s, onOpenTree }: {
+  s: GameState;
+  onOpenTree: (nodeId?: string) => void;
+}): JSX.Element {
   const build = getBuild(s);
   const stats = displayStats(s, build);
   const cd = CONFIG.baseCooldownMs * stats.cooldownMult;
   const ready = canRoll(s);
-  const dice = Math.max(1, Math.floor(stats.handfulDice));
+  const dice = effectiveDice(s, build);
   const rollRef = useRef<(() => void) | null>(null);
 
   return (
     <section className="game panel">
-      <h2 className="panel__title">
-        Dice
-        <span className="game__score">
-          <Currency label="Score" value={s.score} />
-        </span>
-      </h2>
+      <h2 className="panel__title">Dice</h2>
 
       <div className="game__arena">
         <DiceTray s={s} rollRef={rollRef} />

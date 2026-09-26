@@ -628,6 +628,53 @@ of them in a tray that now shows one clearly. `sweepSpent` runs every frame
 and retires dice whose number has been gone for a moment, keeping back as
 many as the next throw will use.
 
+### 24. Handful's dice are borrowed, not owned
+
+Reworked on request: **"Dice that last for 5 seconds before disappearing."**
+It was a flat `handfulDice: 3`, so every click threw three forever.
+
+The sentence only means something if there is a window in which you have the
+extras and one in which you do not, so: **rolling grants them and rolling
+refreshes them, and they lapse five seconds after the last roll.** The first
+click after a pause throws one die and lights them; keep rolling and the
+whole handful goes. `effectiveDice` is the single place that decides, and
+the tray, the Roll button and the stats panel all read it.
+
+Worth knowing before tuning it: the base cooldown is about 700ms against a
+five-second window, so in continuous play the extras never lapse and the
+build measures the same as before — 9.95 rolls per action against 9.91.
+What changed is what happens when you stop. If the intent was to make
+Handful cost something during active play, five seconds is far too long and
+the number is one constant.
+
+The ×0.55 Score penalty is untouched. The node is strictly weaker now, so
+that penalty may want revisiting, but that is a balance decision rather than
+part of the change asked for.
+
+### 25. Buying a node says so
+
+A ring and twelve lines thrown outward from the node, over 700ms, in the
+node's own region colour. It is driven off `allocatedKey` rather than the
+click, so it fires wherever the purchase came from — the web, the upgrade
+panel, or a keyboard press — and it deliberately does not fire on a refund
+or a reload, both of which change the set by more than one node.
+
+Two things went wrong worth recording. The lines first scaled about their
+own centres rather than the node's, so they shimmered in place instead of
+flying out; grouping them and scaling the group fixes it, and the group's
+own origin is the node, so `transform-box: fill-box` — unreliable on an SVG
+group — is not needed. And the effect looked broken in every screenshot
+until it turned out the captures were landing after the 700ms had elapsed;
+pausing the animation with a negative delay is how to photograph it.
+
+Also in this pass: the goal button reads **Open in Web** and selects the
+pinned node without buying it, and it is now offered while saving as well
+as when the node is affordable, since reaching the node is the point either
+way. The Score readout inside the Dice panel is gone — the top bar already
+carries it. And the top bar gained a stacking context, because the settings
+menu hangs below the bar and was being painted under the right-hand column,
+which swallowed its clicks.
+
 ---
 
 ## Unresolved — deliberately not implemented

@@ -261,13 +261,13 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'volume',
     description: {
-      A: 'Each click throws 3 dice instead of 1. Every roll is worth less in exchange.',
-      B: 'Each click throws 3 dice instead of 1.',
+      A: 'Rolling gains 2 extra dice that last 5 seconds before disappearing. Every roll is worth less in exchange.',
+      B: 'Rolling gains 2 extra dice that last 5 seconds before disappearing.',
     },
     notation: {
-      A: [[note('per click'), to(), any(), any(), any()],
+      A: [[note('per click'), to(), any(), any(), any(), note('5s')],
          clause('swap', score('Score'), op('×'), val('0.55', 'warn'))],
-      B: [[note('per click'), to(), any(), any(), any()]],
+      B: [[note('per click'), to(), any(), any(), any(), note('5s')]],
     },
     costs: { score: 1700 },
     prerequisites: ['vl_splinter', 'vl_secondwind'],
