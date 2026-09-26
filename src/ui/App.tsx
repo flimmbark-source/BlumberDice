@@ -12,6 +12,7 @@ import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
 import { DesktopWindow } from './DesktopWindow.tsx';
+import { StatsPanel } from './StatsPanel.tsx';
 
 const TREE_UNLOCK_SCORE = 20;
 
@@ -20,6 +21,8 @@ export function App(): JSX.Element {
   const [inspected, setInspected] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const focusN = useRef(0);
 
   // scoreEarned is lifetime Score for this run, so spending below 20 never
@@ -38,6 +41,8 @@ export function App(): JSX.Element {
     if (!treeUnlocked) {
       setInspected(null);
       setExpanded(false);
+      setStatsOpen(false);
+      setLogOpen(false);
     }
   }, [treeUnlocked]);
 
@@ -64,6 +69,12 @@ export function App(): JSX.Element {
         canRefund={canRefund(s)}
         refundScore={spent.score}
         refundMeta={spent.meta}
+        utilitiesUnlocked={treeUnlocked}
+        onOpenStats={() => {
+          actions.seenStats();
+          setStatsOpen(true);
+        }}
+        onOpenLog={() => setLogOpen(true)}
       />
 
       <main className="desktop" aria-label="BlumberDice workspace">
@@ -121,6 +132,33 @@ export function App(): JSX.Element {
             <GoalBar s={s} onOpenTree={() => focusNode(s.pinned!)} />
           </DesktopWindow>
         )}
+
+
+        {treeUnlocked && statsOpen && (
+          <DesktopWindow
+            id="stats"
+            title="Stats"
+            className="desktop-window--stats"
+            defaultStyle={{ left: '52%', top: '12%', width: 360, height: 520 }}
+          >
+            <aside className="panel panel--utility">
+              <div className="panel__body"><StatsPanel s={s} /></div>
+            </aside>
+          </DesktopWindow>
+        )}
+
+        {treeUnlocked && logOpen && (
+          <DesktopWindow
+            id="log"
+            title="Log"
+            className="desktop-window--log"
+            defaultStyle={{ left: '56%', top: '18%', width: 360, height: 420 }}
+          >
+            <aside className="panel panel--utility">
+              <div className="panel__body"><LogPanel s={s} /></div>
+            </aside>
+          </DesktopWindow>
+        )}
       </main>
 
       {store.debug && <DebugPanel s={s} />}
@@ -128,12 +166,18 @@ export function App(): JSX.Element {
   );
 }
 
-function TopBar({ s, knowsB, canRefund: mayRefund, refundScore, refundMeta }: {
+function TopBar({
+  s, knowsB, canRefund: mayRefund, refundScore, refundMeta,
+  utilitiesUnlocked, onOpenStats, onOpenLog,
+}: {
   s: GameState;
   knowsB: boolean;
   canRefund: boolean;
   refundScore: number;
   refundMeta: number;
+  utilitiesUnlocked: boolean;
+  onOpenStats: () => void;
+  onOpenLog: () => void;
 }): JSX.Element {
   const [menu, setMenu] = useState(false);
   return (
@@ -143,7 +187,14 @@ function TopBar({ s, knowsB, canRefund: mayRefund, refundScore, refundMeta }: {
         <span className="brand__word"><b>Blumber</b><i>Dice</i></span>
       </div>
 
-      <div className="topbar__spacer" />
+      <nav className="window-launchers" aria-label="Utility windows">
+        {utilitiesUnlocked && (
+          <>
+            <button type="button" className="window-launcher" onClick={onOpenStats}>Stats</button>
+            <button type="button" className="window-launcher" onClick={onOpenLog}>Log</button>
+          </>
+        )}
+      </nav>
 
       <div className="topbar__right">
         {knowsB && (
@@ -273,6 +324,17 @@ function GamePanel({ s }: { s: GameState }): JSX.Element {
         <ControlRail s={s} />
       </div>
     </section>
+  );
+}
+
+function LogPanel({ s }: { s: GameState }): JSX.Element {
+  return (
+    <div className="logpanel">
+      {s.log.length === 0 && <p className="muted">Nothing yet.</p>}
+      {s.log.slice().reverse().map((e) => (
+        <div key={e.id} className={`feed__line feed__line--${e.kind}`}>{e.text}</div>
+      ))}
+    </div>
   );
 }
 
