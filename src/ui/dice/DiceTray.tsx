@@ -35,6 +35,17 @@ function sideFor(dice: number): number {
  */
 const HEADROOM = 0.28;
 
+/**
+ * Where the arena sits in whatever height is left over after the surface.
+ *
+ * Nearly all of the slack goes above it: that is the space the throw arc
+ * actually uses, and it is also where the illustration behind the tray
+ * stands. The remainder keeps the near rim off the bottom of the panel.
+ */
+const ARENA_DROP = 0.82;
+/** Pixels always kept between the near rim and the bottom of the panel. */
+const ARENA_FOOT = 14;
+
 /** How long a die must tumble. Big cascades speed up so the tray keeps pace. */
 function tumbleFor(backlog: number): number {
   if (backlog > 10) return 110;
@@ -111,12 +122,23 @@ export function DiceTray({ s, rollRef }: {
         ((rect.height - 12) * (1 - HEADROOM)) / diamondH,
       ));
       originX = rect.width / 2;
-      // Centre the arena in what is left, rather than dropping it to the
-      // floor of the panel with all the slack piled above it.
+      // The surface sits low in the panel, with the slack stacked above it
+      // for the throw. `originY` is the far corner of the projected diamond,
+      // which is also the back rim of the circle the arena is drawn as.
+      const slack = rect.height - diamondH * zoom;
       originY = Math.max(
         diamondH * zoom * 0.12,
-        rect.height - diamondH * zoom - (rect.height - diamondH * zoom) * 0.42,
+        Math.min(slack * ARENA_DROP, slack - ARENA_FOOT),
       );
+
+      // The arena publishes its own horizon. The arch behind the tray is a
+      // DOM element, and this is what lets it stand on the ground plane the
+      // canvas draws rather than on a percentage that guesses at it.
+      const arena = wrap.parentElement;
+      if (arena) {
+        arena.style.setProperty('--arena-back', `${originY}px`);
+        arena.style.setProperty('--arena-depth', `${diamondH * zoom}px`);
+      }
     };
     resize();
     const ro = new ResizeObserver(resize);

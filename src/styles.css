@@ -316,8 +316,14 @@ button:disabled { cursor: default; }
    ground plane the dice bounce on crosses its feet — which is what puts the
    throw in front of the illustration instead of on top of it. */
 .arch {
-  position: absolute; left: 50%; bottom: 34%; transform: translateX(-50%);
-  width: min(46%, 360px); height: 62%;
+  /* Its feet land on `--arena-back`, the back rim of the circle the tray
+     paints, plus a little of the arena's depth so it stands on the surface
+     instead of on the horizon. The tray measures both and publishes them;
+     the percentages are only what is used before the first measurement. */
+  position: absolute; left: 50%; transform: translateX(-50%);
+  top: 4%;
+  bottom: calc(100% - var(--arena-back, 52%) - var(--arena-depth, 0px) * 0.16);
+  width: min(46%, 360px);
   pointer-events: none;
   --arch-sky-top: #bacfc9;
   --arch-sky-bottom: #e9e2c6;
