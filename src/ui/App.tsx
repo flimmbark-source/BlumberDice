@@ -140,7 +140,7 @@ export function App(): JSX.Element {
             id="upgrade"
             title="Selected upgrade"
             className="desktop-window--upgrade"
-            defaultStyle={{ right: 12, top: 12, width: '23%', height: '56%' }}
+            defaultStyle={{ right: 12, top: 12, width: '23%', height: 'calc(100% - 24px)' }}
           >
             <SelectedUpgrade s={s} nodeId={inspected} onReveal={focusNode} embedded />
           </DesktopWindow>
