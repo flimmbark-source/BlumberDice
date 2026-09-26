@@ -768,6 +768,8 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 }
 .gear__item:hover:not(:disabled) { background: rgba(77, 166, 255, 0.12); }
 .gear__item:disabled { opacity: 0.4; }
+.gear__item--danger { color: #ff9b9b; }
+.gear__item--danger:hover:not(:disabled) { background: rgba(255, 107, 107, 0.12); color: #ffc2c2; }
 .gear__sub { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
 
 /* =============================================================== build tree */
