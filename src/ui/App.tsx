@@ -3,53 +3,43 @@ import {
   allocatedCost, canRefund, canRoll, canSwitchFramework, CONFIG, displayStats,
   effectiveDice, getBuild, type GameState,
 } from '../engine/game.ts';
-import { NODES } from '../engine/nodes.ts';
-import { checkAllocation, isVisible } from '../engine/tree.ts';
-import { openTargets } from '../engine/goal.ts';
-import type { DiscoveryFlag } from '../engine/types.ts';
 import { actions, store, useGame } from './store.ts';
 import { useCountUp } from './useCountUp.ts';
 import { ControlRail } from './ControlRail.tsx';
 import { DecisionBar } from './DecisionBar.tsx';
 import { GoalBar } from './GoalBar.tsx';
 import { DiceTray } from './dice/DiceTray.tsx';
-import { StatsPanel } from './StatsPanel.tsx';
 import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
+import { DesktopWindow } from './DesktopWindow.tsx';
 
-type Tab = 'web' | 'stats' | 'log';
+const TREE_UNLOCK_SCORE = 20;
 
 export function App(): JSX.Element {
   const s = useGame();
-  const [tab, setTab] = useState<Tab>('web');
-  // Which node the panels are describing. Owned by the app because two
-  // columns read it: the web sets it, the upgrade panel shows it.
-  // Opens on the root, so the upgrade panel has something to say before the
-  // player has pointed at anything.
-  const [inspected, setInspected] = useState<string | null>('start');
+  const [inspected, setInspected] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
-  /** Bumped on every request so asking for the same node again still pans. */
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
   const focusN = useRef(0);
 
-  /**
-   * Walks the button through the goal and everything affordable, one per
-   * press, selecting each in the panel and centring the web on it.
-   */
-  const openInWeb = (): void => {
-    setTab('web');
-    const list = openTargets(s);
-    if (list.length === 0) return;
-    const at = inspected ? list.indexOf(inspected) : -1;
-    const next = list[(at + 1) % list.length];
-    setInspected(next);
-    focusN.current += 1;
-    setFocus({ id: next, n: focusN.current });
-  };
+  // scoreEarned is lifetime Score for this run, so spending below 20 never
+  // makes the tree vanish again after the player has discovered it.
+  const treeUnlocked = s.stats.scoreEarned >= TREE_UNLOCK_SCORE;
   const knowsB = s.discovered.includes('frameworkB');
   const spent = allocatedCost(s);
 
-  useEffect(() => { if (tab === 'stats') actions.seenStats(); }, [tab]);
+  const focusNode = (id: string): void => {
+    setInspected(id);
+    focusN.current += 1;
+    setFocus({ id, n: focusN.current });
+  };
+
+  useEffect(() => {
+    if (!treeUnlocked) {
+      setInspected(null);
+      setExpanded(false);
+    }
+  }, [treeUnlocked]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -68,16 +58,31 @@ export function App(): JSX.Element {
 
   return (
     <div className="app">
-      <TopBar s={s} knowsB={knowsB} tab={tab} setTab={setTab} canRefund={canRefund(s)}
-        refundScore={spent.score} refundMeta={spent.meta} />
+      <TopBar
+        s={s}
+        knowsB={knowsB}
+        canRefund={canRefund(s)}
+        refundScore={spent.score}
+        refundMeta={spent.meta}
+      />
 
-      <main className="main">
-        {/* The game column is first in the DOM so Tab reaches Roll before
-            fifty-four tree nodes; grid-column puts it back in the middle. */}
-        <GamePanel s={s} onOpenTree={openInWeb} />
+      <main className="desktop" aria-label="BlumberDice workspace">
+        <DesktopWindow
+          id="dice"
+          title="Dice"
+          className="desktop-window--dice"
+          defaultStyle={{ left: '26%', top: 16, width: '48%', height: '66%' }}
+        >
+          <GamePanel s={s} />
+        </DesktopWindow>
 
-        <section className="col col--left">
-          {tab === 'web' && (
+        {treeUnlocked && (
+          <DesktopWindow
+            id="tree"
+            title="Build tree"
+            className="desktop-window--tree"
+            defaultStyle={{ left: 16, top: 16, width: '23%', height: 'calc(100% - 32px)' }}
+          >
             <TreeView
               allocatedKey={s.allocated.join(',')}
               discoveredKey={s.discovered.join(',')}
@@ -90,23 +95,32 @@ export function App(): JSX.Element {
               expanded={expanded}
               setExpanded={setExpanded}
               focus={focus}
+              embedded
             />
-          )}
-          {tab === 'stats' && (
-            <aside className="panel panel--left">
-              <h2 className="panel__title">Stats</h2>
-              <div className="panel__body"><StatsPanel s={s} /></div>
-            </aside>
-          )}
-          {tab === 'log' && (
-            <aside className="panel panel--left">
-              <h2 className="panel__title">Log</h2>
-              <div className="panel__body"><LogPanel s={s} /></div>
-            </aside>
-          )}
-        </section>
+          </DesktopWindow>
+        )}
 
-        <SelectedUpgrade s={s} nodeId={inspected} onReveal={setInspected} />
+        {treeUnlocked && inspected && (
+          <DesktopWindow
+            id="upgrade"
+            title="Selected upgrade"
+            className="desktop-window--upgrade"
+            defaultStyle={{ right: 16, top: 16, width: '23%', height: '66%' }}
+          >
+            <SelectedUpgrade s={s} nodeId={inspected} onReveal={focusNode} embedded />
+          </DesktopWindow>
+        )}
+
+        {treeUnlocked && s.pinned && (
+          <DesktopWindow
+            id="goal"
+            title="Next goal"
+            className="desktop-window--goal"
+            defaultStyle={{ left: '26%', bottom: 16, width: '48%', height: 190 }}
+          >
+            <GoalBar s={s} onOpenTree={() => focusNode(s.pinned!)} />
+          </DesktopWindow>
+        )}
       </main>
 
       {store.debug && <DebugPanel s={s} />}
@@ -114,10 +128,12 @@ export function App(): JSX.Element {
   );
 }
 
-
-function TopBar({ s, knowsB, tab, setTab, canRefund: mayRefund, refundScore, refundMeta }: {
-  s: GameState; knowsB: boolean; tab: Tab; setTab: (t: Tab) => void;
-  canRefund: boolean; refundScore: number; refundMeta: number;
+function TopBar({ s, knowsB, canRefund: mayRefund, refundScore, refundMeta }: {
+  s: GameState;
+  knowsB: boolean;
+  canRefund: boolean;
+  refundScore: number;
+  refundMeta: number;
 }): JSX.Element {
   const [menu, setMenu] = useState(false);
   return (
@@ -127,11 +143,7 @@ function TopBar({ s, knowsB, tab, setTab, canRefund: mayRefund, refundScore, ref
         <span className="brand__word"><b>Blumber</b><i>Dice</i></span>
       </div>
 
-      <nav className="tabsx" role="tablist" aria-label="Panel">
-        <TabBtn id="web" tab={tab} set={setTab} label="Build" badge={availableCount(s)} />
-        <TabBtn id="stats" tab={tab} set={setTab} label="Stats" dot={statsUnread(s)} />
-        <TabBtn id="log" tab={tab} set={setTab} label="Log" />
-      </nav>
+      <div className="topbar__spacer" />
 
       <div className="topbar__right">
         {knowsB && (
@@ -206,7 +218,6 @@ function GearMark(): JSX.Element {
 }
 
 function Currency({ label, value, alt = false }: { label: string; value: number; alt?: boolean }): JSX.Element {
-  // Held back while the rolled number is still showing above its die.
   const { value: shown, moving } = useCountUp(
     value,
     alt ? () => store.heldBack.meta : () => store.heldBack.score,
@@ -222,7 +233,7 @@ function Currency({ label, value, alt = false }: { label: string; value: number;
   );
 }
 
-function GamePanel({ s, onOpenTree }: { s: GameState; onOpenTree: () => void }): JSX.Element {
+function GamePanel({ s }: { s: GameState }): JSX.Element {
   const build = getBuild(s);
   const stats = displayStats(s, build);
   const cd = CONFIG.baseCooldownMs * stats.cooldownMult;
@@ -232,8 +243,6 @@ function GamePanel({ s, onOpenTree }: { s: GameState; onOpenTree: () => void }):
 
   return (
     <section className="game panel">
-      <h2 className="panel__title">Dice</h2>
-
       <div className="game__arena">
         <DiceTray s={s} rollRef={rollRef} />
       </div>
@@ -260,54 +269,11 @@ function GamePanel({ s, onOpenTree }: { s: GameState; onOpenTree: () => void }):
             style={{ width: `${cd > 0 ? (1 - Math.min(1, s.cooldownRemaining / cd)) * 100 : 100}%` }} />
         </button>
 
-        <GoalBar s={s} onOpenTree={onOpenTree} />
         {s.decision && <DecisionBar decision={s.decision} />}
         <ControlRail s={s} />
       </div>
     </section>
   );
-}
-
-function LogPanel({ s }: { s: GameState }): JSX.Element {
-  return (
-    <div className="logpanel">
-      {s.log.length === 0 && <p className="muted">Nothing yet.</p>}
-      {s.log.slice().reverse().map((e) => (
-        <div key={e.id} className={`feed__line feed__line--${e.kind}`}>{e.text}</div>
-      ))}
-    </div>
-  );
-}
-
-function TabBtn({ id, tab, set, label, badge, dot }: {
-  id: Tab; tab: Tab; set: (t: Tab) => void; label: string; badge?: number; dot?: boolean;
-}): JSX.Element {
-  return (
-    <button type="button" className={`tab${tab === id ? ' tab--on' : ''}`} onClick={() => set(id)}>
-      {label}
-      {badge ? <span className="tab__badge">{badge}</span> : null}
-      {dot ? <span className="tab__dot" aria-label="new" /> : null}
-    </button>
-  );
-}
-
-/**
- * The ordinary "there is something here you have not looked at" convention.
- * It points at the panel, not at what is in it.
- */
-function statsUnread(s: GameState): boolean {
-  return !s.sawStats && s.totalRolls >= CONFIG.discoveryRollThreshold;
-}
-
-function availableCount(s: GameState): number {
-  const allocated = new Set(s.allocated);
-  const discovered = new Set(s.discovered as DiscoveryFlag[]);
-  let n = 0;
-  for (const node of NODES) {
-    if (!isVisible(node, discovered)) continue;
-    if (checkAllocation(node.id, { allocated, discovered, score: s.score, meta: s.meta }).ok) n++;
-  }
-  return n;
 }
 
 function DebugPanel({ s }: { s: GameState }): JSX.Element {
@@ -321,7 +287,10 @@ function DebugPanel({ s }: { s: GameState }): JSX.Element {
         <span>pending</span><b>{s.pending.length}</b>
       </div>
       <div className="debug__row">
-        <button type="button" className="chip" onClick={() => store.act((g) => { g.score += 5000; })}>+5000 Score</button>
+        <button type="button" className="chip" onClick={() => store.act((g) => {
+          g.score += 5000;
+          g.stats.scoreEarned += 5000;
+        })}>+5000 Score</button>
         <button type="button" className="chip" onClick={() => store.act((g) => { g.meta += 500; })}>+500 Meta</button>
         <button
           type="button" className="chip"
