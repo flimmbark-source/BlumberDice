@@ -51,7 +51,7 @@ export function App(): JSX.Element {
   }, [treeUnlocked, tab]);
 
   const alignWindows = (): void => {
-    for (const id of ['dice', 'tree', 'upgrade', 'goal']) {
+    for (const id of ['tree', 'upgrade']) {
       try { localStorage.removeItem(`blumberdice.window.${id}`); } catch { /* optional persistence */ }
     }
     setLayoutVersion((v) => v + 1);
@@ -87,15 +87,9 @@ export function App(): JSX.Element {
       />
 
       <main className="desktop" aria-label="BlumberDice workspace">
-        <DesktopWindow
-          key={`dice-${layoutVersion}`}
-          id="dice"
-          title="Dice"
-          className="desktop-window--dice"
-          defaultStyle={{ left: '25%', top: 12, width: '50%', height: '56%' }}
-        >
+        <section className="game-area" aria-label="Game area">
           <GamePanel s={s} />
-        </DesktopWindow>
+        </section>
 
         {treeUnlocked && (
           <DesktopWindow
@@ -106,20 +100,33 @@ export function App(): JSX.Element {
             defaultStyle={{ left: 12, top: 12, width: '23%', height: 'calc(100% - 24px)' }}
           >
             {tab === 'web' && (
-              <TreeView
-                allocatedKey={s.allocated.join(',')}
-                discoveredKey={s.discovered.join(',')}
-                score={s.score}
-                meta={s.meta}
-                framework={s.framework}
-                pinned={s.pinned}
-                inspected={inspected}
-                setInspected={setInspected}
-                expanded={expanded}
-                setExpanded={setExpanded}
-                focus={focus}
-                embedded
-              />
+              <div className="tech-build">
+                <TreeView
+                  allocatedKey={s.allocated.join(',')}
+                  discoveredKey={s.discovered.join(',')}
+                  score={s.score}
+                  meta={s.meta}
+                  framework={s.framework}
+                  pinned={s.pinned}
+                  inspected={inspected}
+                  setInspected={setInspected}
+                  expanded={expanded}
+                  setExpanded={setExpanded}
+                  focus={focus}
+                  embedded
+                />
+                {s.pinned && (
+                  <div className="tech-build__goal">
+                    <GoalBar
+                      s={s}
+                      onOpenTree={() => {
+                        setTab('web');
+                        focusNode(s.pinned!);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             )}
             {tab === 'stats' && (
               <aside className="panel panel--utility">
@@ -143,24 +150,6 @@ export function App(): JSX.Element {
             defaultStyle={{ right: 12, top: 12, width: '23%', height: 'calc(100% - 24px)' }}
           >
             <SelectedUpgrade s={s} nodeId={inspected} onReveal={focusNode} embedded />
-          </DesktopWindow>
-        )}
-
-        {treeUnlocked && s.pinned && (
-          <DesktopWindow
-            key={`goal-${layoutVersion}`}
-            id="goal"
-            title="Next goal"
-            className="desktop-window--goal"
-            defaultStyle={{ left: '25%', bottom: 12, width: '50%', height: '38%' }}
-          >
-            <GoalBar
-              s={s}
-              onOpenTree={() => {
-                setTab('web');
-                focusNode(s.pinned!);
-              }}
-            />
           </DesktopWindow>
         )}
 
@@ -331,7 +320,7 @@ function GamePanel({ s }: { s: GameState }): JSX.Element {
   const rollRef = useRef<(() => void) | null>(null);
 
   return (
-    <section className="game panel">
+    <section className="game game-area__panel">
       <div className="game__arena">
         <DiceTray s={s} rollRef={rollRef} />
       </div>
