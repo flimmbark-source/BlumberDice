@@ -146,6 +146,11 @@ export interface GameState {
 
   allocated: string[];
   discovered: DiscoveryFlag[];
+  /**
+   * The node the player is saving toward, if they picked one. A goal, not a
+   * recommendation: nothing sets this but an explicit choice in the web.
+   */
+  pinned: string | null;
   sawStats: boolean;
 
   totalRolls: number;
@@ -198,6 +203,7 @@ export function createGame(seed = 0x5eed1e): GameState {
     framework: 'A',
     allocated: ['start'],
     discovered: [],
+    pinned: null,
     sawStats: false,
     totalRolls: 0,
     lastFace: null,
@@ -1096,6 +1102,9 @@ export function allocate(s: GameState, nodeId: string): { ok: boolean; reason?: 
   s.score -= node.costs.score ?? 0;
   s.meta -= node.costs.meta ?? 0;
   s.allocated.push(nodeId);
+  // Buying what you were saving for retires the goal; the player picks the
+  // next one. Nothing advances it automatically.
+  if (s.pinned === nodeId) s.pinned = null;
   log(s, 'system', `Allocated ${node.name}`);
   // Keep persistent control state legal after a capacity change.
   const cap = Math.floor(displayStats(s).holdCapacity);
@@ -1132,6 +1141,8 @@ export function refundAll(s: GameState): { score: number; meta: number } | null 
   s.score += refunded.score;
   s.meta += refunded.meta;
   s.allocated = ['start'];
+  // Whatever was pinned is almost certainly out of reach now.
+  s.pinned = null;
 
   // Control state that only existed because of a node that is now gone.
   s.held = [];

@@ -572,3 +572,87 @@ button.minidie:hover .die__body { stroke: var(--muted); }
   .tray__hint--show { animation: none; opacity: 1; }
   .cooldown__fill { transition: none; }
 }
+
+/* ------------------------------------------------------------------- goal */
+/* Beside the die, not in the topbar: this is what the player watches while
+   rolling. Compact on purpose -- it is a strip, not a second card. */
+.goal {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 9px 14px 11px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(20, 25, 32, 0.55);
+}
+.goal--ready { background: rgba(232, 192, 90, 0.07); border-bottom-color: rgba(232, 192, 90, 0.28); }
+/* The band spans the column, the content does not: a 5px bar 600px wide
+   stops reading as a bar. */
+.goal > * { width: 100%; max-width: 430px; margin-inline: auto; }
+
+.goal__head {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.15em;
+  color: var(--muted); font-weight: 650;
+}
+.goal--ready .goal__head { color: var(--score); }
+.goal__mark { font-size: 9px; }
+
+.goal__row { display: flex; align-items: baseline; gap: 10px; }
+.goal__name { font-size: 15px; font-weight: 650; letter-spacing: 0.01em; }
+.goal__lead { margin-block: 0; font-size: 14px; font-weight: 600; }
+.goal__unpin {
+  margin-left: auto; padding: 1px 7px;
+  border: 1px solid var(--line); border-radius: 5px; background: none;
+  color: var(--muted); font-size: 10.5px;
+}
+.goal__unpin:hover { color: var(--text); border-color: #435063; }
+
+/* The upgrade previews itself, in the grammar the cards already use. */
+.goal__nt { margin-block: -1px 1px; }
+.goal__nt .nt { margin: 0; gap: 4px; }
+.goal__nt .nt__row { min-height: 22px; }
+.goal__nt .nt__row--clause { display: none; }
+
+.goal__note { margin-block: 0; font-size: 11px; color: var(--muted); }
+.goal__after {
+  margin-block: 1px 0; font-size: 10.5px; color: #626d7d;
+  display: flex; align-items: baseline; gap: 6px;
+}
+.goal__afterLabel { text-transform: uppercase; letter-spacing: 0.13em; font-size: 8.5px; opacity: 0.75; }
+
+.goal__open {
+  align-self: flex-start; margin-top: 2px; padding: 4px 12px;
+  border: 1px solid var(--score); border-radius: 7px;
+  background: rgba(232, 192, 90, 0.1); color: var(--score);
+  font-size: 12px; font-weight: 600;
+}
+.goal__open:hover { background: rgba(232, 192, 90, 0.18); }
+
+.goalbar { display: flex; flex-direction: column; gap: 3px; }
+.goalbar__nums {
+  display: flex; align-items: baseline; gap: 4px;
+  font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.goalbar__cur { font-weight: 650; color: var(--text); }
+.goalbar__sep, .goalbar__need { color: var(--muted); }
+.goalbar__cy {
+  margin-left: auto; font-size: 9.5px; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--score);
+}
+.goalbar--alt .goalbar__cy { color: var(--meta); }
+.goalbar__track {
+  height: 5px; border-radius: 3px; overflow: hidden;
+  background: rgba(125, 155, 205, 0.12);
+}
+.goalbar__fill {
+  display: block; height: 100%; border-radius: 3px;
+  background: var(--score); transition: width 0.12s linear;
+}
+.goalbar--alt .goalbar__fill { background: var(--meta); }
+
+/* The goal in the web itself. */
+.node--pinned .node__shape {
+  stroke-dasharray: 3 2.5;
+  filter: drop-shadow(0 0 5px hsl(var(--hue) 75% 60% / 0.7));
+}
+
+@media (prefers-reduced-motion: reduce) { .goalbar__fill { transition: none; } }

@@ -425,6 +425,52 @@ the longest needs 24. Complexity belongs in the notation and the clause, not
 in a longer paragraph. Three tests now hold the line: the word cap, a ban on
 engine vocabulary and "no effect", and one spelling of multiplication.
 
+### 18. A milestone is not a goal, and neither is a recommendation
+
+The score was a counter with no destination: nothing told a new player what
+they were accumulating toward. Fixed without adding quests, missions or any
+new progression rule — the tree and its costs already contain every number
+this needs.
+
+Three things are kept strictly apart, and only the first two are built:
+
+- a **milestone** is a threshold at which something becomes possible,
+- a **goal** is a node the player pinned themselves,
+- a **recommendation** is the game deciding, and it is absent on purpose.
+
+That distinction is what shapes the copy. Four nodes hang off `start` at 45
+Score, so the opening state reads "45 Score · 4 upgrades unlock", never
+"save for Weighted Edge". Naming one would be a recommendation, and it would
+also be a lie about how the tree branches.
+
+The state is one field: `pinned: string | null`. Everything else is derived
+in `src/engine/goal.ts` — the cheapest reachable threshold, how many nodes
+clear it, how many are affordable now, and the per-currency shortfall.
+Pressing an unaffordable node in the web pins it; pressing it again clears
+it; buying it clears it and selects nothing in its place.
+
+Two decisions inside it:
+
+- **The shortfall is never one blended percentage.** A node costing Score
+  and Meta draws two bars, so the player can see which currency is the one
+  holding them up. Collapsing them would hide the actual blocker.
+- **The `AFTER` horizon only appears when the tree is unambiguous** — when
+  buying the pinned node would open exactly one door that is not already
+  open by another route. That is true of 18 of the 54 nodes and false of
+  every region entry, which is correct: the point of a spine head is that it
+  forks. Where it is ambiguous the line is omitted rather than picking one,
+  which would be a recommendation wearing a different hat.
+
+The brief's own illustration showed "AFTER Momentum" under Raised Floor.
+In the real tree Momentum also needs Heavy Six, so buying Raised Floor
+unlocks nothing on its own and the line is correctly absent there.
+
+A bug fixed on the way: nodes carried `aria-disabled` for every state but
+`available`. Once an unaffordable node became a real control — pressing it
+sets the goal — that was telling assistive technology a working control was
+disabled. It is now set only for genuinely inert states, and the label says
+what activating the node will do.
+
 ---
 
 ## Unresolved — deliberately not implemented

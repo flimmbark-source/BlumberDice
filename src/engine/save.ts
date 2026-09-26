@@ -52,6 +52,10 @@ export function deserialize(raw: string): GameState | null {
   };
   merged.allocated = (merged.allocated ?? ['start']).filter((id) => NODES_BY_ID.has(id));
   if (!merged.allocated.includes('start')) merged.allocated.unshift('start');
+  // A goal pointing at a node this build no longer has, or never had.
+  if (merged.pinned && (!NODES_BY_ID.has(merged.pinned) || merged.allocated.includes(merged.pinned))) {
+    merged.pinned = null;
+  }
   // The visible queue must match the restored build before the first roll.
   syncQueue(merged);
   return merged;

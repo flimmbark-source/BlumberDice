@@ -128,6 +128,8 @@ export const actions = {
   roll: () => store.act(manualRoll),
   switchFramework: () => store.act(switchFramework),
   allocate: (id: string) => store.act((s) => { allocate(s, id); }),
+  /** Set or clear the node the player is saving toward. */
+  pin: (id: string | null) => store.act((s) => { s.pinned = id; }),
   refund: () => store.act((s) => { refundAll(s); }),
   decide: (choice: DecisionChoice) => store.act((s) => resolveDecision(s, choice)),
   seal: (face: Face | null) => store.act((s) => setSeal(s, face)),

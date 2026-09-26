@@ -10,6 +10,7 @@ import { actions, store, useGame } from './store.ts';
 import { useCountUp } from './useCountUp.ts';
 import { ControlRail } from './ControlRail.tsx';
 import { DecisionBar } from './DecisionBar.tsx';
+import { GoalBar } from './GoalBar.tsx';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
 import { TreeView } from './TreeView.tsx';
@@ -43,7 +44,7 @@ export function App(): JSX.Element {
     <div className="app">
       <TopBar s={s} knowsB={knowsB} />
       <main className="main">
-        <GamePanel s={s} />
+        <GamePanel s={s} onOpenTree={() => setTab('web')} />
         <aside className="side">
           <nav className="tabs">
             <TabBtn id="web" tab={tab} set={setTab} label="Web" badge={availableCount(s)} />
@@ -58,6 +59,7 @@ export function App(): JSX.Element {
                 score={s.score}
                 meta={s.meta}
                 framework={s.framework}
+                pinned={s.pinned}
                 canRefund={canRefund(s)}
                 refundScore={spent.score}
                 refundMeta={spent.meta}
@@ -124,7 +126,7 @@ function Currency({ label, value, alt = false }: { label: string; value: number;
   );
 }
 
-function GamePanel({ s }: { s: GameState }): JSX.Element {
+function GamePanel({ s, onOpenTree }: { s: GameState; onOpenTree: () => void }): JSX.Element {
   const build = getBuild(s);
   const stats = displayStats(s, build);
   const cd = CONFIG.baseCooldownMs * stats.cooldownMult;
@@ -138,6 +140,8 @@ function GamePanel({ s }: { s: GameState }): JSX.Element {
       <div className={`cooldown${ready ? ' cooldown--ready' : ''}`}>
         <span className="cooldown__fill" style={{ width: `${progress * 100}%` }} />
       </div>
+
+      <GoalBar s={s} onOpenTree={onOpenTree} />
 
       {s.decision && <DecisionBar decision={s.decision} />}
 

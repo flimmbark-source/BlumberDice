@@ -233,6 +233,18 @@ that would revive it rather than saying "no effect".
 the whole vocabulary at once: `npx vite`, then `node scripts/sheet-shot.mjs
 out.png`.
 
+### The next target is always on screen
+
+`src/engine/goal.ts` derives what the player is working toward from the tree
+alone — no quests, no new resources. It reports a **milestone** (the cheapest
+reachable threshold and how many nodes clear it), a **ready** state, or a
+**goal**: a node the player pinned by pressing it in the web. It never names
+a node the player did not choose.
+
+`GoalBar` renders that beside the die, using the tree's own notation as the
+reward preview. Costs in two currencies get two bars, never one blended
+percentage, so the blocking requirement stays visible.
+
 ### The roll pipeline
 
 `generate → loadedChoice → hold → flip → finalize → ride`

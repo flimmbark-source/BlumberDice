@@ -84,6 +84,7 @@ interface Props {
   score: number;
   meta: number;
   framework: FrameworkId;
+  pinned: string | null;
   canRefund: boolean;
   /** Primitives, so memo can compare them by value. */
   refundScore: number;
@@ -102,7 +103,7 @@ function statusOf(
 }
 
 export const TreeView = memo(function TreeView({
-  allocatedKey, discoveredKey, score, meta, framework, canRefund, refundScore, refundMeta,
+  allocatedKey, discoveredKey, score, meta, framework, pinned, canRefund, refundScore, refundMeta,
 }: Props): JSX.Element {
   const allocated = useMemo(() => new Set(allocatedKey.split(',').filter(Boolean)), [allocatedKey]);
   const discovered = useMemo(
@@ -237,15 +238,17 @@ export const TreeView = memo(function TreeView({
               <g
                 key={n.id}
                 transform={`translate(${n.position.x} ${n.position.y})`}
-                className={`node node--${n.nodeType} node--${st}${inspected === n.id ? ' node--inspected' : ''}`}
+                className={`node node--${n.nodeType} node--${st}${inspected === n.id ? ' node--inspected' : ''}${pinned === n.id ? ' node--pinned' : ''}`}
                 style={{ ['--hue' as string]: REGION_HUE[n.region] }}
                 /* Every visible node is focusable, not only the affordable
                    ones: reading the web is half of using it, and without
                    this the whole tree was unreachable without a mouse. */
                 tabIndex={0}
                 role="button"
-                aria-label={nodeLabel(n, st)}
-                aria-disabled={st !== 'available'}
+                aria-label={nodeLabel(n, st, pinned === n.id)}
+                /* Only genuinely inert nodes are disabled. An unaffordable
+                   one is now an active control: pressing it sets the goal. */
+                aria-disabled={st === 'locked' || st === 'allocated'}
                 onPointerEnter={() => setInspected(n.id)}
                 onFocus={() => setInspected(n.id)}
                 onKeyDown={(e) => {
@@ -255,12 +258,16 @@ export const TreeView = memo(function TreeView({
                   e.stopPropagation();
                   setConfirmRefund(false);
                   if (st === 'available') actions.allocate(n.id);
+                  else if (st === 'unaffordable') actions.pin(pinned === n.id ? null : n.id);
                 }}
                 onClick={() => {
                   setInspected(n.id);
                   // Touching the web is an answer of sorts: stop asking.
                   setConfirmRefund(false);
                   if (st === 'available') actions.allocate(n.id);
+                  // One purchase away and out of pocket: the only node worth
+                  // saving toward, so a press makes it the goal.
+                  else if (st === 'unaffordable') actions.pin(pinned === n.id ? null : n.id);
                 }}
               >
                 <NodeShape type={n.nodeType} />
@@ -365,7 +372,7 @@ function Swatch({ type }: { type: PassiveNode['nodeType'] }): JSX.Element {
 
 /** What a screen reader says for a node: what it is, what it costs, and why
  *  it can or cannot be taken. */
-function nodeLabel(n: PassiveNode, st: Status): string {
+function nodeLabel(n: PassiveNode, st: Status, isGoal: boolean): string {
   const cost = [
     n.costs.score ? `${n.costs.score} Score` : '',
     n.costs.meta ? `${n.costs.meta} Meta` : '',
@@ -374,7 +381,11 @@ function nodeLabel(n: PassiveNode, st: Status): string {
     : st === 'available' ? 'available'
     : st === 'unaffordable' ? 'cannot afford'
     : 'locked, connect an adjacent node first';
-  return `${n.name}, ${n.nodeType}${cost ? `, ${cost}` : ''}. ${state}.`;
+  // Say what activating it does, since that now differs by state.
+  const act = st === 'available' ? ' Press to allocate.'
+    : st === 'unaffordable' ? (isGoal ? ' Current goal. Press to clear.' : ' Press to set as your goal.')
+    : '';
+  return `${n.name}, ${n.nodeType}${cost ? `, ${cost}` : ''}. ${state}.${act}`;
 }
 
 /** Which currency a cost is in, told by shape as well as by colour. */
