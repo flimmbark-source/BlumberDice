@@ -112,19 +112,15 @@ export function currentGoal(s: GameState): Goal {
 }
 
 /**
- * What "Open in Web" walks through, in order: the pinned goal if there is
- * one, then everything the player could buy right now. Pressing the button
- * again steps to the next, so it is a tour of what is actionable rather
- * than a jump to one place.
+ * Nodes the player can buy right now, in stable tree order.
+ *
+ * The "X Available to Buy" button cycles this list. A pinned-but-unaffordable
+ * goal is deliberately excluded: the button describes purchases available
+ * now, so every stop in its cycle must actually be purchasable.
  */
 export function openTargets(s: GameState): string[] {
   const c = ctxOf(s);
-  const out: string[] = [];
-  if (s.pinned && !c.allocated.has(s.pinned) && NODES_BY_ID.has(s.pinned)) out.push(s.pinned);
-  for (const n of candidates(c)) {
-    if (affordable(n, c) && !out.includes(n.id)) out.push(n.id);
-  }
-  return out;
+  return candidates(c).filter((n) => affordable(n, c)).map((n) => n.id);
 }
 
 /** Pinning is only meaningful for a node that is one purchase away. */
