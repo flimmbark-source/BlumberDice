@@ -1140,3 +1140,76 @@ button.chain__btn:hover { border-color: var(--accent); }
   background: #13233a;
 }
 
+
+
+/* The die is the game itself, not another desktop tool. It owns the fixed
+   centre workspace while the movable utility windows live around it. */
+.game-area {
+  position: absolute;
+  left: 25%;
+  right: 25%;
+  top: 12px;
+  bottom: 12px;
+  display: flex;
+  min-width: 0;
+  z-index: 1;
+}
+.game-area__panel {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.game-area .game__arena { flex: 1 1 auto; min-height: 0; }
+.game-area .game__controls {
+  margin: 0 auto;
+  width: min(560px, calc(100% - 24px));
+  border-top: 0;
+  background: rgba(7, 13, 23, 0.72);
+  border-radius: 10px;
+}
+
+/* Build is one view of the tech window. Its goal belongs to that view, under
+   the tree, rather than occupying another movable window. */
+.tech-build {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.tech-build > .tree {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+.tech-build__goal {
+  flex: 0 0 auto;
+  border-top: 1px solid #203450;
+}
+.tech-build__goal .goal {
+  border: 0;
+  border-radius: 0;
+  border-bottom: 0;
+  padding: 10px 12px 12px;
+  background: rgba(255, 194, 51, 0.055);
+}
+.tech-build__goal .goal__unpin { display: none; }
+
+@media (max-width: 900px) {
+  .game-area {
+    position: relative;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    width: 100%;
+    min-height: min(62vh, 620px);
+    flex: 0 0 min(62vh, 620px);
+  }
+}
