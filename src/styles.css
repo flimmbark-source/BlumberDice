@@ -316,13 +316,20 @@ button:disabled { cursor: default; }
    ground plane the dice bounce on crosses its feet — which is what puts the
    throw in front of the illustration instead of on top of it. */
 .arch {
-  /* Its feet land on `--arena-back`, the back rim of the circle the tray
-     paints, plus a little of the arena's depth so it stands on the surface
-     instead of on the horizon. The tray measures both and publishes them;
-     the percentages are only what is used before the first measurement. */
+  /* Its feet land on the middle of the circle the tray paints — the same
+     ground line the die comes to rest on, so the two stand together. The
+     tray measures the circle and publishes it; the percentage is only what
+     is used before the first measurement. */
+  --arena-base: calc(var(--arena-back, 50%) + var(--arena-depth, 0px) * 0.5);
   position: absolute; left: 50%; transform: translateX(-50%);
-  top: 4%;
-  bottom: calc(100% - var(--arena-back, 52%) - var(--arena-depth, 0px) * 0.16);
+  /* An <svg> is a replaced element: given `top`, `bottom` and an auto
+     height it takes its height from its own aspect ratio and drops the
+     `bottom` on the floor, which is how the arch came adrift from the
+     surface at every window size but the one it was drawn at. So it is
+     placed from the bottom, with a height of its own. */
+  top: auto;
+  bottom: calc(100% - var(--arena-base));
+  height: min(88%, max(0px, var(--arena-base) - 8px));
   width: min(46%, 360px);
   pointer-events: none;
   --arch-sky-top: #bacfc9;
