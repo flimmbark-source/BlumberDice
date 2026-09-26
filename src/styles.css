@@ -706,9 +706,10 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 /* ================================================================== topbar */
 
 .topbar {
-  /* Above the columns: the settings menu hangs out of the bar and was
-     being painted under the right-hand panel, which swallowed its clicks. */
-  position: relative; z-index: 30;
+  /* The settings/refund menu must always sit above movable desktop windows.
+     Those windows raise their z-index as they are focused, so this layer
+     needs to live outside that normal desktop stacking range. */
+  position: relative; z-index: 100000;
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   gap: 16px; padding: 10px 18px;
   border-bottom: 1px solid var(--line-2);
