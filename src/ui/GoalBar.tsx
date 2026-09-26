@@ -51,7 +51,7 @@ export function GoalBar({ s, onOpenTree, selectedNodeId = null }: {
             {goal.available === 1 ? '1 upgrade available' : `${goal.available} upgrades available`}
           </p>
           <button type="button" className="goal__open" onClick={() => onOpenTree()}>
-            Open in Tree
+            {goal.available} Available to Buy
           </button>
         </>
       )}
