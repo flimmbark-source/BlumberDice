@@ -1138,12 +1138,3 @@ button.chain__btn:hover { border-color: var(--accent); }
   background: #13233a;
 }
 
-.desktop-window--stats .panel--utility,
-.desktop-window--log .panel--utility {
-  height: 100%;
-}
-.desktop-window--stats .panel__body,
-.desktop-window--log .panel__body {
-  height: 100%;
-  overflow: auto;
-}
