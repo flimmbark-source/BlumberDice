@@ -406,12 +406,18 @@ describe('holding the score back until the number fades', () => {
     expect(releaseFadedGhosts(world)).toEqual({ score: 40, meta: 4 });
   });
 
-  it('releases a roll when its die is re-thrown before the number fades', () => {
+  it('keeps withholding a roll when its physical die is re-thrown', () => {
     const { world, die } = rolling(12);
-    step(world, 16);
+    while (die.state !== 'rest' && world.t < 4000) step(world, 16);
     expect(releaseFadedGhosts(world).score).toBe(12);
+
     throwDie(world, die, { minTumbleMs: 300 });
+    expect(world.ghosts).toHaveLength(1);
+    expect(releaseFadedGhosts(world).score).toBe(12);
+
+    for (let t = 0; t < 500; t += 16) { step(world, 16); releaseFadedGhosts(world); }
     expect(releaseFadedGhosts(world)).toEqual({ score: 0, meta: 0 });
+    expect(world.ghosts).toHaveLength(0);
   });
 
   it('releases a roll when its die leaves the tray', () => {
@@ -465,23 +471,23 @@ function settledSpent(world: World): DieBody {
 }
 
 describe('a roll does not cut short a result the player has not read', () => {
-  it('leaves a die that is still showing its number alone', () => {
-    // The bug: a bonus roll lands, the player clicks again, and the bonus
-    // die is swept off mid-reveal.
+  it('reuses a die that is still showing its number', () => {
     const world = createWorld(420, 420);
-    const bonus = settledShowing(world, 7);
+    const showing = settledShowing(world, 7);
     const plan = planThrow(world, 1);
-    expect(plan.retire).not.toContain(bonus);
-    expect(plan.reuse).not.toContain(bonus);
+    expect(plan.reuse).toEqual([showing]);
+    expect(plan.retire).toEqual([]);
   });
 
-  it('spawns a fresh die rather than re-throwing one mid-reveal', () => {
+  it('does not require a second physical die for a fast repeat roll', () => {
     const world = createWorld(420, 420);
-    settledShowing(world, 7);
+    const showing = settledShowing(world, 7);
     const plan = planThrow(world, 1);
-    // Nothing reusable, so the caller has to spawn: the showing die is safe.
-    expect(plan.reuse).toEqual([]);
-    expect(plan.retire).toEqual([]);
+    expect(plan.reuse).toHaveLength(1);
+
+    throwDie(world, showing, { minTumbleMs: 300 });
+    expect(world.dice).toHaveLength(1);
+    expect(world.ghosts).toHaveLength(1);
   });
 
   it('still clears away dice whose number has been read', () => {
@@ -493,7 +499,7 @@ describe('a roll does not cut short a result the player has not read', () => {
     expect(plan.retire).toEqual([spentB]);
   });
 
-  it('prefers a spent die over spawning, and protects the showing one', () => {
+  it('prefers a spent die before reusing one that is still showing', () => {
     const world = createWorld(420, 420);
     const showing = settledShowing(world, 7);
     const spent = settledSpent(world);
