@@ -1,3 +1,4 @@
+import type { RollProc } from '../../engine/game.ts';
 import type { Face } from '../../engine/types.ts';
 import {
   add, depthOf, dot, ISO_X, ISO_Y, normalize, project, qRotate, scale, v3,
@@ -348,6 +349,111 @@ export function drawDie(c: CanvasRenderingContext2D, die: DieBody, theme: Theme)
   c.restore();
 }
 
+const PROC_STEP_MS = 620;
+const PROC_VISIBLE_MS = 900;
+
+function procAt(procs: RollProc[], settledAt: number, t: number): {
+  proc: RollProc;
+  age: number;
+} | null {
+  if (procs.length === 0 || settledAt < 0) return null;
+  const sinceSettle = t - settledAt;
+  if (sinceSettle < 0) return null;
+  const index = Math.floor(sinceSettle / PROC_STEP_MS);
+  if (index < 0 || index >= procs.length) return null;
+  const age = sinceSettle - index * PROC_STEP_MS;
+  if (age > PROC_VISIBLE_MS) return null;
+  return { proc: procs[index], age };
+}
+
+/**
+ * Mechanical feedback stays attached to the result that caused it.
+ *
+ * Jackpot gets the strongest local punctuation: a floor pulse around the die.
+ * Pattern/bonus events use the same grammar at lower intensity so the player
+ * learns cause -> proc without the arena turning into a full-screen banner.
+ */
+function drawProcPulse(
+  c: CanvasRenderingContext2D,
+  pos: Vec3,
+  settledAt: number,
+  procs: RollProc[],
+  t: number,
+  alpha: number,
+  theme: Theme,
+): void {
+  const active = procAt(procs, settledAt, t);
+  if (!active) return;
+  const { proc, age } = active;
+  const p = Math.min(1, age / PROC_VISIBLE_MS);
+  const strength = proc.kind === 'jackpot' ? 1 : proc.kind === 'pattern' ? 0.55 : 0.4;
+  const centre = project(v3(pos.x, pos.y, 0));
+  const radius = DIE * (0.62 + p * (proc.kind === 'jackpot' ? 1.15 : 0.72));
+
+  c.save();
+  c.translate(centre.x, centre.y);
+  c.scale(ISO_X, ISO_Y);
+  c.globalAlpha = Math.max(0, 1 - p) * strength * alpha;
+  c.strokeStyle = proc.kind === 'jackpot' ? theme.accent : theme.edge;
+  c.lineWidth = (proc.kind === 'jackpot' ? 3.2 : 1.8) / ISO_Y;
+  c.beginPath();
+  c.arc(0, 0, radius, 0, Math.PI * 2);
+  c.stroke();
+
+  if (proc.kind === 'jackpot') {
+    c.globalAlpha *= 0.55;
+    c.lineWidth = 1.4 / ISO_Y;
+    c.beginPath();
+    c.arc(0, 0, radius * 0.72, 0, Math.PI * 2);
+    c.stroke();
+  }
+  c.restore();
+}
+
+function drawProcLabel(
+  c: CanvasRenderingContext2D,
+  pos: Vec3,
+  settledAt: number,
+  procs: RollProc[],
+  t: number,
+  alpha: number,
+  theme: Theme,
+): void {
+  const active = procAt(procs, settledAt, t);
+  if (!active) return;
+  const { proc, age } = active;
+  const p = Math.min(1, age / PROC_VISIBLE_MS);
+  const enter = Math.min(1, p / 0.14);
+  const exit = p < 0.72 ? 1 : Math.max(0, 1 - (p - 0.72) / 0.28);
+  const fade = enter * exit * alpha;
+  const anchor = project(v3(pos.x, pos.y, pos.z + H));
+  const rise = 7 + p * 16;
+
+  c.save();
+  c.translate(anchor.x, anchor.y - 94 - rise);
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.globalAlpha = fade;
+
+  c.font = proc.kind === 'jackpot'
+    ? '900 24px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
+    : '800 16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+  c.fillStyle = 'rgba(0,0,0,0.72)';
+  c.fillText(proc.label, 0, 2);
+  c.fillStyle = proc.kind === 'jackpot' ? theme.accent : '#e7edf6';
+  c.fillText(proc.label, 0, 0);
+
+  if (proc.detail) {
+    c.font = '700 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    c.globalAlpha = fade * 0.9;
+    c.fillStyle = 'rgba(0,0,0,0.72)';
+    c.fillText(proc.detail, 0, 20);
+    c.fillStyle = proc.kind === 'jackpot' ? theme.accent : theme.edge;
+    c.fillText(proc.detail, 0, 18);
+  }
+  c.restore();
+}
+
 /** The number that floats up once a die stops. */
 function drawGhostValue(
   c: CanvasRenderingContext2D,
@@ -395,18 +501,32 @@ function drawDetachedGhost(
   drawGhostValue(
     c, ghost.result, ghost.pos, ghost.settledAt, ghost.ghostLife, ghost.alpha, theme, t,
   );
+  drawProcLabel(c, ghost.pos, ghost.settledAt, ghost.procs, t, ghost.alpha, theme);
 }
 
 export function drawWorld(c: CanvasRenderingContext2D, world: World, theme: Theme): void {
   drawSurface(c, world, theme);
-  // Shadows and landing rings all belong to the surface, so they are laid down
-  // before any body; otherwise a near die's shadow paints over a far one.
+  // Shadows, landing rings and proc pulses all belong to the surface.
   for (const die of world.dice) drawShadow(c, die);
   for (const die of world.dice) drawImpacts(c, die, theme);
+  for (const die of world.dice) {
+    if (die.state === 'rest') {
+      drawProcPulse(c, die.pos, die.settledAt, die.procs, world.t, die.alpha, theme);
+    }
+  }
+  for (const ghost of world.ghosts) {
+    drawProcPulse(c, ghost.pos, ghost.settledAt, ghost.procs, world.t, ghost.alpha, theme);
+  }
+
   // Painter's algorithm: the camera looks along -(1,1,1), so larger x+y+z is
   // nearer and must be drawn last.
   const order = [...world.dice].sort((a, b) => depthOf(a.pos) - depthOf(b.pos));
   for (const die of order) drawDie(c, die, theme);
   for (const ghost of world.ghosts) drawDetachedGhost(c, ghost, theme, world.t);
-  for (const die of order) drawGhost(c, die, theme, world.t);
+  for (const die of order) {
+    drawGhost(c, die, theme, world.t);
+    if (die.state === 'rest') {
+      drawProcLabel(c, die.pos, die.settledAt, die.procs, world.t, die.alpha, theme);
+    }
+  }
 }
