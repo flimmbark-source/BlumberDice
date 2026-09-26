@@ -16,7 +16,7 @@ import { useCountUp } from './useCountUp.ts';
  */
 export function GoalBar({ s, onOpenTree }: {
   s: GameState;
-  /** Opens the web on the next thing worth looking at. */
+  /** Focuses the tree on the current goal. */
   onOpenTree: () => void;
 }): JSX.Element | null {
   const goal = currentGoal(s);
@@ -34,7 +34,7 @@ export function GoalBar({ s, onOpenTree }: {
           <Bar have={shownScore} need={goal.cost} currency="Score" />
           <p className="goal__note">
             {goal.unlocks === 1 ? '1 upgrade unlocks' : `${goal.unlocks} upgrades unlock`}
-            {' · choose in the web'}
+            {' · choose in the tree'}
           </p>
         </>
       )}
@@ -46,7 +46,7 @@ export function GoalBar({ s, onOpenTree }: {
             {goal.available === 1 ? '1 upgrade available' : `${goal.available} upgrades available`}
           </p>
           <button type="button" className="goal__open" onClick={() => onOpenTree()}>
-            Open in Web
+            Open in Tree
           </button>
         </>
       )}
