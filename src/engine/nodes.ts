@@ -1,5 +1,6 @@
 import {
-  any, die, dice, meta, meter, note, off, op, roll, score, slot, to, val, weight,
+  any, clause, die, dice, meta, meter, note, off, op, pips, roll, score, slot, to, val,
+  weight,
 } from './notation.ts';
 import type { PassiveNode } from './types.ts';
 
@@ -103,9 +104,9 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'high',
     description:
-      'Each roll strictly higher than the previous one adds a Climb stack (max 5). Every stack gives faces 4-6 +0.3 weight. Any roll not higher than the previous clears all stacks.',
+      'Each roll strictly higher than the previous one adds a Climb stack. Any roll not higher clears them all.',
     notation: [[die(2), op('<'), die(4), op('<'), die(5), to(), val('+1', 'accent'), note('Climb')],
-      [meter(0.6, 'Climb · max 5'), to(), die(4), die(5), die(6), weight('+0.3 ea')]],
+      clause('streak', pips(5, 0), to(), die(4), die(5), die(6), weight('+0.3'))],
     costs: { score: 420 },
     prerequisites: ['hr_heavy6'],
     position: { x: 319, y: -392 },
@@ -247,7 +248,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'volume',
     description: 'After 8 consecutive rolls without a bonus roll, the next resolved roll grants one.',
-    notation: [[meter(1, '8 without'), to(), roll()]],
+    notation: [[pips(8, 0, 'dry rolls'), to(), roll()]],
     costs: { score: 430 },
     prerequisites: ['vl_echo'],
     position: { x: 173, y: 616 },
@@ -260,12 +261,12 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'volume',
     description: {
-      A: 'Each manual roll produces 3 dice instead of 1. Score from every roll is multiplied by 0.55.',
+      A: 'Each manual roll produces 3 dice instead of 1. Every roll is worth less in exchange.',
       B: 'Each manual roll produces 3 dice instead of 1.',
     },
     notation: {
       A: [[note('per click'), to(), any(), any(), any()],
-         [score('Score'), op('×'), val('0.55', 'warn')]],
+         clause('swap', score('Score'), op('×'), val('0.55', 'warn'))],
       B: [[note('per click'), to(), any(), any(), any()]],
     },
     costs: { score: 1700 },
@@ -293,7 +294,7 @@ export const NODES: PassiveNode[] = [
       },
     notation: {
       A: [[die(6), to(), score('+14')],
-         [note('all other'), score('Score'), op('×'), val('0.85', 'warn')]],
+         clause('swap', note('all other'), score('Score'), op('×'), val('0.85', 'warn'))],
       B: [[off('no jackpot')]],
     },
     costs: { score: 50 },
@@ -312,12 +313,12 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'jackpot',
     description: {
-      A: 'Every roll that misses the jackpot adds +1 Pressure (max 25). A jackpot pays its Pressure as bonus Score, then clears it.',
+      A: 'Every roll that misses the jackpot adds Pressure. A jackpot pays the accumulated Pressure as bonus Score.',
       B: 'No effect. Pressure does not build here.',
     },
     notation: {
-      A: [[note('miss'), to(), val('+1', 'accent'), note('Pressure · max 25')],
-         [die(6), to(), score('+Pressure'), note('· clears')]],
+      A: [[note('miss'), to(), val('+1', 'accent'), meter(0, 'Pressure · 25')],
+         clause('streak', die(6), to(), score('+Pressure'), note('· clears'))],
       B: [[off()]],
     },
     costs: { score: 135 },
@@ -341,7 +342,7 @@ export const NODES: PassiveNode[] = [
       },
     notation: {
       A: [[note('wager'), score('≤40'), to(), die(6), op('×'), score('2.5')],
-         [note('else'), op('×'), val('0', 'warn')]],
+         clause('deny', note('else'), op('×'), val('0', 'warn'))],
       B: [[off('no wagers')]],
     },
     costs: { score: 140 },
@@ -407,7 +408,7 @@ export const NODES: PassiveNode[] = [
       },
     notation: {
       A: [[score('≥15'), to(), note('bank'), op('/'), note('ride')],
-         [note('ride'), to(), die(6), op('×'), score('3'), op('·'), note('else'), val('0', 'warn')]],
+         clause('swap', note('ride'), to(), die(6), op('×'), score('3'), op('·'), note('else'), val('0', 'warn'))],
       B: [[off()]],
     },
     costs: { score: 610 },
@@ -423,12 +424,12 @@ export const NODES: PassiveNode[] = [
     region: 'jackpot',
     description:
       {
-        A: 'Only a 6 grants Score. A 6 grants 9x its value before other modifiers, and jackpot payouts are multiplied by 1.5.',
+        A: 'Only a 6 grants Score, and it is multiplied before any other modifier applies.',
         B: 'No effect.',
       },
     notation: {
       A: [[die(1, 'out'), die(2, 'out'), die(3, 'out'), die(4, 'out'), die(5, 'out'), to(), score('0')],
-         [die(6), to(), score('×9'), op('·'), note('jackpot'), op('×'), val('1.5', 'accent')]],
+         clause('score', die(6), to(), score('×9'), op('·'), note('jackpot'), op('×'), val('1.5', 'accent'))],
       B: [[off()]],
     },
     costs: { score: 1900 },
@@ -549,14 +550,14 @@ export const NODES: PassiveNode[] = [
     region: 'pattern',
     description:
       {
-        A: 'Two identical results in a row grant +6 Score. Three in a row grant +20 Score.',
-        B: 'Two identical results in a row grant +1 Meta. Three in a row grant +2 Meta.',
+        A: 'Two identical results in a row grant +6 Score.',
+        B: 'Two identical results in a row grant +1 Meta.',
       },
     notation: {
       A: [[die(3), die(3), to(), score('+6')],
-         [die(3), die(3), die(3), to(), score('+20')]],
+         clause('score', die(3), die(3), die(3), to(), score('+20'))],
       B: [[die(3), die(3), to(), meta('+1')],
-         [die(3), die(3), die(3), to(), meta('+2')]],
+         clause('score', die(3), die(3), die(3), to(), meta('+2'))],
     },
     costs: { score: 370 },
     prerequisites: ['pt_step'],
@@ -664,7 +665,7 @@ export const NODES: PassiveNode[] = [
     description:
       'Roll history widens from 4 to 10. Four-long runs and five-long palindromes are detected, alternating sequences are checked over 6 rolls, and all pattern rewards are multiplied by 1.4.',
     notation: [[note('history'), val('4'), to(), val('10', 'accent')],
-      [note('pattern reward'), op('×'), val('1.4', 'accent')]],
+      clause('score', note('pattern reward'), op('×'), val('1.4', 'accent'))],
     costs: { score: 1500 },
     prerequisites: ['pt_palindrome', 'pt_fullset'],
     position: { x: 730, y: 218 },
@@ -711,9 +712,9 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'control',
     description:
-      'Stores 1 result. A held result does not resolve: no Score gained or spent, and no Meta. Swap it in before a later roll.',
-    notation: [[die(4), to(), slot(true), note('unresolved')],
-      [slot(true), to(), note('swaps for a later roll')]],
+      'Stores 1 result and swaps it in before a later roll. Storing it is what costs you: a held result never resolves.',
+    notation: [[die(4), to(), slot(true), pips(1, 0, 'held')],
+      clause('deny', note('no Score, no Meta while held'))],
     costs: { score: 360 },
     prerequisites: ['ct_second'],
     position: { x: -49, y: -357 },
@@ -755,9 +756,9 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'control',
     description:
-      'A queue of the next 3 results is generated and shown. Rolls consume the queue from the front, and you may swap adjacent queued results.',
+      'A queue of the next 3 results is generated and shown. Rolls consume the queue from the front.',
     notation: [[note('queue'), die(3), die(1), die(6), to(), note('next roll')],
-      [note('swap adjacent')]],
+      clause('swap', note('swap adjacent'))],
     costs: { score: 1600 },
     prerequisites: ['ct_flip', 'ct_seal'],
     position: { x: -255, y: -587 },
@@ -898,7 +899,7 @@ export const NODES: PassiveNode[] = [
     },
     notation: {
       A: [[score('<60'), to(), roll('+25%')],
-         [score('>400'), to(), score('Score'), op('×'), val('1.2', 'accent')]],
+         clause('score', score('>400'), to(), score('Score'), op('×'), val('1.2', 'accent'))],
       B: [[score('<60'), to(), roll('+25%')]],
     },
     costs: { score: 420, meta: 35 },
@@ -923,7 +924,7 @@ export const NODES: PassiveNode[] = [
       },
     notation: {
       A: [[score('<40'), to(), score('+6'), note('per roll')],
-         [score('>350'), to(), val('20%'), to(), roll()]],
+         clause('roll', score('>350'), to(), val('20%'), to(), roll())],
       B: [[score('>350'), to(), val('20%'), to(), roll()]],
     },
     costs: { score: 520, meta: 130 },
@@ -948,9 +949,9 @@ export const NODES: PassiveNode[] = [
       },
     notation: {
       A: [[note('per roll'), val('+1', 'accent'), note('Pendulum · max 25')],
-         [op('⇄'), to(), note('next 3'), score('+Pendulum/5')]],
+         clause('streak', op('⇄'), to(), note('next 3'), score('+Pendulum/5'))],
       B: [[note('per roll'), val('+1', 'accent'), note('Pendulum · max 25')],
-         [op('⇄'), to(), note('next 3'), meta('+Pendulum/10')]],
+         clause('streak', op('⇄'), to(), note('next 3'), meta('+Pendulum/10'))],
     },
     costs: { score: 560, meta: 150 },
     prerequisites: ['ad_carryover'],
@@ -988,7 +989,7 @@ export const NODES: PassiveNode[] = [
     description:
       'Count the archetype regions where you have allocated 2 or more nodes. Changing framework grants that many bonus rolls, clears the Flip cooldown, and doubles Reflection and Pendulum payouts.',
     notation: [[note('regions with 2+'), op('='), val('R', 'accent')],
-      [op('⇄'), to(), roll('+R'), op('·'), note('Reflection & Pendulum'), op('×'), val('2', 'accent')]],
+      clause('roll', op('⇄'), to(), roll('+R'), op('·'), note('Reflection · Pendulum'), val('×2', 'accent'))],
     costs: { score: 1500, meta: 650 },
     prerequisites: ['ad_pendulum', 'ad_reflection'],
     position: { x: -639, y: -43 },
@@ -1031,7 +1032,7 @@ export const NODES: PassiveNode[] = [
       },
     notation: {
       A: [[note('lost wager'), to(), score('50%'), note('back')],
-         [slot(true), to(), note('swap after seeing the roll')]],
+         clause('swap', slot(true), to(), note('swap after seeing the roll'))],
       B: [[slot(true), to(), note('swap after seeing the roll')]],
     },
     costs: { score: 660, meta: 95 },

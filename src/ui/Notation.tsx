@@ -1,4 +1,7 @@
-import { notationFor, KEYWORDS, type Notation, type Token } from '../engine/notation.ts';
+import {
+  notationFor, isClause, KEYWORDS,
+  type ClauseIcon, type Notation, type Row, type Token,
+} from '../engine/notation.ts';
 import type { Face, FrameworkId } from '../engine/types.ts';
 import type { NodeNotation } from '../engine/notation.ts';
 
@@ -16,15 +19,15 @@ const PIPS: Record<Face, [number, number][]> = {
   6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]],
 };
 
-/** A die face at glyph scale: 18px, pips only, no bevel. */
+/** A die face at glyph scale: pips only, no bevel. */
 function DieGlyph({ face }: { face: Face }): JSX.Element {
-  const s = 18;
+  const s = 22;
   const off = s * 0.235;
   return (
     <svg className="nt__die" width={s} height={s} viewBox={`0 0 ${s} ${s}`} aria-hidden>
-      <rect x={0.75} y={0.75} width={s - 1.5} height={s - 1.5} rx={4} className="nt__dieBody" />
+      <rect x={0.75} y={0.75} width={s - 1.5} height={s - 1.5} rx={5} className="nt__dieBody" />
       {PIPS[face].map(([dx, dy], i) => (
-        <circle key={i} cx={s / 2 + dx * off} cy={s / 2 + dy * off} r={1.7} className="nt__diePip" />
+        <circle key={i} cx={s / 2 + dx * off} cy={s / 2 + dy * off} r={2} className="nt__diePip" />
       ))}
     </svg>
   );
@@ -45,8 +48,8 @@ function TokenView({ t }: { t: Token }): JSX.Element {
       return (
         <span className={`nt__cell nt__cell--${t.tone ?? 'lit'}${t.text ? ' nt__cell--any' : ''}`}>
           {t.text ?? (
-            <svg className="nt__die" width={18} height={18} viewBox="0 0 18 18" aria-hidden>
-              <rect x={4.5} y={4.5} width={9} height={9} rx={2} className="nt__anyMark" />
+            <svg className="nt__die" width={22} height={22} viewBox="0 0 22 22" aria-hidden>
+              <rect x={5.5} y={5.5} width={11} height={11} rx={2.5} className="nt__anyMark" />
             </svg>
           )}
         </span>
@@ -91,9 +94,51 @@ function TokenView({ t }: { t: Token }): JSX.Element {
         </span>
       );
 
+    case 'pips':
+      // A countable threshold is drawn countable: five circles, not 60% of a
+      // bar. The player should be able to see "two more" without arithmetic.
+      return (
+        <span className="nt__pips">
+          <span className="nt__pipRow">
+            {Array.from({ length: t.of }, (_, i) => (
+              <span key={i} className={`nt__pip${i < (t.filled ?? 0) ? ' nt__pip--on' : ''}`} />
+            ))}
+          </span>
+          <span className="nt__pipText">{t.text ?? `${t.filled ?? 0} / ${t.of}`}</span>
+        </span>
+      );
+
+    case 'clause':
+      return <ClauseIconGlyph icon={t.icon} />;
+
     case 'off':
       return <span className="nt__off">{t.text}</span>;
   }
+}
+
+/**
+ * The clause marker. Five shapes, each tied to one kind of rule, so a player
+ * can tell what a secondary line is about before reading it.
+ */
+function ClauseIconGlyph({ icon }: { icon?: ClauseIcon }): JSX.Element {
+  const d: Record<ClauseIcon, string> = {
+    // A payout: a stack rising to the right.
+    score: 'M2 9 L2 6 M5 9 L5 3.5 M8 9 L8 1',
+    // A roll: a die corner with a pip.
+    roll: 'M1.5 1.5 h7 v7 h-7 z M5 5 h0.01',
+    // A counter climbing.
+    streak: 'M1 9 L3.5 5 L6 7 L9 1',
+    // An exchange.
+    swap: 'M1 3.5 h6 M5 1.5 L7.5 3.5 L5 5.5 M9 6.5 h-6 M5 4.5 L2.5 6.5 L5 8.5',
+    // A refusal.
+    deny: 'M1.8 1.8 L8.2 8.2 M8.2 1.8 L1.8 8.2',
+  };
+  return (
+    <svg className={`nt__clauseIcon nt__clauseIcon--${icon ?? 'score'}`}
+      width={10} height={10} viewBox="0 0 10 10" aria-hidden>
+      <path d={d[icon ?? 'score']} />
+    </svg>
+  );
 }
 
 export function NotationView({ notation, framework }: {
@@ -104,8 +149,8 @@ export function NotationView({ notation, framework }: {
   if (rows.length === 0) return null;
   return (
     <div className="nt">
-      {rows.map((row, i) => (
-        <div className="nt__row" key={i}>
+      {rows.map((row: Row, i) => (
+        <div className={isClause(row) ? 'nt__row nt__row--clause' : 'nt__row'} key={i}>
           {row.map((t, j) => <TokenView t={t} key={j} />)}
         </div>
       ))}

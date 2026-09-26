@@ -275,6 +275,21 @@ The cost: the notation is a second thing to learn, and a player who never
 looks at the prose will miss caps and exact durations that only fit there.
 The bet is that the shapes are learned once and then pay out on every node.
 
+A later pass added the piece that was missing: **a node's second rule is a
+clause**, not a second equal row. Two rows of the same weight meant neither
+was the headline, which is the readability problem the whole notation exists
+to solve. A clause is indented, quieter, and prefixed by a glyph naming the
+kind of rule (pays out, grants rolls, moves a counter, trades, denies). Only
+one is allowed per node, and a node may never open with one. That constraint
+is doing the real work: a node needing two clauses is a node doing two jobs.
+
+The same pass made the node class a badge rather than an aside, colour-coded
+Small / Notable / Keystone / Bridge. This follows the standard progression-tree
+reading — a numeric upgrade, a new rule, and a change to the game are three
+different kinds of information and should not look alike — and it is the one
+place the tooltips now spend visual weight on something other than the
+mechanic itself.
+
 ---
 
 ## Unresolved — deliberately not implemented

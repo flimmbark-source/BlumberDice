@@ -181,6 +181,19 @@ notation: [[die(1, 'dim'), to('30%'), die(2)]]                     // Raised Flo
 notation: { A: [[die(3), die(3), to(), score('+3')]], B: [[off()]] }
 ```
 
+A node's second rule is a **clause**: indented under the statement, prefixed
+by a glyph saying what kind of rule it is (pays out, grants rolls, moves a
+counter, trades one thing for another, takes something away). Splitting them
+is what lets the prose shrink — Doubles no longer spells out three-of-a-kind
+below a diagram that already shows it.
+
+```ts
+notation: [
+  [die(3), die(3), to(), score('+6')],
+  clause('score', die(3), die(3), die(3), to(), score('+20')),
+]
+```
+
 Quantities are written as concrete die faces, never as `n`, `hi` or `≥4`: a
 letter is text that has to be decoded, which is the thing the notation exists
 to avoid. The exemplar carries the shape, the prose underneath carries the
@@ -188,7 +201,17 @@ general rule. `tests/notation.test.ts` enforces that, along with the row and
 token caps, the shared tokens (a bonus roll is always the roll chip, a
 weighted face is always that face), the prose word cap, and the keyword
 registry in `KEYWORDS` — terms that name a system rather than describe one,
-highlighted identically wherever they appear.
+highlighted identically wherever they appear. It also enforces the clause
+rules: a node never opens with one, never carries more than one, and always
+says what kind of rule it is.
+
+The popup's three classes are told apart before a word is read — a Small is
+blue, a Notable violet, a Keystone gold, a Bridge teal — because the class is
+what says whether a node is a number, a new rule, or a change to the game.
+
+`scripts/sheet.html` renders every card as a contact sheet for eyeballing
+the whole vocabulary at once: `npx vite`, then `node scripts/sheet-shot.mjs
+out.png`.
 
 ### The roll pipeline
 

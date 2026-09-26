@@ -308,12 +308,23 @@ function Swatch({ type }: { type: PassiveNode['nodeType'] }): JSX.Element {
   );
 }
 
+/** Which currency a cost is in, told by shape as well as by colour. */
+function CostMark({ kind }: { kind: 'score' | 'meta' }): JSX.Element {
+  return (
+    <svg className="cost__mark" width={9} height={9} viewBox="-5 -5 10 10" aria-hidden>
+      {kind === 'score'
+        ? <circle r={3.6} />
+        : <rect x={-3.2} y={-3.2} width={6.4} height={6.4} rx={1} transform="rotate(45)" />}
+    </svg>
+  );
+}
+
 /**
  * Anchored above the last node the player pointed at or pressed. Floating
  * rather than docked, because a panel in the layout changed height with every
  * description and shoved the web around underneath the pointer.
  */
-function NodePopup({ node, status, framework, score, meta, anchor, size }: {
+export function NodePopup({ node, status, framework, score, meta, anchor, size }: {
   node: PassiveNode;
   status: Status | null;
   framework: FrameworkId;
@@ -338,7 +349,9 @@ function NodePopup({ node, status, framework, score, meta, anchor, size }: {
     >
       <div className="nodepop__head">
         <span className="nodepop__name">{node.name}</span>
-        <span className="nodepop__type">{node.nodeType}</span>
+        {/* The class is a badge, not an aside: it is how a player tells a
+            numeric upgrade from a new rule from a change to the game. */}
+        <span className={`nodepop__type nodepop__type--${node.nodeType}`}>{node.nodeType}</span>
       </div>
 
       {/* The mechanic first: the strongest element on the card. */}
@@ -352,12 +365,12 @@ function NodePopup({ node, status, framework, score, meta, anchor, size }: {
           <span className="nodepop__costs">
             {costScore > 0 && (
               <span className={costScore > score ? 'cost cost--short' : 'cost'}>
-                {costScore.toLocaleString()}
+                <CostMark kind="score" />{costScore.toLocaleString()}
               </span>
             )}
             {costMeta > 0 && (
               <span className={costMeta > meta ? 'cost cost--alt cost--short' : 'cost cost--alt'}>
-                {costMeta.toLocaleString()}
+                <CostMark kind="meta" />{costMeta.toLocaleString()}
               </span>
             )}
           </span>

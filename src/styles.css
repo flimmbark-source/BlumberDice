@@ -281,15 +281,24 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 .tree__hint { margin-left: 6px; opacity: 0.7; }
 
 .nodepop {
+  /* Tinted by node class, so the three kinds of node are told apart before
+     a word is read: a number, a new rule, or a change to the game. */
+  --pop-tint: #7d9bcd;
   position: absolute; z-index: 5;
   transform: translate(-50%, -100%);
-  padding: 10px 12px 9px;
-  border: 1px solid #2f3a49; border-radius: var(--radius);
+  padding: 11px 13px 10px;
+  border: 1px solid color-mix(in srgb, var(--pop-tint) 38%, transparent);
+  border-radius: var(--radius);
   background: rgba(13, 17, 23, 0.975);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 color-mix(in srgb, var(--pop-tint) 14%, transparent);
   /* Never eat a pointer event: the web underneath stays hoverable. */
   pointer-events: none;
 }
+.nodepop--notable { --pop-tint: #a98ff0; }
+.nodepop--keystone { --pop-tint: var(--score); }
+.nodepop--bridge { --pop-tint: var(--meta); }
 .nodepop--below { transform: translate(-50%, 0); }
 
 /* A small tail pointing back at the node. */
@@ -302,40 +311,61 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 
 /* 1. Name, with the class understated in the corner. */
 .nodepop__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.nodepop__name { font-weight: 650; font-size: 13.5px; letter-spacing: 0.01em; }
+.nodepop__name { font-weight: 650; font-size: 14px; letter-spacing: 0.01em; }
 .nodepop__type {
-  font-size: 9px; text-transform: uppercase; letter-spacing: 0.13em;
-  color: #5c6675; font-weight: 600;
+  flex: none;
+  padding: 2px 6px 2.5px; border-radius: 4px;
+  font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.12em;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--pop-tint) 88%, #ffffff);
+  background: color-mix(in srgb, var(--pop-tint) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pop-tint) 34%, transparent);
 }
 
 /* 2. The mechanic. The strongest element on the card. */
 .nt {
-  display: flex; flex-direction: column; gap: 4px;
-  margin: 9px 0 8px;
-  padding: 7px 8px;
-  border-radius: 6px;
-  background: rgba(125, 155, 205, 0.055);
-  border: 1px solid rgba(125, 155, 205, 0.1);
+  /* No panel around it. The notation IS the card's body, so boxing it only
+     pushed it back down the hierarchy. */
+  display: flex; flex-direction: column; gap: 5px;
+  margin: 10px 0 9px;
 }
 .nt__row {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
-  min-height: 20px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
+  min-height: 24px;
   font-variant-numeric: tabular-nums;
 }
 
+/* A clause: a secondary rule, inset and quieter than the statement above. */
+.nt__row--clause {
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: rgba(125, 155, 205, 0.06);
+  border: 1px solid rgba(125, 155, 205, 0.08);
+  font-size: 0.95em;
+}
+.nt__clauseIcon { flex: none; fill: none; stroke-width: 1.3; stroke-linecap: round; opacity: 0.85; }
+.nt__clauseIcon--score { stroke: var(--score); }
+.nt__clauseIcon--roll { stroke: var(--accent); }
+.nt__clauseIcon--streak { stroke: #d08a5a; }
+.nt__clauseIcon--swap { stroke: var(--meta); }
+.nt__clauseIcon--deny { stroke: var(--risk); }
+.nt__row--clause .nt__cell { min-width: 18px; height: 18px; }
+.nt__row--clause .nt__die { width: 18px; height: 18px; }
+
 .nt__cell {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 20px; height: 20px; padding: 0 2px;
-  border: 1px solid #38455a; border-radius: 4px;
-  background: #171e28;
+  min-width: 24px; height: 24px; padding: 0 2px;
+  border: 1px solid #3c4a60; border-radius: 5px;
+  background: linear-gradient(#1a222e, #141b25);
 }
 .nt__cell--any { font-size: 10.5px; font-weight: 600; color: #b9c6d8; padding: 0 5px; }
 .nt__anyMark { fill: none; stroke: #5d6b80; stroke-width: 1.2; stroke-dasharray: 2.4 2; }
 .nt__cell--dim { opacity: 0.45; }
-.nt__cell--out { opacity: 0.32; position: relative; }
+.nt__cell--out { opacity: 0.55; position: relative; }
 .nt__cell--out::after {
-  content: ''; position: absolute; inset: 40% -2px auto -2px;
-  border-top: 1px solid var(--risk);
+  content: ''; position: absolute; inset: 50% -2px auto -2px;
+  border-top: 1.5px solid var(--risk);
 }
 .nt__die { display: block; }
 .nt__dieBody { fill: none; stroke: none; }
@@ -344,7 +374,7 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 
 .nt__slot {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 15px; height: 20px; padding: 0 4px;
+  min-width: 18px; height: 24px; padding: 0 5px;
   border: 1px dashed #3d4b60; border-radius: 4px;
   font-size: 10px; color: var(--muted);
 }
@@ -366,7 +396,7 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 
 .nt__roll {
   display: inline-flex; align-items: center; gap: 3px;
-  height: 20px; padding: 0 6px;
+  height: 24px; padding: 0 7px;
   border: 1px solid rgba(138, 180, 248, 0.38); border-radius: 10px;
   background: rgba(138, 180, 248, 0.12);
   font-size: 11px; font-weight: 650; color: #a9c5f2;
@@ -377,12 +407,26 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 
 .nt__meter {
   position: relative; display: inline-flex; align-items: center;
-  height: 20px; min-width: 62px; padding: 0 7px;
+  height: 24px; min-width: 96px; padding: 0 8px;
   border: 1px solid #3a4658; border-radius: 4px;
   background: #151b24; overflow: hidden;
 }
 .nt__meterFill { position: absolute; inset: 0 auto 0 0; background: rgba(138, 180, 248, 0.2); }
 .nt__meterText { position: relative; font-size: 10px; color: #98a6b8; font-weight: 600; }
+
+/* A countable threshold, drawn countable. */
+.nt__pips {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 24px; padding: 0 8px;
+  border: 1px solid #3a4658; border-radius: 5px; background: #151b24;
+}
+.nt__pipRow { display: inline-flex; gap: 3px; }
+.nt__pip {
+  width: 7px; height: 7px; border-radius: 50%;
+  border: 1px solid #4a5a72;
+}
+.nt__pip--on { background: var(--accent); border-color: var(--accent); }
+.nt__pipText { font-size: 10px; color: #98a6b8; font-weight: 600; }
 
 .nt__off {
   font-size: 11px; color: #5f6a79; font-style: italic;
@@ -391,9 +435,9 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 
 /* 3. Prose. Clarifies the notation; keywords tie systems together. */
 .nodepop__desc {
-  margin: 0; font-size: 11.5px; line-height: 1.45; color: #8d98a8;
+  margin: 0; font-size: 12px; line-height: 1.5; color: #96a2b3;
 }
-.kw { font-style: normal; color: #aeb9cb; font-weight: 550; }
+.kw { font-style: normal; color: #c3cddc; font-weight: 600; }
 
 /* 4. Cost and state, secondary to the mechanic. */
 .nodepop__foot {
@@ -401,7 +445,8 @@ button.minidie:hover .die__body { stroke: var(--muted); }
   margin-top: 8px; padding-top: 7px;
   border-top: 1px solid rgba(125, 155, 205, 0.09);
 }
-.nodepop__costs { display: inline-flex; gap: 9px; font-size: 12px; font-weight: 650; }
+.nodepop__costs { display: inline-flex; gap: 11px; font-size: 12px; font-weight: 650; }
+.cost__mark { margin-right: 4px; vertical-align: -0.5px; fill: currentColor; opacity: 0.85; }
 .cost { color: var(--score); }
 .cost::after { content: ' Score'; font-size: 9.5px; font-weight: 500; opacity: 0.6; }
 .cost--alt { color: var(--meta); }

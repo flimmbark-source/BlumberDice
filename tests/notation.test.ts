@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { NODES, NODES_BY_ID } from '../src/engine/nodes.ts';
 import { describeNode } from '../src/engine/tree.ts';
-import { KEYWORDS, notationFor, type Token } from '../src/engine/notation.ts';
+import { KEYWORDS, isClause, notationFor, type Token } from '../src/engine/notation.ts';
 import type { FrameworkId } from '../src/engine/types.ts';
 
 const FRAMEWORKS: FrameworkId[] = ['A', 'B'];
@@ -79,6 +79,64 @@ describe('every node states its mechanic symbolically', () => {
         for (const t of notationFor(n.notation!, fw).flat()) {
           const text = 'text' in t ? t.text ?? '' : '';
           expect(/framework/i.test(text), `${n.id}: ${text}`).toBe(false);
+        }
+      }
+    }
+  });
+});
+
+describe('a card leads with one statement and indents the rest', () => {
+  it('never opens a node with a clause', () => {
+    // The first row is the mechanic. A secondary rule that arrives first
+    // makes the reader hunt for the headline.
+    for (const n of NODES) {
+      for (const fw of FRAMEWORKS) {
+        const rows = notationFor(n.notation!, fw);
+        expect(isClause(rows[0]), n.id).toBe(false);
+      }
+    }
+  });
+
+  it('keeps the clause marker to the head of its own row', () => {
+    for (const n of NODES) {
+      for (const fw of FRAMEWORKS) {
+        for (const row of notationFor(n.notation!, fw)) {
+          row.slice(1).forEach((t) => expect(t.k, n.id).not.toBe('clause'));
+        }
+      }
+    }
+  });
+
+  it('says what kind of rule every clause states', () => {
+    for (const n of NODES) {
+      for (const fw of FRAMEWORKS) {
+        for (const row of notationFor(n.notation!, fw)) {
+          if (!isClause(row)) continue;
+          const head = row[0];
+          expect(head.k === 'clause' && head.icon, n.id).toBeTruthy();
+          // A clause with nothing after the marker is just decoration.
+          expect(row.length, n.id).toBeGreaterThan(1);
+        }
+      }
+    }
+  });
+
+  it('allows at most one clause per node', () => {
+    for (const n of NODES) {
+      for (const fw of FRAMEWORKS) {
+        const clauses = notationFor(n.notation!, fw).filter(isClause);
+        expect(clauses.length, `${n.id} under ${fw}`).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it('counts short thresholds in pips and long ones on a bar', () => {
+    // Five circles read as five. A bar at 20% does not, and 25 circles are
+    // no longer countable at a glance either.
+    for (const n of NODES) {
+      for (const fw of FRAMEWORKS) {
+        for (const t of notationFor(n.notation!, fw).flat()) {
+          if (t.k === 'pips') expect(t.of, n.id).toBeLessThanOrEqual(8);
         }
       }
     }
