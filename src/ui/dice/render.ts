@@ -3,7 +3,7 @@ import {
   add, depthOf, dot, ISO_X, ISO_Y, normalize, project, qRotate, scale, v3,
   VIEW_DIR, type Vec2, type Vec3,
 } from './math3d.ts';
-import { DIE, DIE_HALF as H, type DieBody, type World } from './physics.ts';
+import { DIE, DIE_HALF as H, type DieBody, type ResultGhost, type World } from './physics.ts';
 
 /** Isometric painting for the dice tray. Reads the world, never changes it. */
 
@@ -348,33 +348,53 @@ export function drawDie(c: CanvasRenderingContext2D, die: DieBody, theme: Theme)
   c.restore();
 }
 
-/** The number that floats up once a die stops, plus its currency change. */
-export function drawGhost(c: CanvasRenderingContext2D, die: DieBody, theme: Theme, t: number): void {
-  if (die.state !== 'rest' || die.settledAt < 0 || die.result === null) return;
-  const age = t - die.settledAt;
-  if (age > die.ghostLife) return;
+/** The number that floats up once a die stops. */
+function drawGhostValue(
+  c: CanvasRenderingContext2D,
+  result: number,
+  pos: { x: number; y: number; z: number },
+  settledAt: number,
+  ghostLife: number,
+  alpha: number,
+  theme: Theme,
+  t: number,
+): void {
+  const age = t - settledAt;
+  if (age < 0 || age > ghostLife) return;
 
-  const p = age / die.ghostLife;
+  const p = age / ghostLife;
   const rise = 20 + p * 52;
   const fade = p < 0.12 ? p / 0.12 : Math.max(0, 1 - (p - 0.12) / 0.88);
   const pop = p < 0.12 ? 0.78 + (p / 0.12) * 0.22 : 1;
-  const anchor = project(v3(die.pos.x, die.pos.y, die.pos.z + H));
+  const anchor = project(v3(pos.x, pos.y, pos.z + H));
 
   c.save();
-  c.globalAlpha = fade * 0.95 * die.alpha;
+  c.globalAlpha = fade * 0.95 * alpha;
   c.translate(anchor.x, anchor.y - 30 - rise);
   c.scale(pop, pop);
   c.textAlign = 'center';
   c.textBaseline = 'middle';
 
-  // Just the rolled value. What it was worth is the HUD's job.
   c.font = '700 50px ui-sans-serif, system-ui, sans-serif';
   c.fillStyle = 'rgba(0,0,0,0.55)';
-  c.fillText(String(die.result), 0, 3);
+  c.fillText(String(result), 0, 3);
   c.fillStyle = theme.accent;
-  c.globalAlpha = fade * 0.6 * die.alpha;
-  c.fillText(String(die.result), 0, 0);
+  c.globalAlpha = fade * 0.6 * alpha;
+  c.fillText(String(result), 0, 0);
   c.restore();
+}
+
+export function drawGhost(c: CanvasRenderingContext2D, die: DieBody, theme: Theme, t: number): void {
+  if (die.state !== 'rest' || die.settledAt < 0 || die.result === null) return;
+  drawGhostValue(c, die.result, die.pos, die.settledAt, die.ghostLife, die.alpha, theme, t);
+}
+
+function drawDetachedGhost(
+  c: CanvasRenderingContext2D, ghost: ResultGhost, theme: Theme, t: number,
+): void {
+  drawGhostValue(
+    c, ghost.result, ghost.pos, ghost.settledAt, ghost.ghostLife, ghost.alpha, theme, t,
+  );
 }
 
 export function drawWorld(c: CanvasRenderingContext2D, world: World, theme: Theme): void {
@@ -387,5 +407,6 @@ export function drawWorld(c: CanvasRenderingContext2D, world: World, theme: Them
   // nearer and must be drawn last.
   const order = [...world.dice].sort((a, b) => depthOf(a.pos) - depthOf(b.pos));
   for (const die of order) drawDie(c, die, theme);
+  for (const ghost of world.ghosts) drawDetachedGhost(c, ghost, theme, world.t);
   for (const die of order) drawGhost(c, die, theme, world.t);
 }
