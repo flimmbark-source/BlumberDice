@@ -1,4 +1,7 @@
-import { currentGoal, type Goal } from '../engine/goal.ts';
+import { currentGoal, successorOf, type Goal } from '../engine/goal.ts';
+import { NODES_BY_ID } from '../engine/nodes.ts';
+import { checkAllocation } from '../engine/tree.ts';
+import type { DiscoveryFlag } from '../engine/types.ts';
 import type { GameState } from '../engine/game.ts';
 import { NotationView } from './Notation.tsx';
 import { store } from './store.ts';
@@ -14,12 +17,14 @@ import { useCountUp } from './useCountUp.ts';
  * It states milestones and it carries a goal the player chose. It never
  * suggests a node.
  */
-export function GoalBar({ s, onOpenTree }: {
+export function GoalBar({ s, onOpenTree, selectedNodeId = null }: {
   s: GameState;
   /** Focuses the tree on the next thing worth looking at. */
   onOpenTree: () => void;
+  /** The node currently selected in the tree/inspector. */
+  selectedNodeId?: string | null;
 }): JSX.Element | null {
-  const goal = currentGoal(s);
+  const goal = selectedNodeGoal(s, selectedNodeId) ?? currentGoal(s);
   // Follows the same eased total as the HUD, so the bar and the number agree.
   const { value: shownScore } = useCountUp(s.score, () => store.heldBack.score);
   const { value: shownMeta } = useCountUp(s.meta, () => store.heldBack.meta);
@@ -92,6 +97,27 @@ export function GoalBar({ s, onOpenTree }: {
       )}
     </div>
   );
+}
+
+function selectedNodeGoal(s: GameState, id: string | null): Goal | null {
+  if (!id) return null;
+  const node = NODES_BY_ID.get(id);
+  if (!node || s.allocated.includes(id)) return null;
+
+  const allocated = new Set(s.allocated);
+  const discovered = new Set(s.discovered as DiscoveryFlag[]);
+  const ctx = { allocated, discovered, score: s.score, meta: s.meta };
+  const needScore = node.costs.score ?? 0;
+  const needMeta = node.costs.meta ?? 0;
+
+  return {
+    kind: 'target',
+    node,
+    affordable: checkAllocation(node.id, ctx).ok,
+    score: { have: s.score, need: needScore },
+    meta: needMeta > 0 ? { have: s.meta, need: needMeta } : null,
+    after: successorOf(node.id, ctx),
+  };
 }
 
 const isReady = (g: Goal): boolean =>
