@@ -419,7 +419,11 @@ button.minidie:hover .die__body { stroke: var(--muted); }
   border: 1px solid #3a4658; border-radius: 4px;
   background: #151b24; overflow: hidden;
 }
-.nt__meterFill { position: absolute; inset: 0 auto 0 0; background: rgba(138, 180, 248, 0.2); }
+.nt__meterFill {
+  position: absolute; inset: 0 auto 0 0;
+  background: rgba(138, 180, 248, 0.2);
+  transition: width 0.14s linear;
+}
 .nt__meterText { position: relative; font-size: 10px; color: #98a6b8; font-weight: 600; }
 
 /* A countable threshold, drawn countable. */
@@ -432,6 +436,7 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 .nt__pip {
   width: 7px; height: 7px; border-radius: 50%;
   border: 1px solid #4a5a72;
+  transition: background-color 0.12s linear, border-color 0.12s linear;
 }
 .nt__pip--on { background: var(--accent); border-color: var(--accent); }
 .nt__pipText { font-size: 10px; color: #98a6b8; font-weight: 600; }
