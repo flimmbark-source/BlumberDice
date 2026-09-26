@@ -301,6 +301,12 @@ export const TreeView = memo(function TreeView({
                   if (e.key !== 'Enter' && e.key !== ' ') return;
                   e.preventDefault();
                   e.stopPropagation();
+                  // Selecting a node can make the embedded Next Goal appear,
+                  // which changes the tree's measured height. Treat activation
+                  // as user navigation so the auto-fit effect does not recenter
+                  // the web in response to that internal layout change.
+                  userZoomed.current = true;
+                  userZoomed.current = true;
                   selectNode(n.id, st, pinned, setInspected);
                 }}
                 onClick={() => {
