@@ -157,7 +157,7 @@ describe('the goal survives a reload', () => {
   });
 });
 
-describe('Open in Web walks what is actionable', () => {
+describe('Available to Buy walks currently purchasable nodes', () => {
   it('offers nothing while nothing can be done', () => {
     expect(openTargets(fresh())).toEqual([]);
   });
@@ -174,12 +174,12 @@ describe('Open in Web walks what is actionable', () => {
     }
   });
 
-  it('puts the pinned goal first, even when it cannot be bought', () => {
+  it('does not include a pinned goal that cannot currently be bought', () => {
     const s = fresh();
-    s.score = 500;
+    s.score = 5;
     s.allocated = ['start', 'hr_edge'];
     s.pinned = 'hr_floor';
-    expect(openTargets(s)[0]).toBe('hr_floor');
+    expect(openTargets(s)).not.toContain('hr_floor');
   });
 
   it('never lists the same node twice', () => {
