@@ -614,7 +614,10 @@ export function planThrow(world: World, count: number, max = 9): {
   const spawning = Math.max(0, count - reuse.length);
   const over = standing - retire.length + spawning - max;
   if (over > 0) {
-    retire.push(...[...showing].sort((a, b) => a.settledAt - b.settledAt).slice(0, over));
+    const candidates = showing
+      .filter((die) => !reuse.includes(die))
+      .sort((a, b) => a.settledAt - b.settledAt);
+    retire.push(...candidates.slice(0, over));
   }
   return { reuse, retire };
 }
