@@ -114,12 +114,25 @@ export interface DieBody {
   ghostLife: number;
 }
 
+export interface ResultGhost {
+  result: Face;
+  /** Fixed landing position: the physical die may already be rolling again. */
+  pos: Vec3;
+  settledAt: number;
+  ghostLife: number;
+  heldScore: number;
+  heldMeta: number;
+  alpha: number;
+}
+
 export interface World {
   t: number;
   /** Surface extent along the two ground axes. */
   w: number;
   d: number;
   dice: DieBody[];
+  /** Result labels detached from dice that were immediately re-used. */
+  ghosts: ResultGhost[];
   nextKey: number;
   shake: number;
 }
@@ -130,7 +143,7 @@ const INV_MASS = 1;
 const INV_INERTIA = 6 / (DIE * DIE);
 
 export function createWorld(w = 420, d = 420): World {
-  return { t: 0, w, d, dice: [], nextKey: 1, shake: 0 };
+  return { t: 0, w, d, dice: [], ghosts: [], nextKey: 1, shake: 0 };
 }
 
 export function setWorldSize(world: World, w: number, d: number): void {
@@ -211,6 +224,7 @@ export function throwDie(
   die: DieBody,
   opts: { minTumbleMs: number; power?: number; fromClick?: boolean } = { minTumbleMs: 520 },
 ): void {
+  detachReveal(world, die);
   const power = opts.power ?? 1;
   die.vel = v3(rnd(-150, 150) * power, rnd(-150, 150) * power, rnd(880, 1080) * power);
   die.omega = v3(rnd(-15, 15), rnd(-15, 15), rnd(-15, 15));
@@ -227,6 +241,32 @@ export function throwDie(
     die.vel.z *= 1.1;
     world.shake = Math.min(world.shake + 3, 9);
   }
+}
+
+/**
+ * Preserve a visible result when its physical die is re-used.
+ *
+ * A result belongs to the roll, not to the cube object. Keeping the label
+ * separate lets the one base die roll again without manufacturing a second
+ * physical die just to finish displaying the previous number.
+ */
+function detachReveal(world: World, die: DieBody): void {
+  if (die.rollId === null || die.result === null || die.settledAt < 0) return;
+  const age = world.t - die.settledAt;
+  if (age < die.ghostLife) {
+    world.ghosts.push({
+      result: die.result,
+      pos: { ...die.pos },
+      settledAt: die.settledAt,
+      ghostLife: die.ghostLife,
+      heldScore: die.heldScore,
+      heldMeta: die.heldMeta,
+      alpha: die.alpha,
+    });
+  }
+  die.rollId = null;
+  die.heldScore = 0;
+  die.heldMeta = 0;
 }
 
 export function retireDie(die: DieBody): void {
@@ -507,11 +547,22 @@ export function releaseFadedGhosts(world: World): { score: number; meta: number 
     if (die.rollId === null) continue;
     if (die.state === 'rest' && world.t - die.settledAt >= die.ghostLife) {
       die.rollId = null;
+      die.heldScore = 0;
+      die.heldMeta = 0;
       continue;
     }
     score += die.heldScore;
     meta += die.heldMeta;
   }
+
+  // A re-thrown die may have left its still-visible result behind. Those
+  // detached reveals withhold the same payout until their original fade ends.
+  world.ghosts = world.ghosts.filter((ghost) => {
+    if (world.t - ghost.settledAt >= ghost.ghostLife) return false;
+    score += ghost.heldScore;
+    meta += ghost.heldMeta;
+    return true;
+  });
   return { score, meta };
 }
 
@@ -528,10 +579,9 @@ export function owesReveal(die: DieBody): boolean {
 /**
  * Which dice a new throw reuses, and which it clears away.
  *
- * A die that is still showing its number has not been read. Re-throwing it
- * or sweeping it off cuts that short — which is what made a bonus die vanish
- * the instant the player rolled again. Those dice are left alone here and
- * retire on a later throw, once their ghost has expired.
+ * A die that is still showing its number may be re-used. `throwDie` detaches
+ * that result first, so the old number can finish fading at its landing spot
+ * while the same physical cube starts the next throw.
  *
  * The exception is a full surface: past `max` live dice the oldest reveals
  * are given up anyway, because an unreadable pile helps nobody. Retiring
@@ -548,8 +598,12 @@ export function planThrow(world: World, count: number, max = 9): {
   const spent = settled.filter((die) => !owesReveal(die));
   const showing = settled.filter(owesReveal);
 
-  const reuse = spent.slice(0, count);
-  const retire = spent.slice(count);
+  // Prefer already-spent dice, but a die that is still showing its result is
+  // also reusable: throwDie detaches that result before moving the cube.
+  // This keeps one mechanical die as one physical die on screen.
+  const reusable = [...spent, ...showing];
+  const reuse = reusable.slice(0, count);
+  const retire = spent.filter((die) => !reuse.includes(die));
 
   // Only once the surface is genuinely crowded, and oldest reveal first.
   // Counted against everything that will be on it after this throw: dice
