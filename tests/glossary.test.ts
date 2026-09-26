@@ -42,10 +42,11 @@ describe('the glossary is written to the same standard as the nodes', () => {
     }
   });
 
-  it('keeps every entry to a couple of sentences', () => {
+  it('keeps every popup to one short complementary sentence', () => {
     for (const [lemma, e] of Object.entries(GLOSSARY)) {
-      const words = e.text.split(/\s+/).length;
-      expect(words, `${lemma}: ${words} words`).toBeLessThanOrEqual(34);
+      const words = e.text.trim().split(/\s+/).length;
+      expect(words, `${lemma}: ${words} words`).toBeLessThanOrEqual(14);
+      expect((e.text.match(/[.!?](?:\s|$)/g) ?? []).length, lemma).toBeLessThanOrEqual(1);
       expect(e.term.length, lemma).toBeGreaterThan(0);
     }
   });
