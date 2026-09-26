@@ -2,7 +2,6 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { EDGES, NODES, NODES_BY_ID } from '../engine/nodes.ts';
 import { checkAllocation, describeNode, isReachable, isVisible } from '../engine/tree.ts';
 import type { DiscoveryFlag, FrameworkId, PassiveNode, Region } from '../engine/types.ts';
-import { actions } from './store.ts';
 import { KEYWORDS } from '../engine/glossary.ts';
 
 /**
@@ -66,6 +65,8 @@ interface Props {
   setExpanded: (v: boolean) => void;
   /** A node to pan onto. `n` rises each request, so repeats still land. */
   focus: { id: string; n: number } | null;
+  /** Removes duplicate chrome when the tree lives inside a desktop window. */
+  embedded?: boolean;
 }
 
 function statusOf(
@@ -81,7 +82,7 @@ function statusOf(
 
 export const TreeView = memo(function TreeView({
   allocatedKey, discoveredKey, score, meta, framework, pinned, inspected, setInspected,
-  expanded, setExpanded, focus,
+  expanded, setExpanded, focus, embedded = false,
 }: Props): JSX.Element {
   const allocated = useMemo(() => new Set(allocatedKey.split(',').filter(Boolean)), [allocatedKey]);
   const discovered = useMemo(
@@ -226,8 +227,8 @@ export const TreeView = memo(function TreeView({
 
   return (
     <div className={`tree panel panel--left${expanded ? ' tree--expanded' : ''}`} ref={wrapRef}>
-      <h2 className="panel__title">
-        Build tree
+      <h2 className={embedded ? 'tree__embeddedKey' : 'panel__title'}>
+        {!embedded && 'Build tree'}
         {/* The regions, not the node states: hue is what the eye is actually
             sorting the web by, and the states read from the nodes anyway. */}
         <span className="tree__key">
@@ -285,13 +286,8 @@ export const TreeView = memo(function TreeView({
                 aria-label={nodeLabel(n, st, pinned === n.id, hasKeywords(n, framework))}
                 /* Only genuinely inert nodes are disabled. An unaffordable
                    one is now an active control: pressing it sets the goal. */
-                aria-disabled={st === 'locked' || st === 'allocated'}
-                onPointerEnter={() => setInspected(n.id)}
                 onFocus={() => setInspected(n.id)}
                 onKeyDown={(e) => {
-                  // The popup always describes whatever node has focus, so
-                  // Tab can never walk into it -- it walks to the next node
-                  // and the popup changes underneath. This is the way in.
                   if (e.key === '?') {
                     e.preventDefault();
                     const first = wrapRef.current?.querySelector<HTMLElement>('.kw--known');
@@ -299,20 +295,13 @@ export const TreeView = memo(function TreeView({
                     return;
                   }
                   if (e.key !== 'Enter' && e.key !== ' ') return;
-                  // Space also throws the dice; a focused node owns it first.
+                  // Selecting a node only opens its inspector. Spending and
+                  // setting a goal are explicit actions in that window.
                   e.preventDefault();
                   e.stopPropagation();
-                                    if (st === 'available') actions.allocate(n.id);
-                  else if (st === 'unaffordable') actions.pin(pinned === n.id ? null : n.id);
-                }}
-                onClick={() => {
                   setInspected(n.id);
-                  // Touching the web is an answer of sorts: stop asking.
-                                    if (st === 'available') actions.allocate(n.id);
-                  // One purchase away and out of pocket: the only node worth
-                  // saving toward, so a press makes it the goal.
-                  else if (st === 'unaffordable') actions.pin(pinned === n.id ? null : n.id);
                 }}
+                onClick={() => setInspected(n.id)}
               >
                 <NodeShape type={n.nodeType} />
                 {(n.nodeType === 'keystone' || n.nodeType === 'notable') && st === 'allocated' && (
@@ -374,14 +363,11 @@ function nodeLabel(n: PassiveNode, st: Status, isGoal: boolean, terms: boolean):
     : st === 'available' ? 'available'
     : st === 'unaffordable' ? 'cannot afford'
     : 'locked, connect an adjacent node first';
-  // Say what activating it does, since that now differs by state.
-  const act = st === 'available' ? ' Press to allocate.'
-    : st === 'unaffordable' ? (isGoal ? ' Current goal. Press to clear.' : ' Press to set as your goal.')
-    : '';
+  const goal = isGoal ? ' Current goal.' : '';
   // Only mentioned where there is something to read, so it does not pad
   // every one of fifty-four labels.
   const terms_ = terms ? ' Press question mark for the terms used here.' : '';
-  return `${n.name}, ${n.nodeType}${cost ? `, ${cost}` : ''}. ${state}.${act}${terms_}`;
+  return `${n.name}, ${n.nodeType}${cost ? `, ${cost}` : ''}. ${state}.${goal}${terms_}`;
 }
 
 /**
