@@ -587,6 +587,47 @@ not count against the limit — harmless while every throw swept the surface
 clean, fatal once protected dice could accumulate. It counts everything
 standing after the throw now.
 
+### 23. Three columns, from a supplied mockup
+
+Rebuilt to match a design handed over as an image: a top bar with the
+wordmark, a centred segmented tab group and the Score readout; then Build
+Tree, Dice and Selected Upgrade side by side.
+
+What that changed structurally:
+
+- **The floating tooltip became a docked panel.** Entry 10 recorded the
+  opposite move — a docked panel was floated because it changed height with
+  every description and shoved the web around under the pointer. A fixed
+  third column cannot do that, which is why the mockup's version is safe
+  where the old one was not. `inspected` moved up to the app, since two
+  columns read it now.
+- **The tray is an arena, not a slab.** The floor is concentric rings drawn
+  as circles in world space, so the projection makes the ellipses rather
+  than them being faked, over a fixed starfield and a shaft of light. The
+  physics is untouched: the dice still live in the same square.
+- **A real Roll button**, with the cooldown as a number on it. Entry 16
+  listed the old cooldown — a 3px full-bleed line nowhere near the die —
+  as an unfixed finding; this is the fix.
+- **"View full tree"** is not decoration. At 340px a 54-node web is
+  unreadable, so the panel opens over the whole window.
+- The game column is first in the DOM and placed back in the middle with
+  `grid-column`, so Tab reaches Roll before fifty-four tree nodes.
+- Refunding moved into a settings menu behind the gear, since the tree's
+  bottom bar now holds zoom and the full-tree toggle.
+
+Two departures from the mockup, both deliberate. Its "Collector — adds a new
+face to the die" is not this game's Collector, and its node text is
+placeholder generally, so every panel is filled from the real catalogue.
+And its "NEXT IN CHAIN" is rendered here as **Leads to**: every node that
+names this one as a prerequisite, which is a fact of the graph. It is not a
+suggested route, and nodes the player has not discovered stay unnamed.
+
+A bug the new layout exposed: `planThrow` only runs when the player rolls,
+so a flurry of bonus rolls left its dice sitting until the next click — nine
+of them in a tray that now shows one clearly. `sweepSpent` runs every frame
+and retires dice whose number has been gone for a moment, keeping back as
+many as the next throw will use.
+
 ---
 
 ## Unresolved — deliberately not implemented

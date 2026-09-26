@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createWorld, DIE, DIE_HALF, dieAt, faceUp, LOCAL_VERTICES, nudgeDie,
-  orientationFor, owesReveal, planThrow, releaseFadedGhosts, retireDie, setWorldSize,
+  orientationFor, owesReveal, planThrow, releaseFadedGhosts, retireDie, setWorldSize, sweepSpent,
   spawnDie, step, throwDie, type DieBody, type World,
 } from '../src/ui/dice/physics.ts';
 import {
@@ -557,5 +557,53 @@ describe('a roll does not cut short a result the player has not read', () => {
     expect(owesReveal(die)).toBe(false);
     // Now it is fair game for the next throw.
     expect(planThrow(world, 1).reuse).toEqual([die]);
+  });
+});
+
+describe('the surface clears itself between rolls', () => {
+  it('sweeps dice whose number has long gone, keeping what the next throw uses', () => {
+    const world = createWorld(420, 420);
+    const dice: DieBody[] = [];
+    for (let i = 0; i < 6; i++) {
+      const die = settledShowing(world, 30 + i, i * 100);
+      die.rollId = null;
+      dice.push(die);
+    }
+    world.t = 5000;
+    sweepSpent(world, 1);
+    // Newest kept, the rest let go.
+    expect(dice.slice(0, 5).every((d) => d.retiring)).toBe(true);
+    expect(dice[5].retiring).toBe(false);
+  });
+
+  it('keeps a whole handful when the build throws three', () => {
+    const world = createWorld(420, 420);
+    const dice: DieBody[] = [];
+    for (let i = 0; i < 6; i++) {
+      const die = settledShowing(world, 40 + i, i * 100);
+      die.rollId = null;
+      dice.push(die);
+    }
+    world.t = 5000;
+    sweepSpent(world, 3);
+    expect(dice.filter((d) => !d.retiring).length).toBe(3);
+  });
+
+  it('never sweeps a die still showing its number', () => {
+    const world = createWorld(420, 420);
+    const showing = settledShowing(world, 50);
+    for (let i = 0; i < 4; i++) { const d = settledShowing(world, 60 + i, i * 100); d.rollId = null; }
+    world.t = 5000;
+    sweepSpent(world, 1);
+    expect(showing.retiring).toBe(false);
+  });
+
+  it('waits out the grace period before clearing', () => {
+    const world = createWorld(420, 420);
+    const dice: DieBody[] = [];
+    for (let i = 0; i < 3; i++) { const d = settledShowing(world, 70 + i, 0); d.rollId = null; dice.push(d); }
+    world.t = 1400 + 300;
+    sweepSpent(world, 1, 700);
+    expect(dice.every((d) => !d.retiring)).toBe(true);
   });
 });

@@ -542,7 +542,9 @@ export function planThrow(world: World, count: number, max = 9): {
   reuse: DieBody[];
   retire: DieBody[];
 } {
-  const settled = world.dice.filter((die) => !die.retiring && die.state !== 'tumbling');
+  const settled = world.dice.filter(
+    (die) => !die.retiring && (die.state === 'rest' || die.state === 'idle'),
+  );
   const spent = settled.filter((die) => !owesReveal(die));
   const showing = settled.filter(owesReveal);
 
@@ -561,6 +563,27 @@ export function planThrow(world: World, count: number, max = 9): {
     retire.push(...[...showing].sort((a, b) => a.settledAt - b.settledAt).slice(0, over));
   }
   return { reuse, retire };
+}
+
+/**
+ * Clears away dice nobody is looking at any more.
+ *
+ * `planThrow` only runs when the player rolls, so a flurry of bonus rolls
+ * used to leave its dice sitting on the surface until the next click — nine
+ * of them, in a tray meant to show one. This runs every frame instead:
+ * once a die's number has been gone for `graceMs` it goes too, newest
+ * `keep` dice excepted so there is always something to pick up and throw.
+ */
+export function sweepSpent(world: World, keep: number, graceMs = 700): void {
+  const idle = world.dice.filter(
+    (die) => !die.retiring && die.state === 'rest' && !owesReveal(die),
+  );
+  if (idle.length <= keep) return;
+  // Newest last, so the ones kept are the ones just thrown.
+  idle.sort((a, b) => a.settledAt - b.settledAt);
+  for (const die of idle.slice(0, idle.length - keep)) {
+    if (world.t - (die.settledAt + die.ghostLife) > graceMs) die.retiring = true;
+  }
 }
 
 /** Frontmost die whose projected centre is near the given screen point. */

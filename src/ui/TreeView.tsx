@@ -3,7 +3,6 @@ import { EDGES, NODES, NODES_BY_ID } from '../engine/nodes.ts';
 import { checkAllocation, describeNode, isReachable, isVisible } from '../engine/tree.ts';
 import type { DiscoveryFlag, FrameworkId, PassiveNode, Region } from '../engine/types.ts';
 import { actions } from './store.ts';
-import { NotationView, Prose } from './Notation.tsx';
 import { KEYWORDS } from '../engine/glossary.ts';
 
 /**
@@ -26,7 +25,6 @@ const NODE_RADIUS: Record<PassiveNode['nodeType'], number> = {
   keystone: 34, notable: 22, bridge: 21, small: 13,
 };
 
-const POPUP_WIDTH = 296;
 
 /**
  * Smallest a Small node may be drawn before the view zooms in to compensate.
@@ -40,31 +38,6 @@ const MIN_NODE_PX = 14;
 /** Pointer travel, in pixels, past which a press counts as a pan not a click. */
 const DRAG_SLOP = 3;
 
-/**
- * Where a node sits in the container, in pixels.
- *
- * Computed rather than read back from the DOM: the transform is known exactly
- * (an SVG viewBox letterboxed by `xMidYMid meet`, then the pan and zoom applied
- * to the inner group), and doing the arithmetic keeps the popup in step with a
- * drag without a second render pass per frame.
- */
-function nodeScreenPos(
-  node: PassiveNode,
-  view: { x: number; y: number; zoom: number },
-  size: { w: number; h: number },
-): { x: number; y: number; radius: number } {
-  const fit = Math.min(size.w / VB.w, size.h / VB.h);
-  const offX = (size.w - VB.w * fit) / 2 - VB.minX * fit;
-  const offY = (size.h - VB.h * fit) / 2 - VB.minY * fit;
-  // transform="scale(zoom) translate(x y)" maps p to zoom * (p + t).
-  const ux = (node.position.x + view.x) * view.zoom;
-  const uy = (node.position.y + view.y) * view.zoom;
-  return {
-    x: ux * fit + offX,
-    y: uy * fit + offY,
-    radius: NODE_RADIUS[node.nodeType] * view.zoom * fit,
-  };
-}
 
 const REGION_HUE: Record<Region, number> = {
   core: 45, high: 18, volume: 150, jackpot: 330, control: 205, pattern: 265, adaptive: 90,
@@ -86,10 +59,11 @@ interface Props {
   meta: number;
   framework: FrameworkId;
   pinned: string | null;
-  canRefund: boolean;
-  /** Primitives, so memo can compare them by value. */
-  refundScore: number;
-  refundMeta: number;
+  /** Owned by the app: the upgrade panel in the next column reads it too. */
+  inspected: string | null;
+  setInspected: (id: string | null) => void;
+  expanded: boolean;
+  setExpanded: (v: boolean) => void;
 }
 
 function statusOf(
@@ -104,7 +78,8 @@ function statusOf(
 }
 
 export const TreeView = memo(function TreeView({
-  allocatedKey, discoveredKey, score, meta, framework, pinned, canRefund, refundScore, refundMeta,
+  allocatedKey, discoveredKey, score, meta, framework, pinned, inspected, setInspected,
+  expanded, setExpanded,
 }: Props): JSX.Element {
   const allocated = useMemo(() => new Set(allocatedKey.split(',').filter(Boolean)), [allocatedKey]);
   const discovered = useMemo(
@@ -126,10 +101,6 @@ export const TreeView = memo(function TreeView({
     const cy = VB.minY + VB.h / 2;
     setView({ x: z === 1 ? 0 : cx / z, y: z === 1 ? 0 : cy / z, zoom: z });
   }, [size.w, size.h]);
-  // The panel holds the last node the player looked at or pressed, so it does
-  // not empty out the moment the pointer moves away.
-  const [inspected, setInspected] = useState<string | null>(null);
-  const [confirmRefund, setConfirmRefund] = useState(false);
   const drag = useRef<{
     x: number; y: number; vx: number; vy: number;
     /** Set once the pointer travels far enough to count as a pan. */
@@ -158,6 +129,27 @@ export const TreeView = memo(function TreeView({
     for (const n of NODES) m.set(n.id, statusOf(n, allocated, discovered, score, meta));
     return m;
   }, [allocated, discovered, score, meta]);
+
+  /** Zoom about the middle of the panel, which is where the eye already is. */
+  const nudgeZoom = (k: number): void => {
+    userZoomed.current = true;
+    setView((v) => {
+      const z = Math.min(3, Math.max(0.5, v.zoom * k));
+      const cx = VB.minX + VB.w / 2;
+      const cy = VB.minY + VB.h / 2;
+      const ax = (v.x - cx / v.zoom);
+      const ay = (v.y - cy / v.zoom);
+      return { zoom: z, x: cx / z + ax, y: cy / z + ay };
+    });
+  };
+
+  const recentre = (): void => {
+    userZoomed.current = false;
+    const fit = Math.min(size.w / VB.w, size.h / VB.h);
+    const drawn = NODE_RADIUS.small * 2 * fit;
+    const z = drawn >= MIN_NODE_PX ? 1 : Math.min(3, MIN_NODE_PX / drawn);
+    setView({ x: z === 1 ? 0 : (VB.minX + VB.w / 2) / z, y: z === 1 ? 0 : (VB.minY + VB.h / 2) / z, zoom: z });
+  };
 
   const onWheel = (e: React.WheelEvent): void => {
     const z = Math.min(3, Math.max(0.5, view.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
@@ -190,19 +182,20 @@ export const TreeView = memo(function TreeView({
     const d = drag.current;
     drag.current = null;
     // A press on empty canvas that was not a pan puts the popup away.
-    if (d && !d.moved && !d.onNode) {
-      setInspected(null);
-      setConfirmRefund(false);
-    }
+    if (d && !d.moved && !d.onNode) setInspected(null);
   };
 
-  const shown = inspected ? NODES_BY_ID.get(inspected) ?? null : null;
-  const shownStatus = shown ? statuses.get(shown.id) ?? null : null;
-
-  const anchor = shown && size.w > 0 ? nodeScreenPos(shown, view, size) : null;
-
   return (
-    <div className="tree" ref={wrapRef}>
+    <div className={`tree panel panel--left${expanded ? ' tree--expanded' : ''}`} ref={wrapRef}>
+      <h2 className="panel__title">
+        Build tree
+        <span className="tree__key">
+          <i className="dotk dotk--owned" />Owned
+          <i className="dotk dotk--avail" />Available
+          <i className="dotk dotk--locked" />Locked
+          <i className="dotk dotk--goal" />Goal
+        </span>
+      </h2>
       <svg
         ref={svgRef}
         className="tree__svg"
@@ -266,15 +259,13 @@ export const TreeView = memo(function TreeView({
                   // Space also throws the dice; a focused node owns it first.
                   e.preventDefault();
                   e.stopPropagation();
-                  setConfirmRefund(false);
-                  if (st === 'available') actions.allocate(n.id);
+                                    if (st === 'available') actions.allocate(n.id);
                   else if (st === 'unaffordable') actions.pin(pinned === n.id ? null : n.id);
                 }}
                 onClick={() => {
                   setInspected(n.id);
                   // Touching the web is an answer of sorts: stop asking.
-                  setConfirmRefund(false);
-                  if (st === 'available') actions.allocate(n.id);
+                                    if (st === 'available') actions.allocate(n.id);
                   // One purchase away and out of pocket: the only node worth
                   // saving toward, so a press makes it the goal.
                   else if (st === 'unaffordable') actions.pin(pinned === n.id ? null : n.id);
@@ -290,18 +281,6 @@ export const TreeView = memo(function TreeView({
         </g>
       </svg>
 
-      {shown && anchor && (
-        <NodePopup
-          node={shown}
-          status={shownStatus}
-          framework={framework}
-          score={score}
-          meta={meta}
-          anchor={anchor}
-          size={size}
-        />
-      )}
-
       <div className="tree__regions" aria-hidden>
         {REGION_NAMES.map(([region, label]) => (
           <span key={region} style={{ ['--hue' as string]: REGION_HUE[region] }}>
@@ -310,44 +289,17 @@ export const TreeView = memo(function TreeView({
         ))}
       </div>
 
-      <div className="tree__legend">
-        <span><Swatch type="small" /> small</span>
-        <span><Swatch type="notable" /> notable</span>
-        <span><Swatch type="bridge" /> bridge</span>
-        <span><Swatch type="keystone" /> keystone</span>
-        <span className="tree__hint">drag to pan · scroll to zoom</span>
-      </div>
-
       <div className="tree__tools">
-        {confirmRefund ? (
-          <>
-            <button
-              type="button"
-              className="btn btn--risk btn--sm"
-              onClick={() => { setConfirmRefund(false); actions.refund(); }}
-            >
-              Refund {Math.round(refundScore).toLocaleString()} Score
-              {refundMeta > 0 && ` + ${Math.round(refundMeta).toLocaleString()} Meta`}
-            </button>
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              onClick={() => setConfirmRefund(false)}
-            >
-              Keep build
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            onClick={() => setConfirmRefund(true)}
-            disabled={!canRefund}
-            title="Return every point spent on the web"
-          >
-            Refund Points
-          </button>
-        )}
+        <button type="button" className="iconbtn" aria-label="Zoom out"
+          onClick={() => nudgeZoom(1 / 1.25)}>&minus;</button>
+        <button type="button" className="iconbtn" aria-label="Zoom in"
+          onClick={() => nudgeZoom(1.25)}>+</button>
+        <button type="button" className="iconbtn" aria-label="Recentre the web"
+          onClick={recentre}>&#9678;</button>
+        <button type="button" className="btn btn--ghost btn--sm"
+          onClick={() => setExpanded(!expanded)}>
+          {expanded ? 'Close full tree' : 'View full tree'}
+        </button>
       </div>
     </div>
   );
@@ -367,18 +319,6 @@ function NodeShape({ type }: { type: PassiveNode['nodeType'] }): JSX.Element {
   }
 }
 
-function Swatch({ type }: { type: PassiveNode['nodeType'] }): JSX.Element {
-  return (
-    <svg width={26} height={26} viewBox="-13 -13 26 26" className="swatch">
-      <g className={`node node--${type} node--allocated`} style={{ ['--hue' as string]: 210 }}>
-        {type === 'small' && <circle r={5} className="node__shape" />}
-        {type === 'notable' && <circle r={9} className="node__shape" />}
-        {type === 'bridge' && <rect x={-6} y={-6} width={12} height={12} transform="rotate(45)" className="node__shape" />}
-        {type === 'keystone' && <path d="M0,-11 L9,-5 L9,5 L0,11 L-9,5 L-9,-5 Z" className="node__shape" />}
-      </g>
-    </svg>
-  );
-}
 
 /** What a screen reader says for a node: what it is, what it costs, and why
  *  it can or cannot be taken. */
@@ -405,84 +345,6 @@ function nodeLabel(n: PassiveNode, st: Status, isGoal: boolean, terms: boolean):
   // every one of fifty-four labels.
   const terms_ = terms ? ' Press question mark for the terms used here.' : '';
   return `${n.name}, ${n.nodeType}${cost ? `, ${cost}` : ''}. ${state}.${act}${terms_}`;
-}
-
-/** Which currency a cost is in, told by shape as well as by colour. */
-function CostMark({ kind }: { kind: 'score' | 'meta' }): JSX.Element {
-  return (
-    <svg className="cost__mark" width={9} height={9} viewBox="-5 -5 10 10" aria-hidden>
-      {kind === 'score'
-        ? <circle r={3.6} />
-        : <rect x={-3.2} y={-3.2} width={6.4} height={6.4} rx={1} transform="rotate(45)" />}
-    </svg>
-  );
-}
-
-/**
- * Anchored above the last node the player pointed at or pressed. Floating
- * rather than docked, because a panel in the layout changed height with every
- * description and shoved the web around underneath the pointer.
- */
-export function NodePopup({ node, status, framework, score, meta, anchor, size }: {
-  node: PassiveNode;
-  status: Status | null;
-  framework: FrameworkId;
-  score: number;
-  meta: number;
-  anchor: { x: number; y: number; radius: number };
-  size: { w: number; h: number };
-}): JSX.Element {
-  const costScore = node.costs.score ?? 0;
-  const costMeta = node.costs.meta ?? 0;
-
-  const gap = anchor.radius + 14;
-  // Sit under the node instead when there is no room above it.
-  const below = anchor.y - gap < 150;
-  const half = POPUP_WIDTH / 2;
-  const left = Math.min(Math.max(anchor.x, half + 10), Math.max(half + 10, size.w - half - 10));
-
-  return (
-    <div
-      className={`nodepop nodepop--${node.nodeType}${below ? ' nodepop--below' : ''}`}
-      style={{ left, top: anchor.y + (below ? gap : -gap), width: POPUP_WIDTH }}
-    >
-      <div className="nodepop__head">
-        <span className="nodepop__name">{node.name}</span>
-        {/* The class is a badge, not an aside: it is how a player tells a
-            numeric upgrade from a new rule from a change to the game. */}
-        <span className={`nodepop__type nodepop__type--${node.nodeType}`}>{node.nodeType}</span>
-      </div>
-
-      {/* The mechanic first: the strongest element on the card. */}
-      {node.notation && <NotationView notation={node.notation} framework={framework} />}
-
-      {/* Prose clarifies the notation rather than carrying the explanation. */}
-      <Prose text={describeNode(node, framework)} />
-
-      <div className="nodepop__foot">
-        {(costScore > 0 || costMeta > 0) && (
-          <span className="nodepop__costs">
-            {costScore > 0 && (
-              <span className={costScore > score ? 'cost cost--short' : 'cost'}>
-                <CostMark kind="score" />{costScore.toLocaleString()}
-              </span>
-            )}
-            {costMeta > 0 && (
-              <span className={costMeta > meta ? 'cost cost--alt cost--short' : 'cost cost--alt'}>
-                <CostMark kind="meta" />{costMeta.toLocaleString()}
-              </span>
-            )}
-          </span>
-        )}
-        <span className="nodepop__status">
-          {status === 'allocated' && 'Allocated'}
-          {status === 'available' && 'Click to allocate'}
-          {status === 'unaffordable' && 'Cannot afford'}
-          {status === 'locked' && 'Connect an adjacent node first'}
-        </span>
-      </div>
-    </div>
-  );
 }
 
 /**

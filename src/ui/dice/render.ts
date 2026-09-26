@@ -19,19 +19,19 @@ export interface Theme {
 }
 
 export const THEME_A: Theme = {
-  surface: ['#2b3543', '#111821'],
-  grid: 'rgba(232, 192, 90, 0.09)',
+  surface: ['#123056', '#060c18'],
+  grid: 'rgba(77, 166, 255, 0.16)',
   faceLight: '#fbf6ea',
   faceShade: '#8e8878',
   edge: 'rgba(255, 252, 240, 0.55)',
   pip: '#22252b',
   accent: '#e8c05a',
-  glow: 'rgba(232, 192, 90, ',
+  glow: 'rgba(120, 190, 255, ',
 };
 
 export const THEME_B: Theme = {
-  surface: ['#26383c', '#0e1a1d'],
-  grid: 'rgba(111, 211, 199, 0.09)',
+  surface: ['#0d3a3c', '#050f12'],
+  grid: 'rgba(111, 211, 199, 0.16)',
   faceLight: '#eaf7f4',
   faceShade: '#779a96',
   edge: 'rgba(240, 255, 252, 0.55)',
@@ -91,58 +91,117 @@ function polygon(c: CanvasRenderingContext2D, pts: Vec2[]): void {
 // Surface
 // ---------------------------------------------------------------------------
 
+/**
+ * The arena floor: concentric rings on the ground plane rather than a slab.
+ *
+ * They are circles in world space, so the projection turns them into the
+ * ellipses the perspective calls for without any of it being faked. The
+ * dice still live in the same square the physics uses; the rings are how
+ * that square is dressed.
+ */
 export function drawSurface(c: CanvasRenderingContext2D, world: World, theme: Theme): void {
   const { w, d } = world;
-  const corners = [v3(0, 0, 0), v3(w, 0, 0), v3(w, d, 0), v3(0, d, 0)].map(project);
+  const cx = w / 2;
+  const cy = d / 2;
+  const outer = Math.min(w, d) / 2;
 
-  const mid = project(v3(w / 2, d / 2, 0));
-  const g = c.createRadialGradient(mid.x, mid.y, 10, mid.x, mid.y, (w + d) * 0.55);
-  g.addColorStop(0, theme.surface[0]);
-  g.addColorStop(1, theme.surface[1]);
-
-  // A soft drop below the surface reads as a raised slab.
-  c.save();
-  c.translate(0, 13);
-  polygon(c, corners);
-  c.fillStyle = 'rgba(0,0,0,0.5)';
-  c.fill();
-  c.restore();
-
-  polygon(c, corners);
-  c.fillStyle = g;
+  const mid = project(v3(cx, cy, 0));
+  const glow = c.createRadialGradient(mid.x, mid.y, 8, mid.x, mid.y, outer * 1.5);
+  glow.addColorStop(0, theme.surface[0]);
+  glow.addColorStop(0.55, 'rgba(10, 20, 40, 0.55)');
+  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  c.fillStyle = glow;
+  c.beginPath();
+  ringPath(c, cx, cy, outer * 1.45);
   c.fill();
 
-  c.save();
-  polygon(c, corners);
-  c.clip();
-  c.strokeStyle = theme.grid;
-  c.lineWidth = 1.2;
-  const stepSize = DIE;
-  for (let x = 0; x <= w + 0.1; x += stepSize) {
-    const a = project(v3(x, 0, 0));
-    const b = project(v3(x, d, 0));
-    c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
+  // Four rings, brightest at the rim the dice actually bounce off.
+  const rings = [0.34, 0.58, 0.79, 1];
+  rings.forEach((k, i) => {
+    c.beginPath();
+    ringPath(c, cx, cy, outer * k);
+    c.strokeStyle = theme.grid;
+    c.lineWidth = i === rings.length - 1 ? 2.4 : 1.1;
+    c.globalAlpha = i === rings.length - 1 ? 1 : 0.5 + i * 0.12;
+    c.stroke();
+  });
+  c.globalAlpha = 1;
+
+  // A wash inside the rim so dice read against something.
+  c.beginPath();
+  ringPath(c, cx, cy, outer);
+  const inner = c.createRadialGradient(mid.x, mid.y, 4, mid.x, mid.y, outer);
+  inner.addColorStop(0, 'rgba(30, 90, 170, 0.20)');
+  inner.addColorStop(1, 'rgba(10, 30, 70, 0.02)');
+  c.fillStyle = inner;
+  c.fill();
+}
+
+/** A circle on the ground plane, projected. */
+function ringPath(c: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {
+  const steps = 72;
+  for (let i = 0; i <= steps; i++) {
+    const t = (i / steps) * Math.PI * 2;
+    const p = project(v3(cx + Math.cos(t) * r, cy + Math.sin(t) * r, 0));
+    if (i === 0) c.moveTo(p.x, p.y); else c.lineTo(p.x, p.y);
   }
-  for (let y = 0; y <= d + 0.1; y += stepSize) {
-    const a = project(v3(0, y, 0));
-    const b = project(v3(w, y, 0));
-    c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke();
-  }
-  // Inner shading toward the far corner.
-  const far = project(v3(0, 0, 0));
-  const near = project(v3(w, d, 0));
-  const lin = c.createLinearGradient(far.x, far.y, near.x, near.y);
-  lin.addColorStop(0, 'rgba(0,0,0,0.45)');
-  lin.addColorStop(0.55, 'rgba(0,0,0,0)');
-  c.fillStyle = lin;
-  polygon(c, corners);
-  c.fill();
-  c.restore();
+  c.closePath();
+}
 
-  polygon(c, corners);
-  c.strokeStyle = theme.glow + '0.3)';
-  c.lineWidth = 1.6;
-  c.stroke();
+/**
+ * Starfield and the shaft of light above the arena, drawn in canvas space
+ * before the world transform so they sit behind everything and do not
+ * scale with the zoom.
+ */
+const STARS: { x: number; y: number; r: number; a: number }[] = Array.from(
+  { length: 90 },
+  (_, i) => {
+    // Deterministic: a fixed sky, not a twinkling one that churns each frame.
+    const n = Math.sin(i * 127.1) * 43758.5453;
+    const m = Math.sin(i * 311.7) * 24634.6345;
+    return {
+      x: n - Math.floor(n),
+      y: m - Math.floor(m),
+      r: 0.5 + ((i * 7) % 5) * 0.22,
+      a: 0.18 + ((i * 13) % 9) * 0.06,
+    };
+  },
+);
+
+export function drawBackdrop(
+  c: CanvasRenderingContext2D, w: number, h: number, theme: Theme,
+): void {
+  const sky = c.createRadialGradient(w / 2, h * 0.34, 10, w / 2, h * 0.34, Math.max(w, h) * 0.8);
+  sky.addColorStop(0, 'rgba(18, 42, 84, 0.55)');
+  sky.addColorStop(1, 'rgba(4, 8, 18, 0)');
+  c.fillStyle = sky;
+  c.fillRect(0, 0, w, h);
+
+  for (const st of STARS) {
+    c.globalAlpha = st.a;
+    c.fillStyle = '#cfe4ff';
+    c.beginPath();
+    c.arc(st.x * w, st.y * h * 0.82, st.r, 0, Math.PI * 2);
+    c.fill();
+  }
+  c.globalAlpha = 1;
+
+  // The shaft of light the arena sits under. Drawn additively: over a dark
+  // field a plain fill reads as a grey wedge rather than as light.
+  c.globalCompositeOperation = 'lighter';
+  const beam = c.createLinearGradient(w / 2, 0, w / 2, h * 0.52);
+  beam.addColorStop(0, `${theme.glow}0.22)`);
+  beam.addColorStop(0.5, `${theme.glow}0.07)`);
+  beam.addColorStop(1, `${theme.glow}0)`);
+  c.fillStyle = beam;
+  c.beginPath();
+  c.moveTo(w / 2 - 1.5, 0);
+  c.lineTo(w / 2 + 1.5, 0);
+  c.lineTo(w / 2 + 26, h * 0.5);
+  c.lineTo(w / 2 - 26, h * 0.5);
+  c.closePath();
+  c.fill();
+  c.globalCompositeOperation = 'source-over';
 }
 
 // ---------------------------------------------------------------------------

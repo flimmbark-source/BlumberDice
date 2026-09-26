@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   allocatedCost, canRefund, canRoll, canSwitchFramework, CONFIG, displayStats,
   getBuild, type GameState,
@@ -14,12 +14,17 @@ import { GoalBar } from './GoalBar.tsx';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
 import { TreeView } from './TreeView.tsx';
+import { SelectedUpgrade } from './SelectedUpgrade.tsx';
 
 type Tab = 'web' | 'stats' | 'log';
 
 export function App(): JSX.Element {
   const s = useGame();
   const [tab, setTab] = useState<Tab>('web');
+  // Which node the panels are describing. Owned by the app because two
+  // columns read it: the web sets it, the upgrade panel shows it.
+  const [inspected, setInspected] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const knowsB = s.discovered.includes('frameworkB');
   const spent = allocatedCost(s);
 
@@ -42,70 +47,139 @@ export function App(): JSX.Element {
 
   return (
     <div className="app">
-      <TopBar s={s} knowsB={knowsB} />
+      <TopBar s={s} knowsB={knowsB} tab={tab} setTab={setTab} canRefund={canRefund(s)}
+        refundScore={spent.score} refundMeta={spent.meta} />
+
       <main className="main">
+        {/* The game column is first in the DOM so Tab reaches Roll before
+            fifty-four tree nodes; grid-column puts it back in the middle. */}
         <GamePanel s={s} onOpenTree={() => setTab('web')} />
-        <aside className="side">
-          <nav className="tabs">
-            <TabBtn id="web" tab={tab} set={setTab} label="Web" badge={availableCount(s)} />
-            <TabBtn id="stats" tab={tab} set={setTab} label="Stats" dot={statsUnread(s)} />
-            <TabBtn id="log" tab={tab} set={setTab} label="Log" />
-          </nav>
-          <div className="side__body">
-            {tab === 'web' && (
-              <TreeView
-                allocatedKey={s.allocated.join(',')}
-                discoveredKey={s.discovered.join(',')}
-                score={s.score}
-                meta={s.meta}
-                framework={s.framework}
-                pinned={s.pinned}
-                canRefund={canRefund(s)}
-                refundScore={spent.score}
-                refundMeta={spent.meta}
-              />
-            )}
-            {tab === 'stats' && <StatsPanel s={s} />}
-            {tab === 'log' && <LogPanel s={s} />}
-          </div>
-        </aside>
+
+        <section className="col col--left">
+          {tab === 'web' && (
+            <TreeView
+              allocatedKey={s.allocated.join(',')}
+              discoveredKey={s.discovered.join(',')}
+              score={s.score}
+              meta={s.meta}
+              framework={s.framework}
+              pinned={s.pinned}
+              inspected={inspected}
+              setInspected={setInspected}
+              expanded={expanded}
+              setExpanded={setExpanded}
+            />
+          )}
+          {tab === 'stats' && (
+            <aside className="panel panel--left">
+              <h2 className="panel__title">Stats</h2>
+              <div className="panel__body"><StatsPanel s={s} /></div>
+            </aside>
+          )}
+          {tab === 'log' && (
+            <aside className="panel panel--left">
+              <h2 className="panel__title">Log</h2>
+              <div className="panel__body"><LogPanel s={s} /></div>
+            </aside>
+          )}
+        </section>
+
+        <SelectedUpgrade s={s} nodeId={inspected} onReveal={setInspected} />
       </main>
+
       {store.debug && <DebugPanel s={s} />}
     </div>
   );
 }
 
-function TopBar({ s, knowsB }: { s: GameState; knowsB: boolean }): JSX.Element {
+
+function TopBar({ s, knowsB, tab, setTab, canRefund: mayRefund, refundScore, refundMeta }: {
+  s: GameState; knowsB: boolean; tab: Tab; setTab: (t: Tab) => void;
+  canRefund: boolean; refundScore: number; refundMeta: number;
+}): JSX.Element {
+  const [menu, setMenu] = useState(false);
   return (
     <header className="topbar">
-      <div className="brand">BlumberDice</div>
-      <div className="currencies">
-        <Currency label="Score" value={s.score} />
-        {knowsB && <Currency label="Meta" value={s.meta} alt />}
+      <div className="brand">
+        <BrandMark />
+        <span className="brand__word"><b>Blumber</b><i>Dice</i></span>
       </div>
-      {knowsB && (
-        <div className="fwtoggle" role="group" aria-label="Active framework">
-          <button
-            type="button"
-            className={`fwtoggle__btn${s.framework === 'A' ? ' fwtoggle__btn--on' : ''}`}
-            onClick={() => { if (s.framework !== 'A') actions.switchFramework(); }}
-            disabled={!canSwitchFramework(s) && s.framework !== 'A'}
-          >
-            <span className="fwtoggle__glyph">+</span>
-            <span className="fwtoggle__text">gain Score</span>
-          </button>
-          <button
-            type="button"
-            className={`fwtoggle__btn${s.framework === 'B' ? ' fwtoggle__btn--on' : ''}`}
-            onClick={() => { if (s.framework !== 'B') actions.switchFramework(); }}
-            disabled={!canSwitchFramework(s) && s.framework !== 'B'}
-          >
-            <span className="fwtoggle__glyph">↺</span>
-            <span className="fwtoggle__text">gain Meta</span>
-          </button>
+
+      <nav className="tabsx" role="tablist" aria-label="Panel">
+        <TabBtn id="web" tab={tab} set={setTab} label="Build" badge={availableCount(s)} />
+        <TabBtn id="stats" tab={tab} set={setTab} label="Stats" dot={statsUnread(s)} />
+        <TabBtn id="log" tab={tab} set={setTab} label="Log" />
+      </nav>
+
+      <div className="topbar__right">
+        {knowsB && (
+          <div className="fwtoggle" role="group" aria-label="Active framework">
+            <button
+              type="button"
+              className={`fwtoggle__btn${s.framework === 'A' ? ' fwtoggle__btn--on' : ''}`}
+              onClick={() => { if (s.framework !== 'A') actions.switchFramework(); }}
+              disabled={!canSwitchFramework(s) && s.framework !== 'A'}
+            >
+              <span className="fwtoggle__glyph">+</span>
+              <span className="fwtoggle__text">gain Score</span>
+            </button>
+            <button
+              type="button"
+              className={`fwtoggle__btn${s.framework === 'B' ? ' fwtoggle__btn--on' : ''}`}
+              onClick={() => { if (s.framework !== 'B') actions.switchFramework(); }}
+              disabled={!canSwitchFramework(s) && s.framework !== 'B'}
+            >
+              <span className="fwtoggle__glyph">↺</span>
+              <span className="fwtoggle__text">gain Meta</span>
+            </button>
+          </div>
+        )}
+        <div className="currencies">
+          <Currency label="Score" value={s.score} />
+          {knowsB && <Currency label="Meta" value={s.meta} alt />}
         </div>
-      )}
+        <div className="gear">
+          <button type="button" className="iconbtn" aria-label="Settings"
+            aria-expanded={menu} onClick={() => setMenu((v) => !v)}>
+            <GearMark />
+          </button>
+          {menu && (
+            <div className="gear__menu">
+              <button
+                type="button" className="gear__item" disabled={!mayRefund}
+                onClick={() => { actions.refund(); setMenu(false); }}
+              >
+                Refund every point
+                <span className="gear__sub">
+                  returns {refundScore.toLocaleString()} Score
+                  {refundMeta > 0 ? ` and ${refundMeta.toLocaleString()} Meta` : ''}
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </header>
+  );
+}
+
+function BrandMark(): JSX.Element {
+  return (
+    <svg className="brand__mark" width={34} height={34} viewBox="-16 -16 32 32" aria-hidden>
+      <rect x={-11} y={-11} width={22} height={22} rx={6} />
+      <circle cx={-4.5} cy={-4.5} r={2} /><circle cx={4.5} cy={4.5} r={2} />
+      <circle cx={4.5} cy={-4.5} r={2} /><circle cx={-4.5} cy={4.5} r={2} />
+    </svg>
+  );
+}
+
+function GearMark(): JSX.Element {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" aria-hidden
+      fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
+      <circle cx={12} cy={12} r={3.2} />
+      <path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6M5.4 5.4l1.8 1.8M16.8 16.8l1.8 1.8M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8" />
+    </svg>
   );
 }
 
@@ -130,28 +204,53 @@ function GamePanel({ s, onOpenTree }: { s: GameState; onOpenTree: () => void }):
   const build = getBuild(s);
   const stats = displayStats(s, build);
   const cd = CONFIG.baseCooldownMs * stats.cooldownMult;
-  const progress = cd > 0 ? 1 - Math.min(1, s.cooldownRemaining / cd) : 1;
   const ready = canRoll(s);
+  const dice = Math.max(1, Math.floor(stats.handfulDice));
+  const rollRef = useRef<(() => void) | null>(null);
 
   return (
-    <section className="game">
-      <DiceTray s={s} />
+    <section className="game panel">
+      <h2 className="panel__title">
+        Dice
+        <span className="game__score">
+          <Currency label="Score" value={s.score} />
+        </span>
+      </h2>
 
-      <div className={`cooldown${ready ? ' cooldown--ready' : ''}`}>
-        <span className="cooldown__fill" style={{ width: `${progress * 100}%` }} />
+      <div className="game__arena">
+        <DiceTray s={s} rollRef={rollRef} />
       </div>
 
-      <GoalBar s={s} onOpenTree={onOpenTree} />
+      <div className="game__controls">
+        <button
+          type="button"
+          className={`rollbtn${ready ? '' : ' rollbtn--wait'}`}
+          onClick={() => rollRef.current?.()}
+          disabled={!ready}
+        >
+          <span className="rollbtn__pip" aria-hidden>
+            <svg width={22} height={22} viewBox="-16 -16 32 32">
+              <rect x={-11} y={-11} width={22} height={22} rx={6} />
+              <circle cx={-4.5} cy={-4.5} r={2} /><circle cx={4.5} cy={4.5} r={2} />
+              <circle cx={4.5} cy={-4.5} r={2} /><circle cx={-4.5} cy={4.5} r={2} />
+            </svg>
+          </span>
+          <span className="rollbtn__label">{dice > 1 ? `Roll ${dice} dice` : 'Roll'}</span>
+          <span className="rollbtn__time">
+            {ready ? 'Space' : `${(s.cooldownRemaining / 1000).toFixed(2)}s`}
+          </span>
+          <span className="rollbtn__fill"
+            style={{ width: `${cd > 0 ? (1 - Math.min(1, s.cooldownRemaining / cd)) * 100 : 100}%` }} />
+        </button>
 
-      {s.decision && <DecisionBar decision={s.decision} />}
-
-      <div className="game__lower">
+        <GoalBar s={s} onOpenTree={onOpenTree} />
+        {s.decision && <DecisionBar decision={s.decision} />}
+        <ControlRail s={s} />
         <div className="feed">
-          {s.log.slice(-5).reverse().map((e) => (
+          {s.log.slice(-3).reverse().map((e) => (
             <div key={e.id} className={`feed__line feed__line--${e.kind}`}>{e.text}</div>
           ))}
         </div>
-        <ControlRail s={s} />
       </div>
     </section>
   );

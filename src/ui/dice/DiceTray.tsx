@@ -1,13 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type MutableRefObject } from 'react';
 import { canRoll, displayStats, type GameState, type RollRecord } from '../../engine/game.ts';
 import { prefersReducedMotion } from '../motion.ts';
 import { actions, store } from '../store.ts';
 import { ISO_X, ISO_Y, project, v3 } from './math3d.ts';
 import {
   createWorld, dieAt, DIE, nudgeDie, planThrow, releaseFadedGhosts, retireDie, setWorldSize,
+  sweepSpent,
   spawnDie, step, throwDie, type DieBody, type World,
 } from './physics.ts';
-import { drawWorld, THEME_A, THEME_B } from './render.ts';
+import { drawBackdrop, drawWorld, THEME_A, THEME_B } from './render.ts';
 
 const MAX_DICE = 9;
 /** Surface side in world units. Fixed, so the dice always read the same size. */
@@ -22,10 +23,12 @@ function tumbleFor(backlog: number): number {
   return 300;
 }
 
-export function DiceTray({ s }: { s: GameState }): JSX.Element {
+export function DiceTray({ s, rollRef }: {
+  s: GameState;
+  /** Filled in by the tray so the Roll button throws the same dice a click does. */
+  rollRef: MutableRefObject<(() => void) | null>;
+}): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  /** Set by the frame loop so a real control can throw the dice too. */
-  const rollRef = useRef<(() => void) | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<World>(createWorld());
   const cursorRef = useRef<number>(0);
@@ -43,6 +46,9 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
     let originX = 0;
     let originY = 0;
     let zoom = 1;
+    /** Canvas size in CSS pixels; the context is already scaled for dpr. */
+    let viewW = 0;
+    let viewH = 0;
 
     const resize = (): void => {
       const rect = wrap.getBoundingClientRect();
@@ -51,6 +57,8 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
       canvas.height = Math.max(1, Math.round(rect.height * dpr));
       canvas.style.width = `${rect.width}px`;
       canvas.style.height = `${rect.height}px`;
+      viewW = rect.width;
+      viewH = rect.height;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       // The surface keeps a fixed size in world units so a die always reads
@@ -140,12 +148,15 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
       }
 
       step(world, dt);
+      // Keep the surface to what the next throw will actually use.
+      sweepSpent(world, Math.max(1, Math.floor(displayStats(game).handfulDice)));
       // The HUD counts a roll only once its number has faded off the die.
       store.heldBack = releaseFadedGhosts(world);
 
       const theme = game.framework === 'A' ? THEME_A : THEME_B;
       const shake = world.shake;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBackdrop(ctx, viewW, viewH, theme);
       ctx.save();
       ctx.translate(
         originX + (shake ? (Math.random() - 0.5) * shake : 0),
@@ -249,17 +260,6 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
   return (
     <div className="tray" ref={wrapRef}>
       <canvas className="tray__canvas" ref={canvasRef} aria-hidden />
-      {/* The canvas cannot be focused or announced, so the die was reachable
-          only by a Space shortcut nothing advertised. This is the real
-          control: off-screen until focused, then visible like any button. */}
-      <button
-        type="button"
-        className="tray__roll"
-        disabled={!ready}
-        onClick={() => rollRef.current?.()}
-      >
-        {dice > 1 ? `Throw ${dice} dice` : 'Roll the die'}
-      </button>
       <div className={`tray__hint${ready && s.totalRolls < 6 ? ' tray__hint--show' : ''}`}>
         {dice > 1 ? `click to throw ${dice} dice` : 'click the die to roll'}
         <span className="tray__hintKey"> · or press Space</span>
