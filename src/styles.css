@@ -1138,28 +1138,3 @@ button.chain__btn:hover { border-color: var(--accent); }
 }
 
 
-.window-launchers {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-height: 32px;
-}
-.window-launcher {
-  padding: 6px 13px;
-  border: 1px solid #2b466d;
-  border-radius: 6px;
-  background: #0b1625;
-  color: #9fb6d4;
-  font-size: 12px;
-  font-weight: 650;
-}
-.window-launcher:hover {
-  color: #fff;
-  border-color: #4d7eb8;
-  background: #13233a;
-}
-.desktop-window--stats .panel--utility,
-.desktop-window--log .panel--utility {
-  height: 100%;
-}
