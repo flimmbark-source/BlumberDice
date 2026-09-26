@@ -51,20 +51,15 @@ export function App(): JSX.Element {
   const openGoalInTree = (): void => {
     setTab('web');
 
-    // A chosen target should always jump straight back to that node.
-    if (s.pinned) {
-      focusNode(s.pinned);
-      return;
-    }
-
-    // With no pinned goal, "Open in Tree" walks the currently affordable
-    // nodes. If one is already inspected, move to the next; otherwise start
-    // with the first. This makes the button useful in the generic "ready"
-    // state instead of doing nothing.
+    // "X Available to Buy" is a carousel over the nodes that can actually be
+    // purchased now. Each press advances one step, centres that node in the
+    // tree, and makes it the selected/Next Goal node.
     const targets = openTargets(s);
     if (targets.length === 0) return;
     const current = inspected ? targets.indexOf(inspected) : -1;
-    focusNode(targets[(current + 1) % targets.length]);
+    const next = targets[(current + 1) % targets.length];
+    focusNode(next);
+    actions.pin(next);
   };
 
   useEffect(() => {
