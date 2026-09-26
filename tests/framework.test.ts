@@ -36,6 +36,31 @@ describe('Framework A', () => {
   });
 });
 
+describe('roll feedback metadata', () => {
+  it('marks a forced jackpot on the roll that caused it', () => {
+    const s = makeBuild({ nodes: ['jp_longodds'] });
+    resolveFace(s, 6);
+    const last = s.rollLog[s.rollLog.length - 1];
+    expect(last.procs).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'jackpot', label: 'JACKPOT' }),
+    ]));
+  });
+
+  it('names a triggered pattern and includes the triggering faces', () => {
+    const s = makeBuild({ nodes: ['pt_repeat'] });
+    resolveFace(s, 3);
+    resolveFace(s, 3);
+    const last = s.rollLog[s.rollLog.length - 1];
+    expect(last.procs).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: 'pattern',
+        label: 'DOUBLES',
+        detail: expect.stringContaining('3–3'),
+      }),
+    ]));
+  });
+});
+
 describe('Framework B', () => {
   it('grants exactly one Meta per resolved roll regardless of value', () => {
     for (const face of [1, 2, 3, 4, 5, 6] as Face[]) {
