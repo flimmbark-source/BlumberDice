@@ -130,6 +130,8 @@ export const TreeView = memo(function TreeView({
     /** Whether the press landed on a node rather than empty canvas. */
     onNode: boolean;
   } | null>(null);
+  const suppressNodeClick = useRef(false);
+  const [dragging, setDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -198,7 +200,9 @@ export const TreeView = memo(function TreeView({
     setView((v) => ({ ...v, zoom: z }));
   };
 
-  const onDown = (e: React.PointerEvent): void => {
+  const onDown = (e: React.PointerEvent<SVGSVGElement>): void => {
+    if (e.button !== 0) return;
+    suppressNodeClick.current = false;
     drag.current = {
       x: e.clientX,
       y: e.clientY,
@@ -207,21 +211,40 @@ export const TreeView = memo(function TreeView({
       moved: false,
       onNode: (e.target as Element).closest?.('.node') != null,
     };
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+    // Capture on the SVG itself rather than whichever path/circle happened
+    // to receive the press. Panning then remains stable across node edges.
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
-  const onMove = (e: React.PointerEvent): void => {
+  const onMove = (e: React.PointerEvent<SVGSVGElement>): void => {
     const d = drag.current;
     if (!d) return;
-    if (Math.abs(e.clientX - d.x) > DRAG_SLOP || Math.abs(e.clientY - d.y) > DRAG_SLOP) {
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!d.moved && (Math.abs(dx) > DRAG_SLOP || Math.abs(dy) > DRAG_SLOP)) {
       d.moved = true;
+      suppressNodeClick.current = true;
+      setDragging(true);
     }
-    setView((v) => ({ ...v, x: d.vx + (e.clientX - d.x) / v.zoom, y: d.vy + (e.clientY - d.y) / v.zoom }));
+
+    // view.x/y are SVG user units, not CSS pixels. Convert the pointer delta
+    // through the fitted viewBox scale first; otherwise panning in this narrow
+    // tech window feels several times slower than the mouse.
+    const fit = size.w > 0 && size.h > 0 ? Math.min(size.w / VB.w, size.h / VB.h) : 1;
+    setView((v) => ({
+      ...v,
+      x: d.vx + dx / (fit * v.zoom),
+      y: d.vy + dy / (fit * v.zoom),
+    }));
   };
 
-  const onUp = (): void => {
+  const onUp = (e: React.PointerEvent<SVGSVGElement>): void => {
     const d = drag.current;
     drag.current = null;
+    setDragging(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
     // A press on empty canvas that was not a pan puts the popup away.
     if (d && !d.moved && !d.onNode) setInspected(null);
   };
@@ -243,13 +266,13 @@ export const TreeView = memo(function TreeView({
       </h2>
       <svg
         ref={svgRef}
-        className="tree__svg"
+        className={`tree__svg${dragging ? ' tree__svg--dragging' : ''}`}
         viewBox={VIEWBOX}
         onWheel={onWheel}
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
-        onPointerLeave={onUp}
+        onPointerCancel={onUp}
       >
         <g transform={`scale(${view.zoom}) translate(${view.x} ${view.y})`}>
           {EDGES.map(([a, b]) => {
@@ -299,7 +322,13 @@ export const TreeView = memo(function TreeView({
                   e.stopPropagation();
                   selectNode(n.id, st, pinned, setInspected);
                 }}
-                onClick={() => selectNode(n.id, st, pinned, setInspected)}
+                onClick={() => {
+                  if (suppressNodeClick.current) {
+                    suppressNodeClick.current = false;
+                    return;
+                  }
+                  selectNode(n.id, st, pinned, setInspected);
+                }}
               >
                 <NodeShape type={n.nodeType} />
                 {(n.nodeType === 'keystone' || n.nodeType === 'notable') && st === 'allocated' && (
