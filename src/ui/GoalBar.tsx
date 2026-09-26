@@ -1,7 +1,7 @@
 import { currentGoal, type Goal } from '../engine/goal.ts';
 import type { GameState } from '../engine/game.ts';
 import { NotationView } from './Notation.tsx';
-import { actions, store } from './store.ts';
+import { store } from './store.ts';
 import { useCountUp } from './useCountUp.ts';
 
 /**
@@ -56,14 +56,6 @@ export function GoalBar({ s, onOpenTree }: {
           <Head label={goal.affordable ? 'Upgrade ready' : 'Next'} ready={goal.affordable} />
           <div className="goal__row">
             <span className="goal__name">{goal.node.name}</span>
-            <button
-              type="button"
-              className="goal__unpin"
-              onClick={() => actions.pin(null)}
-              aria-label={`Stop targeting ${goal.node.name}`}
-            >
-              clear
-            </button>
           </div>
 
           {/* The upgrade is its own reward preview, in the tree's own grammar. */}
