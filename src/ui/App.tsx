@@ -8,7 +8,7 @@ import { useCountUp } from './useCountUp.ts';
 import { ControlRail } from './ControlRail.tsx';
 import { DecisionBar } from './DecisionBar.tsx';
 import { GoalBar } from './GoalBar.tsx';
-import { currentGoal } from '../engine/goal.ts';
+import { currentGoal, openTargets } from '../engine/goal.ts';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
@@ -38,6 +38,25 @@ export function App(): JSX.Element {
     setInspected(id);
     focusN.current += 1;
     setFocus({ id, n: focusN.current });
+  };
+
+  const openGoalInTree = (): void => {
+    setTab('web');
+
+    // A chosen target should always jump straight back to that node.
+    if (s.pinned) {
+      focusNode(s.pinned);
+      return;
+    }
+
+    // With no pinned goal, "Open in Tree" walks the currently affordable
+    // nodes. If one is already inspected, move to the next; otherwise start
+    // with the first. This makes the button useful in the generic "ready"
+    // state instead of doing nothing.
+    const targets = openTargets(s);
+    if (targets.length === 0) return;
+    const current = inspected ? targets.indexOf(inspected) : -1;
+    focusNode(targets[(current + 1) % targets.length]);
   };
 
   useEffect(() => {
@@ -121,10 +140,7 @@ export function App(): JSX.Element {
                   <div className="tech-build__goal">
                     <GoalBar
                       s={s}
-                      onOpenTree={() => {
-                        setTab('web');
-                        if (s.pinned) focusNode(s.pinned);
-                      }}
+                      onOpenTree={openGoalInTree}
                     />
                   </div>
                 )}
