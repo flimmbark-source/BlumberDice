@@ -790,7 +790,7 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
       intent.procs.push({
         kind: 'ability',
         label: 'CLIMB',
-        detail: `+${s.transient.climb} Stack${s.transient.climb === 1 ? '' : 's'}`,
+        detail: `+1 · ${s.transient.climb}/${CONFIG.climbMaxStacks} Stacks`,
       });
     } else {
       s.transient.climb = 0;
@@ -1001,7 +1001,7 @@ function completeRoll(
   const threshold = Math.floor(stats.secondWindThreshold);
   if (threshold > 0 && s.transient.rollsSinceBonus >= threshold) {
     const queued = queueBonusRolls(s, 1, depth);
-    if (queued > 0) intent.procs.push({ kind: 'bonus', label: 'SECOND WIND', detail: '+1 Bonus Roll' });
+    if (queued > 0) intent.procs.push({ kind: 'ability', label: 'SECOND WIND', detail: '+1 Bonus Roll' });
   }
 
   // --- Bookkeeping --------------------------------------------------------
