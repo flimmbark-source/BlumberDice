@@ -488,6 +488,7 @@ function applyEffects(
         break;
       case 'weightFor':
         s.transient.weightPush.push({ face: e.face, value: e.add, expiresAt: s.totalRolls + 1 + e.rolls });
+        details.push(`Face ${e.face} Weight ${e.add >= 0 ? '+' : ''}${e.add}`);
         break;
       case 'tempStat':
         s.transient.tempStats.push({
@@ -508,34 +509,30 @@ function applyEffects(
   return details;
 }
 
+interface TriggerActivation {
+  label: string;
+  details: string[];
+}
+
 function fireTriggers(
   s: GameState,
   build: ResolvedBuild,
   event: TriggerEvent,
   ctx: RollCtx,
   opts: { depth: number; rewardMult: number },
-): string[] {
-  const details: string[] = [];
-  for (const t of build.triggers) {
+): TriggerActivation[] {
+  const activations: TriggerActivation[] = [];
+  for (const resolved of build.triggers) {
+    const t = resolved.trigger;
     if (t.on !== event) continue;
     if (!evalAll(s, t.when, ctx)) continue;
-    details.push(...applyEffects(s, t.effects, ctx, opts));
+    activations.push({
+      label: resolved.sourceName.toUpperCase(),
+      details: applyEffects(s, t.effects, ctx, opts),
+    });
   }
-  return details;
+  return activations;
 }
-
-const PATTERN_LABEL: Record<PatternName, string> = {
-  pair: 'DOUBLES',
-  triple: 'TRIPLE',
-  step: 'STEP',
-  run: 'RUN',
-  longRun: 'LONG RUN',
-  palindrome: 'PALINDROME',
-  longPalindrome: 'LONG PALINDROME',
-  alternating: 'ALTERNATING',
-  fullSet: 'FULL SET',
-  newFace: 'NEW FACE',
-};
 
 // ---------------------------------------------------------------------------
 // Roll pipeline
@@ -790,6 +787,11 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
   if (build.flags.has('climb')) {
     if (s.lastFace !== null && face > s.lastFace) {
       s.transient.climb = Math.min(s.transient.climb + 1, CONFIG.climbMaxStacks);
+      intent.procs.push({
+        kind: 'ability',
+        label: 'CLIMB',
+        detail: `+${s.transient.climb} Stack${s.transient.climb === 1 ? '' : 's'}`,
+      });
     } else {
       s.transient.climb = 0;
     }
@@ -818,10 +820,18 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
     const mult = build.flags.has('duality') ? 2 : 1;
     if (inA) {
       const amt = Math.round((s.pendulumPayout / 5) * mult);
-      if (amt > 0) { grantScore(s, amt); log(s, 'score', `Pendulum +${amt} Score`); }
+      if (amt > 0) {
+        grantScore(s, amt);
+        log(s, 'score', `Pendulum +${amt} Score`);
+        intent.procs.push({ kind: 'ability', label: 'PENDULUM', detail: `+${amt} Score` });
+      }
     } else {
       const amt = Math.round((s.pendulumPayout / 10) * mult);
-      if (amt > 0) { grantMeta(s, amt); log(s, 'meta', `Pendulum +${amt} Meta`); }
+      if (amt > 0) {
+        grantMeta(s, amt);
+        log(s, 'meta', `Pendulum +${amt} Meta`);
+        intent.procs.push({ kind: 'ability', label: 'PENDULUM', detail: `+${amt} Meta` });
+      }
     }
   }
   if (build.flags.has('pendulum')) {
@@ -934,19 +944,38 @@ function completeRoll(
   const depth = intent.depth;
   const opts = { depth, rewardMult };
 
-  fireTriggers(s, build, 'onResolve', ctx, opts);
-  if (ctx.jackpotHit) fireTriggers(s, build, 'onJackpot', ctx, opts);
-  else if (build.flags.has('jackpot') && s.framework === 'A') {
-    fireTriggers(s, build, 'onJackpotMiss', ctx, opts);
+  const resolvedActivations = fireTriggers(s, build, 'onResolve', ctx, opts);
+  for (const activation of resolvedActivations) {
+    intent.procs.push({
+      kind: 'ability',
+      label: activation.label,
+      detail: activation.details.length > 0 ? activation.details.join(' · ') : undefined,
+    });
   }
+
+  const jackpotActivations = ctx.jackpotHit
+    ? fireTriggers(s, build, 'onJackpot', ctx, opts)
+    : build.flags.has('jackpot') && s.framework === 'A'
+      ? fireTriggers(s, build, 'onJackpotMiss', ctx, opts)
+      : [];
+  for (const activation of jackpotActivations) {
+    intent.procs.push({
+      kind: 'ability',
+      label: activation.label,
+      detail: activation.details.length > 0 ? activation.details.join(' · ') : undefined,
+    });
+  }
+
   for (const hit of hits) {
     const hitCtx: RollCtx = { ...ctx, pattern: hit.name, patternEnd: hit.faces[hit.faces.length - 1] };
-    const details = fireTriggers(s, build, 'onPattern', hitCtx, opts);
-    if (details.length > 0) {
+    for (const activation of fireTriggers(s, build, 'onPattern', hitCtx, opts)) {
       intent.procs.push({
         kind: 'pattern',
-        label: PATTERN_LABEL[hit.name],
-        detail: `${hit.faces.join('–')} · ${details.join(' · ')}`,
+        label: activation.label,
+        detail: [
+          hit.faces.join('–'),
+          ...activation.details,
+        ].join(' · '),
       });
     }
   }
@@ -962,9 +991,9 @@ function completeRoll(
   if (stats.splinterChance > 0 && chance(s.rng, stats.splinterChance)) {
     const queued = queueBonusRolls(s, 2, depth);
     if (queued > 0) intent.procs.push({
-      kind: 'bonus',
-      label: 'BONUS ROLLS',
-      detail: `+${queued}`,
+      kind: 'ability',
+      label: 'SPLINTER',
+      detail: `+${queued} Bonus Rolls`,
     });
   }
 
