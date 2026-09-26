@@ -12,7 +12,6 @@ import { currentGoal, openTargets } from '../engine/goal.ts';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
-import { DesktopWindow } from './DesktopWindow.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
 
 const TREE_UNLOCK_SCORE = 20;
@@ -24,7 +23,6 @@ export function App(): JSX.Element {
   const [tab, setTab] = useState<Tab>('web');
   const [expanded, setExpanded] = useState(false);
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
-  const [layoutVersion, setLayoutVersion] = useState(0);
   const focusN = useRef(0);
 
   // scoreEarned is lifetime Score for this run, so spending below 20 never
@@ -74,13 +72,6 @@ export function App(): JSX.Element {
     if (treeUnlocked && tab === 'stats') actions.seenStats();
   }, [treeUnlocked, tab]);
 
-  const alignWindows = (): void => {
-    for (const id of ['tree', 'upgrade']) {
-      try { localStorage.removeItem(`blumberdice.window.${id}`); } catch { /* optional persistence */ }
-    }
-    setLayoutVersion((v) => v + 1);
-  };
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === '`') store.toggleDebug();
@@ -107,24 +98,14 @@ export function App(): JSX.Element {
         treeUnlocked={treeUnlocked}
         tab={tab}
         setTab={setTab}
-        onAlignWindows={alignWindows}
       />
 
-      <main className="desktop" aria-label="BlumberDice workspace">
-        <section className="game-area" aria-label="Game area">
-          <GamePanel s={s} />
-        </section>
-
+      <main className="botanical-workspace" aria-label="BlumberDice workspace">
         {treeUnlocked && (
-          <DesktopWindow
-            key={`tree-${layoutVersion}`}
-            id="tree"
-            title={tab === 'web' ? 'Build tree' : tab === 'stats' ? 'Stats' : 'Log'}
-            className="desktop-window--tree"
-            defaultStyle={{ left: 12, top: 12, width: '23%', height: 'calc(100% - 24px)' }}
-          >
+          <aside className="botanical-pane botanical-pane--left">
+            <div className="botanical-pane__ornament" aria-hidden>❧</div>
             {tab === 'web' && (
-              <div className="tech-build">
+              <div className="tech-build botanical-build">
                 <TreeView
                   allocatedKey={s.allocated.join(',')}
                   discoveredKey={s.discovered.join(',')}
@@ -141,41 +122,48 @@ export function App(): JSX.Element {
                   embedded
                 />
                 {hasGoalDisplay && (
-                  <div className="tech-build__goal">
-                    <GoalBar
-                      s={s}
-                      selectedNodeId={inspected}
-                      onOpenTree={openGoalInTree}
-                    />
+                  <div className="tech-build__goal botanical-goal">
+                    <GoalBar s={s} selectedNodeId={inspected} onOpenTree={openGoalInTree} />
                   </div>
                 )}
               </div>
             )}
             {tab === 'stats' && (
-              <aside className="panel panel--utility">
+              <aside className="panel panel--utility botanical-utility">
                 <div className="panel__body"><StatsPanel s={s} /></div>
               </aside>
             )}
             {tab === 'log' && (
-              <aside className="panel panel--utility">
+              <aside className="panel panel--utility botanical-utility">
                 <div className="panel__body"><LogPanel s={s} /></div>
               </aside>
             )}
-          </DesktopWindow>
+          </aside>
         )}
 
-        {treeUnlocked && inspected && (
-          <DesktopWindow
-            key={`upgrade-${layoutVersion}`}
-            id="upgrade"
-            title="Selected upgrade"
-            className="desktop-window--upgrade"
-            defaultStyle={{ right: 12, top: 12, width: '23%', height: 'calc(100% - 24px)' }}
-          >
-            <SelectedUpgrade s={s} nodeId={inspected} onReveal={selectUpgrade} embedded />
-          </DesktopWindow>
-        )}
+        <section className="game-area botanical-center" aria-label="Game area">
+          <div className="botanical-arch" aria-hidden>
+            <span className="botanical-arch__leaf botanical-arch__leaf--a">☘</span>
+            <span className="botanical-arch__leaf botanical-arch__leaf--b">❦</span>
+            <span className="botanical-arch__leaf botanical-arch__leaf--c">☘</span>
+          </div>
+          <GamePanel s={s} />
+        </section>
 
+        {treeUnlocked && (
+          <aside className="botanical-pane botanical-pane--right">
+            <div className="botanical-pane__ornament" aria-hidden>❧</div>
+            {inspected ? (
+              <SelectedUpgrade s={s} nodeId={inspected} onReveal={selectUpgrade} embedded />
+            ) : (
+              <div className="botanical-empty">
+                <div className="botanical-empty__glyph">✦</div>
+                <strong>Select an upgrade</strong>
+                <span>Choose a node from the tree to inspect it.</span>
+              </div>
+            )}
+          </aside>
+        )}
       </main>
 
       {store.debug && <DebugPanel s={s} />}
@@ -185,7 +173,7 @@ export function App(): JSX.Element {
 
 function TopBar({
   s, knowsB, canRefund: mayRefund, refundScore, refundMeta,
-  treeUnlocked, tab, setTab, onAlignWindows,
+  treeUnlocked, tab, setTab,
 }: {
   s: GameState;
   knowsB: boolean;
@@ -195,7 +183,6 @@ function TopBar({
   treeUnlocked: boolean;
   tab: Tab;
   setTab: (tab: Tab) => void;
-  onAlignWindows: () => void;
 }): JSX.Element {
   const [menu, setMenu] = useState(false);
   return (
@@ -207,7 +194,7 @@ function TopBar({
 
       {treeUnlocked ? (
         <nav className="tabsx" role="tablist" aria-label="Tech window view">
-          <TabBtn id="web" tab={tab} set={setTab} label="Build" />
+          <TabBtn id="web" tab={tab} set={setTab} label="Upgrades" />
           <TabBtn id="stats" tab={tab} set={setTab} label="Stats" />
           <TabBtn id="log" tab={tab} set={setTab} label="Log" />
         </nav>
@@ -216,11 +203,6 @@ function TopBar({
       )}
 
       <div className="topbar__right">
-        {treeUnlocked && (
-          <button type="button" className="window-arrange" onClick={onAlignWindows}>
-            Align windows
-          </button>
-        )}
         {knowsB && (
           <div className="fwtoggle" role="group" aria-label="Active framework">
             <button
