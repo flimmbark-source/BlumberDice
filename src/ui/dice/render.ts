@@ -349,8 +349,8 @@ export function drawDie(c: CanvasRenderingContext2D, die: DieBody, theme: Theme)
   c.restore();
 }
 
-const PROC_STEP_MS = 620;
-const PROC_VISIBLE_MS = 900;
+const PROC_STEP_MS = 820;
+const PROC_VISIBLE_MS = 820;
 
 function procAt(procs: RollProc[], settledAt: number, t: number): {
   proc: RollProc;
@@ -436,15 +436,15 @@ function drawProcLabel(
   c.globalAlpha = fade;
 
   c.font = proc.kind === 'jackpot'
-    ? '900 24px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
-    : '800 16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    ? '850 22px ui-sans-serif, system-ui, sans-serif'
+    : '750 15px ui-sans-serif, system-ui, sans-serif';
   c.fillStyle = 'rgba(0,0,0,0.72)';
   c.fillText(proc.label, 0, 2);
   c.fillStyle = proc.kind === 'jackpot' ? theme.accent : '#e7edf6';
   c.fillText(proc.label, 0, 0);
 
   if (proc.detail) {
-    c.font = '700 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    c.font = '650 11px ui-sans-serif, system-ui, sans-serif';
     c.globalAlpha = fade * 0.9;
     c.fillStyle = 'rgba(0,0,0,0.72)';
     c.fillText(proc.detail, 0, 20);
