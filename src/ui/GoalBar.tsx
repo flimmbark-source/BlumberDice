@@ -5,7 +5,7 @@ import { store } from './store.ts';
 import { useCountUp } from './useCountUp.ts';
 
 /**
- * What the player is working toward, kept beside the die.
+ * What the player is working toward, shown beneath the Build tree.
  *
  * The loop this exists to make legible is: roll, watch a bar fill, reach a
  * threshold, make a build decision, pick the next one. Without it the score
@@ -86,7 +86,7 @@ export function GoalBar({ s, onOpenTree }: {
           {/* Always offered while a goal is set: the point is reaching the
               node, which matters as much while saving as when able to buy. */}
           <button type="button" className="goal__open" onClick={onOpenTree}>
-            Open in Web
+            Focus in Tree
           </button>
         </>
       )}
