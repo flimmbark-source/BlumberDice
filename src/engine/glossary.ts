@@ -6,10 +6,10 @@
  * so a highlighted word can never be one the player has no way to look up.
  * `tests/glossary.test.ts` holds that both ways.
  *
- * Entries define, they do not advise. House style is the same as the node
- * copy: say the number where there is one, "roll" for something that
- * happened and "result" for a stored or candidate value, active voice, and
- * no pipeline vocabulary.
+ * Popups are the missing definition, not a second ability description.
+ * Keep each one to a single short sentence. Do not repeat the trigger, cap,
+ * reset condition, or other information already stated by the node unless
+ * that information is the meaning of the highlighted term itself.
  */
 export interface GlossaryEntry {
   /** The heading, in the form a player reads it in the tree. */
@@ -21,7 +21,7 @@ export interface GlossaryEntry {
 export const GLOSSARY: Record<string, GlossaryEntry> = {
   score: {
     term: 'Score',
-    text: 'The main currency used to buy upgrades.',
+    text: 'The currency used to buy upgrades.',
   },
   meta: {
     term: 'Meta',
@@ -41,7 +41,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   pressure: {
     term: 'Pressure',
-    text: 'A jackpot adds all current Pressure to its payout, then clears it.',
+    text: 'Current Pressure is added to a jackpot payout, then cleared.',
   },
   climb: {
     term: 'Climb',
@@ -49,7 +49,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   pendulum: {
     term: 'Pendulum',
-    text: 'Pendulum becomes a payout for the next 3 rolls after switching frameworks.',
+    text: 'Pendulum determines the next 3 post-switch payouts.',
   },
   hold: {
     term: 'Hold',
@@ -57,7 +57,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   'full set': {
     term: 'Full Set',
-    text: 'All six faces rolled since the last Full Set.',
+    text: 'All six faces collected once.',
   },
   'set window': {
     term: 'Set window',
@@ -65,7 +65,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   stacks: {
     term: 'Stacks',
-    text: 'A repeated effect that grows with each stack.',
+    text: 'One repeatable unit of an effect.',
   },
   wager: {
     term: 'Wager',
