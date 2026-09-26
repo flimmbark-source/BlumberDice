@@ -346,10 +346,10 @@ function selectNode(
   setInspected: (id: string | null) => void,
 ): void {
   setInspected(id);
-  // Selection is the goal gesture. Reachable unowned nodes become the goal;
-  // selecting the current goal again clears it. Locked/owned nodes remain
-  // inspectable without disturbing the current target.
-  if (status !== 'available' && status !== 'unaffordable') return;
+  // Selection is the goal gesture. Any unowned visible node becomes the
+  // current Next Goal, even when it is still locked deeper in the tree.
+  // Selecting the current goal again clears it; owned nodes only inspect.
+  if (status === 'allocated' || status === 'hidden') return;
   actions.pin(pinned === id ? null : id);
 }
 
