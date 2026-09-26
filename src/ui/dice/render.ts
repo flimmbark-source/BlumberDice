@@ -522,9 +522,16 @@ function drawDetachedGhost(
   );
 }
 
+/**
+ * Everything that stands on the ground, but not the ground itself.
+ *
+ * The surface is painted on its own layer so the arch behind the tray can
+ * come between the two: the stonework hides the circle it stands on, and
+ * the dice still land in front of the stonework.
+ */
 export function drawWorld(c: CanvasRenderingContext2D, world: World, theme: Theme): void {
-  drawSurface(c, world, theme);
-  // Shadows, landing rings and proc pulses all belong to the surface.
+  // Shadows, landing rings and proc pulses belong with the dice that cast
+  // them, so they ride this layer rather than the ground.
   for (const die of world.dice) drawShadow(c, die, theme);
   for (const die of world.dice) drawImpacts(c, die, theme);
   for (const die of world.dice) {

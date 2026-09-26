@@ -10,7 +10,9 @@ import {
   sweepSpent,
   spawnDie, step, throwDie, type DieBody, type World,
 } from './physics.ts';
-import { drawBackdrop, drawProcOverlay, drawWorld, THEME_A, THEME_B } from './render.ts';
+import {
+  drawBackdrop, drawProcOverlay, drawSurface, drawWorld, THEME_A, THEME_B,
+} from './render.ts';
 
 const MAX_DICE = 9;
 /** Surface side in world units. Fixed, so the dice always read the same size. */
@@ -48,6 +50,8 @@ export function DiceTray({ s, rollRef }: {
   rollRef: MutableRefObject<(() => void) | null>;
 }): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /** The ground, on its own layer beneath the arch. */
+  const groundRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<World>(createWorld());
   const cursorRef = useRef<number>(0);
@@ -58,8 +62,10 @@ export function DiceTray({ s, rollRef }: {
 
   useEffect(() => {
     const canvas = canvasRef.current!;
+    const ground = groundRef.current!;
     const wrap = wrapRef.current!;
     const ctx = canvas.getContext('2d')!;
+    const gctx = ground.getContext('2d')!;
     const world = worldRef.current;
     let raf = 0;
     let last = performance.now();
@@ -84,13 +90,16 @@ export function DiceTray({ s, rollRef }: {
     const resize = (): void => {
       const rect = wrap.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.max(1, Math.round(rect.width * dpr));
-      canvas.height = Math.max(1, Math.round(rect.height * dpr));
-      canvas.style.width = `${rect.width}px`;
-      canvas.style.height = `${rect.height}px`;
+      for (const el of [canvas, ground]) {
+        el.width = Math.max(1, Math.round(rect.width * dpr));
+        el.height = Math.max(1, Math.round(rect.height * dpr));
+        el.style.width = `${rect.width}px`;
+        el.style.height = `${rect.height}px`;
+      }
       viewW = rect.width;
       viewH = rect.height;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       // The surface is sized for the dice in play; the drawing is zoomed to
       // fit, so the arena always fills the panel whatever that size is.
@@ -211,14 +220,23 @@ export function DiceTray({ s, rollRef }: {
       store.heldBack = releaseFadedGhosts(world);
 
       const theme = game.framework === 'A' ? THEME_A : THEME_B;
+      // One jolt, shared by both layers, so the ground and the dice on it
+      // never come apart while the tray is shaking.
       const shake = world.shake;
+      const shakeX = shake ? (Math.random() - 0.5) * shake : 0;
+      const shakeY = shake ? (Math.random() - 0.5) * shake : 0;
+
+      gctx.clearRect(0, 0, ground.width, ground.height);
+      drawBackdrop(gctx, viewW, viewH, theme);
+      gctx.save();
+      gctx.translate(originX + shakeX, originY + shakeY);
+      gctx.scale(zoom, zoom);
+      drawSurface(gctx, world, theme);
+      gctx.restore();
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawBackdrop(ctx, viewW, viewH, theme);
       ctx.save();
-      ctx.translate(
-        originX + (shake ? (Math.random() - 0.5) * shake : 0),
-        originY + (shake ? (Math.random() - 0.5) * shake : 0),
-      );
+      ctx.translate(originX + shakeX, originY + shakeY);
       ctx.scale(zoom, zoom);
       drawWorld(ctx, world, theme);
       ctx.restore();
@@ -317,7 +335,8 @@ export function DiceTray({ s, rollRef }: {
 
   return (
     <div className="tray" ref={wrapRef}>
-      <canvas className="tray__canvas" ref={canvasRef} aria-hidden />
+      <canvas className="tray__canvas tray__canvas--ground" ref={groundRef} aria-hidden />
+      <canvas className="tray__canvas tray__canvas--dice" ref={canvasRef} aria-hidden />
       <div className={`tray__hint${ready && s.totalRolls < 6 ? ' tray__hint--show' : ''}`}>
         {dice > 1 ? `click to throw ${dice} dice` : 'click the die to roll'}
         <span className="tray__hintKey"> · or press Space</span>

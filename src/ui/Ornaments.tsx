@@ -141,6 +141,13 @@ export function ArchBackdrop(): JSX.Element {
           <stop offset="0" stopColor="var(--arch-sky-top)" />
           <stop offset="1" stopColor="var(--arch-sky-bottom)" />
         </linearGradient>
+        {/* The far country has to meet the near ground somewhere. It fades
+            into it across the bottom of the opening rather than ending on a
+            line the arena's own floor would contradict. */}
+        <linearGradient id="archGround" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="var(--arch-ground)" stopOpacity="0" />
+          <stop offset="1" stopColor="var(--arch-ground)" stopOpacity="1" />
+        </linearGradient>
       </defs>
 
       <g clipPath="url(#archOpening)">
@@ -154,6 +161,7 @@ export function ArchBackdrop(): JSX.Element {
           <path d="M78 210h9v44h-9zM104 206h10v48h-10z" />
           <path d="M87 196l4-11 4 11zM105 192l5-12 5 12z" />
         </g>
+        <rect x={0} y={250} width={300} height={150} fill="url(#archGround)" />
       </g>
 
       {/* The stone itself. */}

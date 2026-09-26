@@ -322,6 +322,7 @@ button:disabled { cursor: default; }
      is used before the first measurement. */
   --arena-base: calc(var(--arena-back, 50%) + var(--arena-depth, 0px) * 0.5);
   position: absolute; left: 50%; transform: translateX(-50%);
+  z-index: 2;
   /* An <svg> is a replaced element: given `top`, `bottom` and an auto
      height it takes its height from its own aspect ratio and drops the
      `bottom` on the floor, which is how the arch came adrift from the
@@ -334,11 +335,13 @@ button:disabled { cursor: default; }
   pointer-events: none;
   --arch-sky-top: #bacfc9;
   --arch-sky-bottom: #e9e2c6;
+  /* Where the far country meets the floor the arch stands on. */
+  --arch-ground: #e7dab7;
 }
 .arch__stone { fill: #d4cbaf; stroke: #86795b; stroke-width: 2.4; stroke-linejoin: round; }
 .arch__joint line { stroke: #86795b; stroke-width: 1.3; opacity: 0.7; }
 .arch__hill { fill: #93a894; opacity: 0.9; }
-.arch__hill--near { fill: #7b9074; opacity: 0.9; }
+.arch__hill--near { fill: #869a7e; opacity: 0.9; }
 .arch__keep { fill: #55684f; opacity: 0.95; }
 
 /* --- inline svg dice (decision bar, rail, stats) -------------------------- */
@@ -355,10 +358,20 @@ button:disabled { cursor: default; }
   background: transparent;
   border-radius: var(--radius);
 }
-.tray__canvas { display: block; width: 100%; height: 100%; touch-action: manipulation; position: relative; }
+/* Three layers in one stack, so the arch can sit inside the drawing rather
+   than behind all of it: the ground, then the stonework standing on it, then
+   the dice, which land in front of both. `.tray` sets no z-index of its own,
+   so all three order against each other in the arena's stacking context. */
+.tray__canvas {
+  display: block; position: absolute; inset: 0;
+  width: 100%; height: 100%; touch-action: manipulation;
+}
+.tray__canvas--ground { z-index: 1; }
+.tray__canvas--dice { z-index: 3; }
 
 .tray__hint {
   position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  z-index: 4;
   padding: 5px 15px; border-radius: 999px;
   background: rgba(251, 243, 222, 0.82); border: 1px solid var(--rule);
   color: var(--ink-soft); font-size: 12.5px; font-style: italic; letter-spacing: 0.02em;
@@ -371,6 +384,7 @@ button:disabled { cursor: default; }
 /* Off-screen until focused: the mouse has the canvas, the keyboard has this. */
 .tray__roll {
   position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+  z-index: 4;
   padding: 7px 16px; border-radius: 999px;
   border: 1px solid var(--rule-strong); background: var(--paper-lit); color: var(--ink);
   font-size: 13px;
@@ -383,6 +397,7 @@ button:disabled { cursor: default; }
 
 .tray__queue {
   position: absolute; right: 14px; top: 12px;
+  z-index: 4;
   padding: 4px 12px; border-radius: 999px;
   background: rgba(251, 243, 222, 0.88); border: 1px solid var(--rule);
   color: var(--ink-2); font-size: 11.5px; font-variant-numeric: var(--nums);
