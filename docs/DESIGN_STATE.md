@@ -841,6 +841,16 @@ again clears it; there is no separate Set/Clear Goal button.
 Align Windows therefore resets only the movable tool windows, not the central
 game area or the embedded goal.
 
+### 31. One mechanical die stays one physical die
+
+A fast repeat roll no longer spawns a second physical cube merely because the
+first cube's result label is still fading. The existing physical die is reused.
+Its previous number is detached into a display-only result ghost at the landing
+position, so readability is preserved without visually implying an extra die.
+
+This is a presentation fix only. The engine's mechanical `bonusDice` system,
+its duration, cap and upgrade behavior are unchanged in this pass.
+
 ---
 
 ## Unresolved — deliberately not implemented
