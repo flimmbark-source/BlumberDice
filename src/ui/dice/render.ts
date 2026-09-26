@@ -539,12 +539,15 @@ export function drawProcOverlay(
   originY: number,
   zoom: number,
 ): void {
+  // Result numbers own the space above the die. Mechanical proc labels own
+  // the space below it, so the two feedback channels never fight for the
+  // same pixels.
   for (const ghost of world.ghosts) {
-    const p = project(v3(ghost.pos.x, ghost.pos.y, ghost.pos.z + H));
+    const p = project(v3(ghost.pos.x, ghost.pos.y, 0));
     drawProcLabelScreen(
       c,
       originX + p.x * zoom,
-      originY + p.y * zoom - 72,
+      originY + p.y * zoom + 58,
       ghost.settledAt,
       ghost.procs,
       world.t,
@@ -554,11 +557,11 @@ export function drawProcOverlay(
   }
   for (const die of world.dice) {
     if (die.state !== 'rest') continue;
-    const p = project(v3(die.pos.x, die.pos.y, die.pos.z + H));
+    const p = project(v3(die.pos.x, die.pos.y, 0));
     drawProcLabelScreen(
       c,
       originX + p.x * zoom,
-      originY + p.y * zoom - 72,
+      originY + p.y * zoom + 58,
       die.settledAt,
       die.procs,
       world.t,
