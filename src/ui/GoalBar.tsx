@@ -16,7 +16,7 @@ import { useCountUp } from './useCountUp.ts';
  */
 export function GoalBar({ s, onOpenTree }: {
   s: GameState;
-  /** Focuses the tree on the current goal. */
+  /** Focuses the tree on the next thing worth looking at. */
   onOpenTree: () => void;
 }): JSX.Element | null {
   const goal = currentGoal(s);
@@ -86,7 +86,7 @@ export function GoalBar({ s, onOpenTree }: {
           {/* Always offered while a goal is set: the point is reaching the
               node, which matters as much while saving as when able to buy. */}
           <button type="button" className="goal__open" onClick={onOpenTree}>
-            Focus in Tree
+            Open in Tree
           </button>
         </>
       )}
