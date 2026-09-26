@@ -8,7 +8,7 @@ import { useCountUp } from './useCountUp.ts';
 import { ControlRail } from './ControlRail.tsx';
 import { DecisionBar } from './DecisionBar.tsx';
 import { GoalBar } from './GoalBar.tsx';
-import { canPin, currentGoal, openTargets } from '../engine/goal.ts';
+import { currentGoal, openTargets } from '../engine/goal.ts';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
@@ -42,9 +42,10 @@ export function App(): JSX.Element {
 
   const selectUpgrade = (id: string): void => {
     focusNode(id);
-    // Any explicit upgrade selection should also become the player's Next
-    // Goal when it is a valid one-purchase-away target.
-    if (canPin(s, id)) actions.pin(id);
+    // The inspector's explicit node-selection controls should mean the same
+    // thing as clicking that node in the tree: an unowned node becomes the
+    // current Next Goal.
+    if (!s.allocated.includes(id)) actions.pin(id);
   };
 
   const openGoalInTree = (): void => {
