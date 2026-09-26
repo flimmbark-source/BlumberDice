@@ -923,7 +923,7 @@ function completeRoll(
       intent.procs.push({
         kind: 'pattern',
         label: PATTERN_LABEL[hit.name],
-        detail: details.join(' · '),
+        detail: `${hit.faces.join('–')} · ${details.join(' · ')}`,
       });
     }
   }
