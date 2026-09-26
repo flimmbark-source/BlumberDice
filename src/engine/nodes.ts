@@ -104,7 +104,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'high',
     description:
-      'Each roll strictly higher than the previous one adds 1 Climb stack, up to 5. Each stack gives faces 4–6 +0.3 weight. Any roll not higher clears all stacks.',
+      'Each roll strictly higher than the previous one adds a Climb stack. Any roll not higher clears them all.',
     notation: [[die(2), op('<'), die(4), op('<'), die(5), to(), val('+1', 'accent'), note('Climb')],
       clause('streak', pips(5, 0), to(), die(4), die(5), die(6), weight('+0.3'))],
     costs: { score: 420 },
@@ -206,7 +206,7 @@ export const NODES: PassiveNode[] = [
     name: 'Follow Through',
     nodeType: 'small',
     region: 'volume',
-    description: 'Bonus rolls have a 15% chance to grant a further bonus roll.',
+    description: 'Bonus rolls have an 15% chance to grant a further bonus roll.',
     notation: [[roll('bonus'), to('15%'), roll()]],
     costs: { score: 250 },
     prerequisites: ['vl_lowgear'],
@@ -234,7 +234,7 @@ export const NODES: PassiveNode[] = [
     name: 'Splinter',
     nodeType: 'notable',
     region: 'volume',
-    description: 'Every resolved roll has a 10% chance to grant 2 bonus rolls.',
+    description: 'Every roll has a 10% chance to become 2 rolls, each scoring separately.',
     notation: [[val('10%'), to(), roll('+2')]],
     costs: { score: 520 },
     prerequisites: ['vl_follow'],
@@ -247,7 +247,7 @@ export const NODES: PassiveNode[] = [
     name: 'Second Wind',
     nodeType: 'notable',
     region: 'volume',
-    description: 'The 8th consecutive roll without a bonus roll grants 1 bonus roll, then resets the count.',
+    description: 'After 8 rolls in a row without a bonus roll, the next roll grants one.',
     notation: [[pips(8, 0, 'dry rolls'), to(), roll()]],
     costs: { score: 530 },
     prerequisites: ['vl_cycle'],
@@ -261,8 +261,8 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'volume',
     description: {
-      A: 'Each click throws 3 base dice instead of 1. Score gained from rolled face values is multiplied by 0.55.',
-      B: 'Each click throws 3 base dice instead of 1.',
+      A: 'Each click throws 3 dice instead of 1. Every roll is worth less in exchange.',
+      B: 'Each click throws 3 dice instead of 1.',
     },
     notation: {
       A: [[note('per click'), to(), any(), any(), any()],
@@ -289,8 +289,8 @@ export const NODES: PassiveNode[] = [
     region: 'jackpot',
     description:
       {
-        A: 'Rolling a 6 adds +14 Jackpot Score. Ordinary Score gained from rolled face values is multiplied by 0.85.',
-        B: 'Jackpots are inactive while rolls gain Meta instead of Score.',
+        A: 'Opens the jackpot: a 6 pays an extra +14 Score. Everything else pays ×0.85.',
+        B: 'The jackpot pays only while rolls add Score.',
       },
     notation: {
       A: [[die(6), to(), score('+14')],
@@ -313,8 +313,8 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'jackpot',
     description: {
-      A: 'Each missed jackpot adds +1 Pressure, up to 25. A jackpot adds all current Pressure to its payout, then clears it.',
-      B: 'Pressure does not build while rolls gain Meta instead of Score.',
+      A: 'Every roll that misses the jackpot adds +1 Pressure, up to 25.',
+      B: 'Pressure builds only while rolls add Score.',
     },
     notation: {
       A: [[note('miss'), to(), val('+1', 'accent'), meter(0, 'Pressure · 25')],
@@ -380,8 +380,8 @@ export const NODES: PassiveNode[] = [
     nodeType: 'notable',
     region: 'jackpot',
     description: {
-      A: 'Each missed jackpot adds +3 Pressure total instead of +1, and the Pressure cap becomes 90.',
-      B: 'Pressure does not build while rolls gain Meta instead of Score.',
+      A: 'Each miss adds +3 Pressure instead of +1, and the cap rises by 65.',
+      B: 'Pressure builds only while rolls add Score.',
     },
     notation: {
       A: [[note('miss'), to(), val('+3', 'accent'), note('Pressure · cap +65')]],
@@ -424,8 +424,8 @@ export const NODES: PassiveNode[] = [
     region: 'jackpot',
     description:
       {
-        A: 'Faces 1–5 pay no Score. A 6 pays 9× its face value, and Jackpot payouts are multiplied by 1.5.',
-        B: 'This payout rule is inactive while rolls gain Meta instead of Score.',
+        A: 'Only a 6 pays Score, and its multiplier applies before anything else.',
+        B: 'Pays only while rolls add Score.',
       },
     notation: {
       A: [[die(1, 'out'), die(2, 'out'), die(3, 'out'), die(4, 'out'), die(5, 'out'), to(), score('0')],
@@ -499,8 +499,8 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'pattern',
     description: {
-      A: 'The first time each face appears since the last completed set, it grants +2 Score.',
-      B: 'The first time each face appears since the last completed set, it grants +1 Meta.',
+      A: 'The first time each face appears in the current set window it grants +2 Score.',
+      B: 'The first time each face appears in the current set window it grants +1 Meta.',
     },
     notation: {
       A: [[note('new face'), to(), score('+2')]],
@@ -550,8 +550,8 @@ export const NODES: PassiveNode[] = [
     region: 'pattern',
     description:
       {
-        A: 'A pair grants +6 Score. Three identical rolls in a row also grant an additional +20 Score.',
-        B: 'A pair grants +1 Meta. Three identical rolls in a row also grant an additional +2 Meta.',
+        A: 'Adds a further +6 Score to every pair.',
+        B: 'Adds a further +1 Meta to every pair.',
       },
     notation: {
       A: [[die(3), die(3), to(), score('+6')],
@@ -663,7 +663,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'pattern',
     description:
-      'Roll history expands from 4 to 10. Runs of 4 and palindromes of 5 can now trigger; Alternating Current checks 6 rolls instead of 4. All pattern rewards are multiplied by 1.4.',
+      'Roll history widens from 4 to 10, so runs of 4, palindromes of 5 and alternations of 6 all count.',
     notation: [[note('history'), val('4'), to(), val('10', 'accent')],
       clause('score', note('pattern reward'), op('×'), val('1.4', 'accent'))],
     costs: { score: 1500 },
@@ -698,7 +698,7 @@ export const NODES: PassiveNode[] = [
     name: 'Reserve',
     nodeType: 'small',
     region: 'control',
-    description: 'Increases Hold capacity by 1. It has no effect until Hold is owned.',
+    description: 'Hold one more result.',
     notation: [[note('Hold'), val('+1'), slot()]],
     costs: { score: 150 },
     prerequisites: ['ct_second'],
@@ -756,7 +756,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'control',
     description:
-      'Each roll draws a fresh window of 3 allowed faces; the result must be one of them. Arrange reduces the window to 2.',
+      'Results can only be one of the 3 numbers shown. Changes every roll.',
     notation: [[note('only'), die(3), die(1), die(6)],
       clause('swap', note('new 3 every roll'))],
     costs: { score: 1600 },
@@ -832,7 +832,7 @@ export const NODES: PassiveNode[] = [
     region: 'pattern',
     bridges: ['control', 'pattern'],
     description:
-      'Prepared Roll shows 2 allowed faces instead of 3.',
+      'Narrows the window of possible results from 3 numbers to 2.',
     notation: [[note('window'), val('3'), to(), val('2', 'accent')]],
     costs: { score: 580 },
     prerequisites: ['ct_reserve'],
@@ -852,8 +852,8 @@ export const NODES: PassiveNode[] = [
     region: 'adaptive',
     description:
       {
-        A: 'After changing framework, the next roll multiplies its Score gain by 2.5.',
-        B: 'After changing framework, the next roll loses only 40% as much Score.',
+        A: 'The first roll after changing framework grants ×2.5 Score.',
+        B: 'The first roll after changing framework costs only 40% of its value.',
       },
     notation: {
       A: [[op('⇄'), to(), note('next roll'), score('×2.5')]],
@@ -880,7 +880,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'small',
     region: 'adaptive',
     description:
-      'Changing framework keeps Climb, Pressure, ticket stacks, temporary weight/stat effects, the Flip cooldown, and Second Wind dry-roll progress instead of clearing them.',
+      'Climb stacks, Momentum, Pressure, ticket stacks, weight pushes and the Flip cooldown are kept when you change framework instead of being cleared.',
     notation: [[op('⇄'), to(), note('Climb · Pressure · stacks kept')]],
     costs: { score: 150, meta: 95 },
     prerequisites: ['ad_transition'],
@@ -988,7 +988,7 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'adaptive',
     description:
-      'Changing framework grants 1 bonus roll per region with 2 or more owned nodes and clears the Flip cooldown. Reflection gives twice its reward and bonus rolls; Pendulum payouts are doubled.',
+      'Changing framework grants one bonus roll per region where you hold 2 or more nodes, clears the Flip cooldown, and doubles Reflection and Pendulum.',
     notation: [[note('regions with 2+'), op('='), val('R', 'accent')],
       clause('roll', op('⇄'), to(), roll('+R'), op('·'), note('Reflection · Pendulum'), val('×2', 'accent'))],
     costs: { score: 1500, meta: 650 },
@@ -1100,7 +1100,7 @@ export const NODES: PassiveNode[] = [
     region: 'volume',
     bridges: ['adaptive', 'volume'],
     description:
-      'During the first 3 resolved rolls after changing framework, any bonus roll uses the last face rolled before the change.',
+      'For 3 rolls after changing framework, every bonus roll comes up as the last face before the change.',
     notation: [[op('⇄'), note('≤3 rolls'), to(), roll('bonus'), op('='), note('last face before')]],
     costs: { score: 640, meta: 110 },
     prerequisites: ['vl_quick'],
