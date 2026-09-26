@@ -64,6 +64,8 @@ interface Props {
   setInspected: (id: string | null) => void;
   expanded: boolean;
   setExpanded: (v: boolean) => void;
+  /** A node to pan onto. `n` rises each request, so repeats still land. */
+  focus: { id: string; n: number } | null;
 }
 
 function statusOf(
@@ -79,7 +81,7 @@ function statusOf(
 
 export const TreeView = memo(function TreeView({
   allocatedKey, discoveredKey, score, meta, framework, pinned, inspected, setInspected,
-  expanded, setExpanded,
+  expanded, setExpanded, focus,
 }: Props): JSX.Element {
   const allocated = useMemo(() => new Set(allocatedKey.split(',').filter(Boolean)), [allocatedKey]);
   const discovered = useMemo(
@@ -147,6 +149,25 @@ export const TreeView = memo(function TreeView({
     for (const n of NODES) m.set(n.id, statusOf(n, allocated, discovered, score, meta));
     return m;
   }, [allocated, discovered, score, meta]);
+
+  /**
+   * Pan a requested node to the middle of the panel.
+   *
+   * `scale(z) translate(t)` maps a node at p to z*(p + t), so putting p at
+   * the viewBox centre C means t = C/z − p.
+   */
+  useEffect(() => {
+    if (!focus) return;
+    const node = NODES_BY_ID.get(focus.id);
+    if (!node) return;
+    // The player has now said where they want to be looking; stop refitting.
+    userZoomed.current = true;
+    setView((v) => ({
+      ...v,
+      x: (VB.minX + VB.w / 2) / v.zoom - node.position.x,
+      y: (VB.minY + VB.h / 2) / v.zoom - node.position.y,
+    }));
+  }, [focus?.n]);
 
   /** Zoom about the middle of the panel, which is where the eye already is. */
   const nudgeZoom = (k: number): void => {

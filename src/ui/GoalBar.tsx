@@ -16,8 +16,8 @@ import { useCountUp } from './useCountUp.ts';
  */
 export function GoalBar({ s, onOpenTree }: {
   s: GameState;
-  /** Opens the web, selecting the node this is about when there is one. */
-  onOpenTree: (nodeId?: string) => void;
+  /** Opens the web on the next thing worth looking at. */
+  onOpenTree: () => void;
 }): JSX.Element | null {
   const goal = currentGoal(s);
   // Follows the same eased total as the HUD, so the bar and the number agree.
@@ -93,7 +93,7 @@ export function GoalBar({ s, onOpenTree }: {
           )}
           {/* Always offered while a goal is set: the point is reaching the
               node, which matters as much while saving as when able to buy. */}
-          <button type="button" className="goal__open" onClick={() => onOpenTree(goal.node.id)}>
+          <button type="button" className="goal__open" onClick={onOpenTree}>
             Open in Web
           </button>
         </>

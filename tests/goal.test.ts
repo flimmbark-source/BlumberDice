@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { allocate, createGame, refundAll } from '../src/engine/game.ts';
-import { canPin, currentGoal, successorOf } from '../src/engine/goal.ts';
+import { canPin, currentGoal, openTargets, successorOf } from '../src/engine/goal.ts';
 import { deserialize, serialize } from '../src/engine/save.ts';
 import { NODES, NODES_BY_ID } from '../src/engine/nodes.ts';
 import type { DiscoveryFlag } from '../src/engine/types.ts';
@@ -154,5 +154,62 @@ describe('the goal survives a reload', () => {
 
   it('starts a new game with no goal', () => {
     expect(fresh().pinned).toBeNull();
+  });
+});
+
+describe('Open in Web walks what is actionable', () => {
+  it('offers nothing while nothing can be done', () => {
+    expect(openTargets(fresh())).toEqual([]);
+  });
+
+  it('lists everything affordable', () => {
+    const s = fresh();
+    s.score = 500;
+    const list = openTargets(s);
+    expect(list.length).toBeGreaterThan(1);
+    for (const id of list) {
+      const n = NODES_BY_ID.get(id)!;
+      expect(n.costs.score ?? 0, id).toBeLessThanOrEqual(s.score);
+      expect(s.allocated).not.toContain(id);
+    }
+  });
+
+  it('puts the pinned goal first, even when it cannot be bought', () => {
+    const s = fresh();
+    s.score = 500;
+    s.allocated = ['start', 'hr_edge'];
+    s.pinned = 'hr_floor';
+    expect(openTargets(s)[0]).toBe('hr_floor');
+  });
+
+  it('never lists the same node twice', () => {
+    const s = fresh();
+    s.score = 5000;
+    s.allocated = ['start', 'hr_edge'];
+    s.pinned = 'hr_floor';
+    const list = openTargets(s);
+    expect(new Set(list).size).toBe(list.length);
+  });
+
+  it('cycles and wraps, which is what repeated presses do', () => {
+    const s = fresh();
+    s.score = 500;
+    const list = openTargets(s);
+    const step = (from: string | null): string =>
+      list[((from ? list.indexOf(from) : -1) + 1) % list.length];
+    let at: string | null = null;
+    const seen: string[] = [];
+    for (let i = 0; i < list.length; i++) { at = step(at); seen.push(at); }
+    expect(seen).toEqual(list);
+    // One more press returns to the start.
+    expect(step(at)).toBe(list[0]);
+  });
+
+  it('drops a node from the walk once it is bought', () => {
+    const s = fresh();
+    s.score = 500;
+    const before = openTargets(s);
+    allocate(s, before[0]);
+    expect(openTargets(s)).not.toContain(before[0]);
   });
 });

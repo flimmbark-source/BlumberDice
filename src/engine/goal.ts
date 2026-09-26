@@ -111,6 +111,22 @@ export function currentGoal(s: GameState): Goal {
   return { kind: 'milestone', cost, unlocks: Math.max(1, unlocks) };
 }
 
+/**
+ * What "Open in Web" walks through, in order: the pinned goal if there is
+ * one, then everything the player could buy right now. Pressing the button
+ * again steps to the next, so it is a tour of what is actionable rather
+ * than a jump to one place.
+ */
+export function openTargets(s: GameState): string[] {
+  const c = ctxOf(s);
+  const out: string[] = [];
+  if (s.pinned && !c.allocated.has(s.pinned) && NODES_BY_ID.has(s.pinned)) out.push(s.pinned);
+  for (const n of candidates(c)) {
+    if (affordable(n, c) && !out.includes(n.id)) out.push(n.id);
+  }
+  return out;
+}
+
 /** Pinning is only meaningful for a node that is one purchase away. */
 export function canPin(s: GameState, id: string): boolean {
   const c = ctxOf(s);

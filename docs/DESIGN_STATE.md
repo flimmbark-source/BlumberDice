@@ -794,6 +794,28 @@ Two bugs found building it:
   cascade leaves more out than a click uses — and the drawing zooms to fit,
   so a quiet game still shows one big die.
 
+### 29. Open in Web is a tour, not a jump
+
+Pressing it once selected the goal. Pressing it again did the same thing,
+which is a wasted press on a button the player is already looking at.
+
+It now walks a list: the pinned goal first if there is one, then every node
+that can be bought right now, wrapping at the end. Each press selects the
+next in the upgrade panel and pans the web onto it. `openTargets` builds
+the list, `App` holds the cursor — derived from what is currently selected,
+so buying something or pinning something else corrects it without any
+bookkeeping.
+
+Centring is `t = C/z − p`: the group's transform maps a node at `p` to
+`z * (p + t)`, so putting it at the viewBox centre `C` means that. The
+request carries a rising counter rather than just an id, so asking for the
+same node twice still pans — otherwise the second press of a wrapped cycle
+would do nothing visible.
+
+Measured in the browser: five presses walk the five affordable nodes in
+order, the sixth returns to the first, and the selected node lands dead
+centre horizontally and centred in the tree area vertically.
+
 ---
 
 ## Unresolved — deliberately not implemented

@@ -5,6 +5,7 @@ import {
 } from '../engine/game.ts';
 import { NODES } from '../engine/nodes.ts';
 import { checkAllocation, isVisible } from '../engine/tree.ts';
+import { openTargets } from '../engine/goal.ts';
 import type { DiscoveryFlag } from '../engine/types.ts';
 import { actions, store, useGame } from './store.ts';
 import { useCountUp } from './useCountUp.ts';
@@ -27,6 +28,24 @@ export function App(): JSX.Element {
   // player has pointed at anything.
   const [inspected, setInspected] = useState<string | null>('start');
   const [expanded, setExpanded] = useState(false);
+  /** Bumped on every request so asking for the same node again still pans. */
+  const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
+  const focusN = useRef(0);
+
+  /**
+   * Walks the button through the goal and everything affordable, one per
+   * press, selecting each in the panel and centring the web on it.
+   */
+  const openInWeb = (): void => {
+    setTab('web');
+    const list = openTargets(s);
+    if (list.length === 0) return;
+    const at = inspected ? list.indexOf(inspected) : -1;
+    const next = list[(at + 1) % list.length];
+    setInspected(next);
+    focusN.current += 1;
+    setFocus({ id: next, n: focusN.current });
+  };
   const knowsB = s.discovered.includes('frameworkB');
   const spent = allocatedCost(s);
 
@@ -55,15 +74,7 @@ export function App(): JSX.Element {
       <main className="main">
         {/* The game column is first in the DOM so Tab reaches Roll before
             fifty-four tree nodes; grid-column puts it back in the middle. */}
-        <GamePanel
-          s={s}
-          onOpenTree={(id) => {
-            setTab('web');
-            // Selecting, never buying: the panel fills in and the node lights
-            // up in the web, and allocating stays an explicit second act.
-            if (id) setInspected(id);
-          }}
-        />
+        <GamePanel s={s} onOpenTree={openInWeb} />
 
         <section className="col col--left">
           {tab === 'web' && (
@@ -78,6 +89,7 @@ export function App(): JSX.Element {
               setInspected={setInspected}
               expanded={expanded}
               setExpanded={setExpanded}
+              focus={focus}
             />
           )}
           {tab === 'stats' && (
@@ -210,10 +222,7 @@ function Currency({ label, value, alt = false }: { label: string; value: number;
   );
 }
 
-function GamePanel({ s, onOpenTree }: {
-  s: GameState;
-  onOpenTree: (nodeId?: string) => void;
-}): JSX.Element {
+function GamePanel({ s, onOpenTree }: { s: GameState; onOpenTree: () => void }): JSX.Element {
   const build = getBuild(s);
   const stats = displayStats(s, build);
   const cd = CONFIG.baseCooldownMs * stats.cooldownMult;
