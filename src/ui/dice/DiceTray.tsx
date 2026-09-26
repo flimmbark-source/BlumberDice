@@ -169,8 +169,11 @@ export function DiceTray({ s, rollRef }: {
       target.heldMeta = rec.meta;
       target.procs = rec.procs?.slice() ?? [];
       target.minTumbleUntil = Math.min(target.minTumbleUntil, world.t + tumbleFor(backlog));
-      // Keep a busy surface readable: results linger only while there is room.
-      target.ghostLife = backlog > 8 ? 620 : backlog > 3 ? 950 : 1400;
+      // Keep a busy surface readable, but never truncate a mechanical proc:
+      // those labels teach the player why the build fired.
+      const baseGhostLife = backlog > 8 ? 620 : backlog > 3 ? 950 : 1400;
+      const procLife = target.procs.length > 0 ? 900 + (target.procs.length - 1) * 620 : 0;
+      target.ghostLife = Math.max(baseGhostLife, procLife);
     };
 
     const frame = (now: number): void => {
