@@ -966,9 +966,9 @@ button.chain__btn:hover { border-color: var(--accent); }
 /* ===================================================== modular desktop UI */
 /*
  * The workspace is now progressive rather than a fixed three-column dashboard:
- * Dice exists first; the tree appears after 20 lifetime Score; Inspector and
- * Goal are created by explicit player actions. Windows can be moved and
- * minimized without changing game state.
+ * Dice exists first; tree, Stats and Log appear after 20 lifetime Score.
+ * Selecting a reachable node creates Inspector + Goal. Windows can be moved
+ * and minimized without changing game state.
  */
 .desktop {
   position: relative;
@@ -1090,28 +1090,6 @@ button.chain__btn:hover { border-color: var(--accent); }
   background: #11170f;
 }
 
-.btn--goal {
-  display: block;
-  width: 100%;
-  margin-bottom: 8px;
-  padding: 9px 11px;
-  border: 1px solid rgba(255, 194, 51, 0.5);
-  border-radius: 8px;
-  background: rgba(255, 194, 51, 0.08);
-  color: #ffd76a;
-  font-size: 13px;
-  font-weight: 700;
-}
-.btn--goal:hover { background: rgba(255, 194, 51, 0.14); }
-.btn--goal-primary {
-  padding: 11px;
-  background: linear-gradient(180deg, #346fae, #234c79);
-  border-color: #5f94ca;
-  color: #fff;
-}
-.btn--goal-primary:hover { filter: brightness(1.08); }
-
-.topbar__spacer { min-width: 1px; }
 
 /* On small displays, preserve the progressive order and avoid inaccessible
    off-screen floating windows. Desktop dragging remains the wide-screen mode. */
@@ -1138,3 +1116,34 @@ button.chain__btn:hover { border-color: var(--accent); }
 }
 
 
+
+
+.topbar__spacer {
+  min-width: 1px;
+  display: flex;
+  justify-content: center;
+}
+.window-arrange {
+  padding: 6px 13px;
+  border: 1px solid #355071;
+  border-radius: 6px;
+  background: #0b1625;
+  color: #a9bdd5;
+  font-size: 12px;
+  font-weight: 650;
+}
+.window-arrange:hover {
+  color: #fff;
+  border-color: #5f86b4;
+  background: #13233a;
+}
+
+.desktop-window--stats .panel--utility,
+.desktop-window--log .panel--utility {
+  height: 100%;
+}
+.desktop-window--stats .panel__body,
+.desktop-window--log .panel__body {
+  height: 100%;
+  overflow: auto;
+}
