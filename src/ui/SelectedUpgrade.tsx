@@ -13,17 +13,18 @@ import { actions } from './store.ts';
  * cannot shove the layout around the way a docked panel in the flow once
  * did, which was the reason for floating it in the first place.
  */
-export function SelectedUpgrade({ s, nodeId, onReveal }: {
+export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false }: {
   s: GameState;
   nodeId: string | null;
   onReveal: (id: string) => void;
+  embedded?: boolean;
 }): JSX.Element {
   const node = nodeId ? NODES_BY_ID.get(nodeId) ?? null : null;
   if (!node) {
     return (
       <aside className="panel panel--right">
-        <h2 className="panel__title">Selected upgrade</h2>
-        <p className="panel__empty">Point at a node in the build tree to read it.</p>
+        {!embedded && <h2 className="panel__title">Selected upgrade</h2>}
+        <p className="panel__empty">Select a node in the build tree to read it.</p>
       </aside>
     );
   }
@@ -37,9 +38,11 @@ export function SelectedUpgrade({ s, nodeId, onReveal }: {
   const state: 'owned' | 'available' | 'short' | 'locked' = owned ? 'owned'
     : check.ok ? 'available'
     : reachable ? 'short' : 'locked';
+  const isGoal = s.pinned === node.id;
+  const canTarget = !owned && state !== 'locked';
   return (
     <aside className="panel panel--right">
-      <h2 className="panel__title">Selected upgrade</h2>
+      {!embedded && <h2 className="panel__title">Selected upgrade</h2>}
 
       <div className="upg">
         <div className="upg__head">
@@ -74,15 +77,23 @@ export function SelectedUpgrade({ s, nodeId, onReveal }: {
           </span>
         </div>
 
+        {canTarget && (
+          <button
+            type="button"
+            className={`btn btn--goal${state === 'short' ? ' btn--goal-primary' : ''}`}
+            onClick={() => actions.pin(isGoal ? null : node.id)}
+          >
+            {isGoal ? 'Clear goal' : 'Set as goal'}
+          </button>
+        )}
+
         {state === 'available' && (
           <button type="button" className="btn btn--primary"
             onClick={() => actions.allocate(node.id)}>
             Allocate
           </button>
         )}
-        {/* No goal button here: pressing the node in the web sets and clears
-            it, and the goal card by the dice carries its own control. An
-            owned node needs no sentence either — the chip above says so. */}
+
         {state === 'locked' && (
           <p className="upg__note">Connect an adjacent node first.</p>
         )}
