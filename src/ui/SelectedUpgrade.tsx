@@ -56,7 +56,12 @@ export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false }: {
 
         {node.notation && (
           <div className="upg__nt">
-            <NotationView notation={node.notation} framework={s.framework} />
+            <NotationView
+              notation={node.notation}
+              framework={s.framework}
+              game={s}
+              nodeId={node.id}
+            />
           </div>
         )}
 
