@@ -15,10 +15,12 @@ import { DesktopWindow } from './DesktopWindow.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
 
 const TREE_UNLOCK_SCORE = 20;
+type Tab = 'web' | 'stats' | 'log';
 
 export function App(): JSX.Element {
   const s = useGame();
   const [inspected, setInspected] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('web');
   const [expanded, setExpanded] = useState(false);
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
   const [layoutVersion, setLayoutVersion] = useState(0);
@@ -42,13 +44,14 @@ export function App(): JSX.Element {
       setExpanded(false);
       return;
     }
-    // Stats becomes a visible window at the same moment as the tree, so this
-    // counts as the player having been shown the stats surface.
-    actions.seenStats();
   }, [treeUnlocked]);
 
+  useEffect(() => {
+    if (treeUnlocked && tab === 'stats') actions.seenStats();
+  }, [treeUnlocked, tab]);
+
   const alignWindows = (): void => {
-    for (const id of ['dice', 'tree', 'upgrade', 'goal', 'stats', 'log']) {
+    for (const id of ['dice', 'tree', 'upgrade', 'goal']) {
       try { localStorage.removeItem(`blumberdice.window.${id}`); } catch { /* optional persistence */ }
     }
     setLayoutVersion((v) => v + 1);
@@ -78,6 +81,8 @@ export function App(): JSX.Element {
         refundScore={spent.score}
         refundMeta={spent.meta}
         treeUnlocked={treeUnlocked}
+        tab={tab}
+        setTab={setTab}
         onAlignWindows={alignWindows}
       />
 
@@ -96,24 +101,36 @@ export function App(): JSX.Element {
           <DesktopWindow
             key={`tree-${layoutVersion}`}
             id="tree"
-            title="Build tree"
+            title={tab === 'web' ? 'Build tree' : tab === 'stats' ? 'Stats' : 'Log'}
             className="desktop-window--tree"
-            defaultStyle={{ left: 12, top: 12, width: '23%', height: '56%' }}
+            defaultStyle={{ left: 12, top: 12, width: '23%', height: 'calc(100% - 24px)' }}
           >
-            <TreeView
-              allocatedKey={s.allocated.join(',')}
-              discoveredKey={s.discovered.join(',')}
-              score={s.score}
-              meta={s.meta}
-              framework={s.framework}
-              pinned={s.pinned}
-              inspected={inspected}
-              setInspected={setInspected}
-              expanded={expanded}
-              setExpanded={setExpanded}
-              focus={focus}
-              embedded
-            />
+            {tab === 'web' && (
+              <TreeView
+                allocatedKey={s.allocated.join(',')}
+                discoveredKey={s.discovered.join(',')}
+                score={s.score}
+                meta={s.meta}
+                framework={s.framework}
+                pinned={s.pinned}
+                inspected={inspected}
+                setInspected={setInspected}
+                expanded={expanded}
+                setExpanded={setExpanded}
+                focus={focus}
+                embedded
+              />
+            )}
+            {tab === 'stats' && (
+              <aside className="panel panel--utility">
+                <div className="panel__body"><StatsPanel s={s} /></div>
+              </aside>
+            )}
+            {tab === 'log' && (
+              <aside className="panel panel--utility">
+                <div className="panel__body"><LogPanel s={s} /></div>
+              </aside>
+            )}
           </DesktopWindow>
         )}
 
@@ -141,33 +158,6 @@ export function App(): JSX.Element {
           </DesktopWindow>
         )}
 
-        {treeUnlocked && (
-          <DesktopWindow
-            key={`stats-${layoutVersion}`}
-            id="stats"
-            title="Stats"
-            className="desktop-window--stats"
-            defaultStyle={{ left: 12, bottom: 12, width: '23%', height: '38%' }}
-          >
-            <aside className="panel panel--utility">
-              <div className="panel__body"><StatsPanel s={s} /></div>
-            </aside>
-          </DesktopWindow>
-        )}
-
-        {treeUnlocked && (
-          <DesktopWindow
-            key={`log-${layoutVersion}`}
-            id="log"
-            title="Log"
-            className="desktop-window--log"
-            defaultStyle={{ right: 12, bottom: 12, width: '23%', height: '38%' }}
-          >
-            <aside className="panel panel--utility">
-              <div className="panel__body"><LogPanel s={s} /></div>
-            </aside>
-          </DesktopWindow>
-        )}
       </main>
 
       {store.debug && <DebugPanel s={s} />}
@@ -176,7 +166,8 @@ export function App(): JSX.Element {
 }
 
 function TopBar({
-  s, knowsB, canRefund: mayRefund, refundScore, refundMeta, treeUnlocked, onAlignWindows,
+  s, knowsB, canRefund: mayRefund, refundScore, refundMeta,
+  treeUnlocked, tab, setTab, onAlignWindows,
 }: {
   s: GameState;
   knowsB: boolean;
@@ -184,6 +175,8 @@ function TopBar({
   refundScore: number;
   refundMeta: number;
   treeUnlocked: boolean;
+  tab: Tab;
+  setTab: (tab: Tab) => void;
   onAlignWindows: () => void;
 }): JSX.Element {
   const [menu, setMenu] = useState(false);
@@ -194,15 +187,22 @@ function TopBar({
         <span className="brand__word"><b>Blumber</b><i>Dice</i></span>
       </div>
 
-      <div className="topbar__spacer">
+      <nav className="tabsx" role="tablist" aria-label="Tech window view">
+        {treeUnlocked && (
+          <>
+            <TabBtn id="web" tab={tab} set={setTab} label="Build" />
+            <TabBtn id="stats" tab={tab} set={setTab} label="Stats" />
+            <TabBtn id="log" tab={tab} set={setTab} label="Log" />
+          </>
+        )}
+      </nav>
+
+      <div className="topbar__right">
         {treeUnlocked && (
           <button type="button" className="window-arrange" onClick={onAlignWindows}>
             Align windows
           </button>
         )}
-      </div>
-
-      <div className="topbar__right">
         {knowsB && (
           <div className="fwtoggle" role="group" aria-label="Active framework">
             <button
@@ -251,6 +251,23 @@ function TopBar({
         </div>
       </div>
     </header>
+  );
+}
+
+function TabBtn({ id, tab, set, label }: {
+  id: Tab;
+  tab: Tab;
+  set: (tab: Tab) => void;
+  label: string;
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      className={`tab${tab === id ? ' tab--on' : ''}`}
+      onClick={() => set(id)}
+    >
+      {label}
+    </button>
   );
 }
 
