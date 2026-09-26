@@ -60,7 +60,7 @@ export type StatKey =
   | 'flipPeriod'
   | 'rerollOneChance'
   | 'raisedFloorChance'
-  | 'queueLength'
+  | 'allowedFaces'
   // pattern
   | 'patternRewardMult'
   | 'historyWindow'
@@ -90,7 +90,7 @@ export const BASE_STATS: StatBlock = {
   flipPeriod: 0,
   rerollOneChance: 0,
   raisedFloorChance: 0,
-  queueLength: 0,
+  allowedFaces: 0,
   patternRewardMult: 1,
   historyWindow: 4,
   jackpotFlat: 0,

@@ -471,6 +471,58 @@ sets the goal — that was telling assistive technology a working control was
 disabled. It is now set only for genuinely inert states, and the label says
 what activating the node will do.
 
+### 19. Prepared Roll is a constraint, not a queue
+
+Reworked on request: **"Results can only be one of the 3 numbers shown.
+Changes every roll."** It was a queue of three predetermined results,
+consumed front-first and reorderable; it is now a window of three faces the
+die may land on, redrawn after every roll. `state.queue` became
+`state.allowed`, `queueLength` became `allowedFaces`, and `swapQueue` is
+gone along with its rail buttons.
+
+Three decisions the wording did not settle:
+
+- **The window is drawn uniformly, and the roll inside it is weighted.**
+  Drawing it by weight as well applies the same bias twice, and it measured
+  badly: a High Roller build went from 4.07 average face to 4.91 with the
+  keystone — an effect its wording promises nowhere, and large enough to
+  make the keystone mandatory for that archetype. Uniform keeps it what it
+  says it is. Weight still decides which of the three lands, and a sealed
+  face has no weight so it never appears.
+- **Replacement effects that roll again roll inside the window**, and Raised
+  Floor only lifts a 1 to a 2 when a 2 is in it. Otherwise the node's one
+  promise would be false whenever they fired. Flip, Hold and Afterimage are
+  excepted: those are substitutions the player built to override the die,
+  not rolls, and each says so in its own tooltip.
+- **Loaded Choice composes more simply than before.** It used to offer the
+  queue head against a fresh sample, with only the former consuming the
+  queue. Now both candidates are drawn from inside the window.
+
+The result is a keystone that *costs* expected value for information. On a
+matched build the average face goes 4.67 → 4.48 with it, and 4.33 with
+Arrange as well. That is the intended shape: what you buy is knowing a 1
+cannot come up when 1 is not shown, which is worth most to Pattern builds
+reading for a run and to wagering, where it tells you whether a jackpot is
+even on the table.
+
+### 20. Arrange was a node that did nothing
+
+Found while removing the queue. Arrange claimed two effects and had one.
+
+"Held and queued results count toward patterns once played" was never an
+effect: `pushRoll` runs for every resolved roll, so that is baseline
+behaviour the tooltip described as if it were purchased. The `arrange` flag
+appeared in exactly one line of engine code — widening the queue swap from
+adjacent to any two — and `swapQueue` returned early without Prepared Roll,
+so the node also did nothing at all unless you owned a 1,600 Score keystone.
+
+Removing the queue would have left it a 580 Score, 80 Meta no-op. It now
+narrows the window from 3 faces to 2, which is a real effect on the same
+dependency it always had. That dependency is still a wart — a bridge whose
+value is nil without one specific keystone — but fixing it means moving the
+node or changing its prerequisites, which is a tree change and out of scope
+here.
+
 ---
 
 ## Unresolved — deliberately not implemented

@@ -3,12 +3,7 @@ import { NodePopup } from '../src/ui/TreeView.tsx';
 import { NODES_BY_ID } from '../src/engine/nodes.ts';
 import '../src/styles.css';
 
-const IDS = ['hr_floor','hr_nogoback','vl_quick','vl_splinter','vl_secondwind',
-  'vl_cycle','jp_longodds','jp_hotstreak','jp_stake','jp_ride',
-  'jp_oneinsix','jp_pressure','pt_repeat','pt_doubles','pt_memory',
-  'ct_second','ct_reserve','ct_flip','ct_seal','ct_prepared',
-  'key_loaded','br_arrange','ad_counterweight','ad_crossing','ad_duality',
-  'br_hedge','br_afterimage','ct_hold','vl_handful','hr_upper'];
+const IDS = ['ct_prepared','br_arrange','key_loaded','ct_hold','ct_seal'];
 
 const STATUS = ['available','locked','allocated','unaffordable'] as const;
 

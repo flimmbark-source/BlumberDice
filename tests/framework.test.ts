@@ -209,10 +209,10 @@ describe('Framework switching', () => {
     s.held = [4];
     s.sealedFace = 1;
     runManualRolls(s, 5);
-    const queueBefore = [...s.queue];
+    const windowBefore = [...s.allowed];
     switchFramework(s);
     expect(s.held).toEqual([4]);
     expect(s.sealedFace).toBe(1);
-    expect(s.queue).toEqual(queueBefore);
+    expect(s.allowed).toEqual(windowBefore);
   });
 });

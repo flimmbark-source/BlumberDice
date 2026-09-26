@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   drain, getBuild, manualRoll, resolveDecision, setSeal, setStoreNext, setStake,
-  setUseHeld, swapQueue, switchFramework, syncQueue, type GameState,
+  setUseHeld, switchFramework, syncAllowed, type GameState,
 } from '../src/engine/game.ts';
 import { makeBuild, runManualRolls } from '../src/engine/sim.ts';
 import type { Face } from '../src/engine/types.ts';
@@ -14,39 +14,18 @@ function rollToPrompt(s: GameState): void {
 }
 
 describe('Loaded Choice and Prepared Roll compose', () => {
-  it('offers the queued result alongside a fresh sample', () => {
+  it('draws both candidates from inside the window', () => {
     const s = makeBuild({ seed: 11, nodes: ['ct_prepared', 'key_loaded'] });
-    syncQueue(s);
-    expect(s.queue.length).toBe(3);
-    const head = s.queue[0];
-
+    s.policies.loadedChoice = 'ask';
+    expect(s.allowed.length).toBe(3);
+    const window = [...s.allowed];
+    manualRoll(s);
     rollToPrompt(s);
     expect(s.decision?.kind).toBe('loadedChoice');
-    const d = s.decision as { options: Face[]; fromQueue?: number };
-    expect(d.options.length).toBe(2);
-    expect(d.fromQueue).toBe(0);
-    expect(d.options[0]).toBe(head);
-  });
-
-  it('consumes the queue only when the queued result is taken', () => {
-    const taken = makeBuild({ seed: 11, nodes: ['ct_prepared', 'key_loaded'] });
-    syncQueue(taken);
-    const beforeTaken = [...taken.queue];
-    rollToPrompt(taken);
-    resolveDecision(taken, { kind: 'loadedChoice', index: 0 });
-    drain(taken);
-    expect(taken.lastFace).toBe(beforeTaken[0]);
-    expect(taken.queue.slice(0, 2)).toEqual(beforeTaken.slice(1));
-
-    const left = makeBuild({ seed: 11, nodes: ['ct_prepared', 'key_loaded'] });
-    syncQueue(left);
-    const beforeLeft = [...left.queue];
-    rollToPrompt(left);
-    const fresh = (left.decision as { options: Face[] }).options[1];
-    resolveDecision(left, { kind: 'loadedChoice', index: 1 });
-    drain(left);
-    expect(left.lastFace).toBe(fresh);
-    expect(left.queue).toEqual(beforeLeft);
+    const options = (s.decision as { options: Face[] }).options;
+    expect(options.length).toBe(2);
+    // The window constrains the roll, so it constrains the choice too.
+    for (const o of options) expect(window).toContain(o);
   });
 
   it('keeps Loaded Choice working without Prepared Roll', () => {
@@ -177,12 +156,12 @@ describe('Flip', () => {
 });
 
 describe('Seal', () => {
-  it('removes a face from the pool and refreshes the queue', () => {
+  it('removes a face from the pool and redraws the window', () => {
     const s = makeBuild({ seed: 6, nodes: ['ct_hold', 'ct_second', 'ct_seal', 'ct_flip', 'ct_prepared'] });
-    syncQueue(s);
+    syncAllowed(s);
     setSeal(s, 1);
-    expect(s.queue.length).toBe(3);
-    expect(s.queue).not.toContain(1);
+    expect(s.allowed.length).toBe(3);
+    expect(s.allowed).not.toContain(1);
     const r = runManualRolls(s, 400);
     expect(r.state.stats.faceCounts[1]).toBe(0);
   });
@@ -194,33 +173,75 @@ describe('Seal', () => {
   });
 });
 
-describe('Prepared Roll queue', () => {
-  it('only allows adjacent swaps without Arrange', () => {
+describe('Prepared Roll narrows what the die may produce', () => {
+  it('shows three distinct faces', () => {
     const s = makeBuild({ seed: 8, nodes: ['ct_prepared'] });
-    syncQueue(s);
-    const q = [...s.queue];
-    swapQueue(s, 0, 2);
-    expect(s.queue).toEqual(q);
-    swapQueue(s, 0, 1);
-    expect(s.queue).toEqual([q[1], q[0], q[2]]);
+    expect(s.allowed.length).toBe(3);
+    expect(new Set(s.allowed).size).toBe(3);
   });
 
-  it('allows any swap with Arrange', () => {
-    const s = makeBuild({ seed: 8, nodes: ['ct_prepared', 'br_arrange'] });
-    syncQueue(s);
-    const q = [...s.queue];
-    swapQueue(s, 0, 2);
-    expect(s.queue).toEqual([q[2], q[1], q[0]]);
+  it('never resolves a roll outside the window that was showing', () => {
+    // The whole claim of the node, checked roll by roll rather than in
+    // aggregate: an average inside the window proves nothing.
+    const s = makeBuild({ seed: 8, nodes: ['ct_prepared'] });
+    for (let i = 0; i < 200; i++) {
+      const window = [...s.allowed];
+      runManualRolls(s, 1);
+      expect(window, `roll ${i} landed on ${s.lastFace} outside ${window}`)
+        .toContain(s.lastFace);
+    }
   });
 
-  it('resolves rolls from the front of the queue', () => {
+  it('redraws the window after every roll', () => {
     const s = makeBuild({ seed: 8, nodes: ['ct_prepared'] });
-    syncQueue(s);
-    const head = s.queue[0];
-    rollToPrompt(s);
-    drain(s);
-    expect(s.lastFace).toBe(head);
-    expect(s.queue.length).toBe(3);
+    let changed = 0;
+    for (let i = 0; i < 60; i++) {
+      const before = s.allowed.join(',');
+      runManualRolls(s, 1);
+      if (s.allowed.join(',') !== before) changed++;
+    }
+    // Three of six faces, so a repeat is expected sometimes; most must move.
+    expect(changed).toBeGreaterThan(40);
+  });
+
+  it('holds replacement effects inside the window too', () => {
+    // Raised Floor turns a 1 into a 2. If the window has no 2 that would
+    // break the node's one promise, so it is suppressed instead.
+    const s = makeBuild({ seed: 3, nodes: ['hr_edge', 'hr_floor', 'ct_second', 'ct_reserve', 'ct_hold', 'ct_flip', 'ct_seal', 'ct_prepared'] });
+    s.sealedFace = null;
+    for (let i = 0; i < 250; i++) {
+      const window = [...s.allowed];
+      runManualRolls(s, 1);
+      expect(window, `landed on ${s.lastFace} outside ${window}`).toContain(s.lastFace);
+    }
+  });
+
+  it('never offers a sealed face in the window', () => {
+    const s = makeBuild({ seed: 6, nodes: ['ct_second', 'ct_reserve', 'ct_hold', 'ct_seal', 'ct_flip', 'ct_prepared'] });
+    setSeal(s, 4);
+    for (let i = 0; i < 80; i++) {
+      expect(s.allowed).not.toContain(4);
+      runManualRolls(s, 1);
+    }
+  });
+
+  it('narrows to two faces with Arrange', () => {
+    const s = makeBuild({ seed: 8, nodes: ['ct_second', 'ct_reserve', 'ct_hold', 'ct_flip', 'ct_seal', 'ct_prepared', 'br_arrange'] });
+    s.sealedFace = null;
+    syncAllowed(s);
+    expect(s.allowed.length).toBe(2);
+    for (let i = 0; i < 60; i++) {
+      const window = [...s.allowed];
+      runManualRolls(s, 1);
+      expect(window).toContain(s.lastFace);
+    }
+  });
+
+  it('leaves the die alone without the keystone', () => {
+    const s = makeBuild({ seed: 8, nodes: ['ct_second'] });
+    expect(s.allowed).toEqual([]);
+    runManualRolls(s, 20);
+    expect(s.allowed).toEqual([]);
   });
 });
 
@@ -432,7 +453,7 @@ describe('build flags only switch on when allocated', () => {
     rollToPrompt(s);
     expect(s.decision).toBeNull();
     drain(s);
-    expect(s.queue).toEqual([]);
+    expect(s.allowed).toEqual([]);
     expect(s.held).toEqual([]);
   });
 });

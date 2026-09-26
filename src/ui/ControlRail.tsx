@@ -73,36 +73,17 @@ export function ControlRail({ s }: { s: GameState }): JSX.Element | null {
   }
 
   if (build.flags.has('preparedRoll')) {
-    const free = build.flags.has('arrange');
+    // No longer a queue to reorder: a window showing what the next roll may
+    // land on. Read-only, because the choice it offers is what to do with
+    // the information, not how to shuffle it.
     blocks.push(
-      <div className="rail__block" key="queue">
-        <div className="rail__title">Next results{free ? '' : ' — swap adjacent'}</div>
+      <div className="rail__block" key="window">
+        <div className="rail__title">Next roll can be</div>
         <div className="rail__row">
-          {s.queue.map((f, i) => (
-            <span className="queueslot" key={i}>
-              <MiniDie face={f} />
-              {i < s.queue.length - 1 && (
-                <button
-                  type="button"
-                  className="queueslot__swap"
-                  title={`Swap positions ${i + 1} and ${i + 2}`}
-                  onClick={() => actions.swapQueue(i, i + 1)}
-                >
-                  ⇄
-                </button>
-              )}
-            </span>
+          {s.allowed.map((f, i) => (
+            <span className="windowface" key={i}><MiniDie face={f} /></span>
           ))}
-          {free && s.queue.length > 2 && (
-            <button
-              type="button"
-              className="chip"
-              title="Swap the first and last queued results"
-              onClick={() => actions.swapQueue(0, s.queue.length - 1)}
-            >
-              ⇄ ends
-            </button>
-          )}
+          <span className="rail__note rail__note--inline">redrawn every roll</span>
         </div>
       </div>,
     );

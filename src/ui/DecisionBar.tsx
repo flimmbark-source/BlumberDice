@@ -23,7 +23,6 @@ export function DecisionBar({ decision }: { decision: Decision }): JSX.Element {
               >
                 <MiniDie face={f} />
                 <span>{f}</span>
-                {decision.fromQueue === i && <span className="decision__tag">from queue</span>}
               </button>
             ))}
           </div>

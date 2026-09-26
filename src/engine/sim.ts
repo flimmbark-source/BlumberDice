@@ -2,6 +2,7 @@ import { NODES_BY_ID } from './nodes.ts';
 import {
   createGame, drain, getBuild, manualRoll, switchFramework,
   type DecisionPolicy, type GameState,
+  syncAllowed,
 } from './game.ts';
 import type { Face } from './types.ts';
 
@@ -65,6 +66,9 @@ export interface SimOptions {
 export function makeBuild(opts: SimOptions = {}): GameState {
   const s = opts.state ?? createGame(opts.seed ?? 12345);
   if (opts.nodes) forceAllocate(s, opts.nodes);
+  // forceAllocate writes the build in directly, so derived state that
+  // allocate() would have synced has to be brought up to date here.
+  syncAllowed(s);
   if (opts.policies) Object.assign(s.policies, opts.policies);
   if (opts.startingScore !== undefined) s.score = opts.startingScore;
   if (opts.framework && opts.framework !== s.framework) {

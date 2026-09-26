@@ -39,19 +39,19 @@ describe('save round-trip', () => {
     expect(restored.decision).toBeNull();
   });
 
-  it('rebuilds the prepared queue for the restored build', () => {
+  it('redraws the prepared window for the restored build', () => {
     const s = makeBuild({ seed: 2, nodes: ['ct_prepared'] });
-    s.queue = [];
+    s.allowed = [];
     const restored = deserialize(serialize(s))!;
-    expect(restored.queue.length).toBe(3);
+    expect(restored.allowed.length).toBe(3);
   });
 
-  it('clears a queue the restored build can no longer support', () => {
+  it('clears a window the restored build can no longer support', () => {
     const s = makeBuild({ seed: 2 });
     const payload = JSON.parse(serialize(s));
-    payload.state.queue = [1, 2, 3];
+    payload.state.allowed = [1, 2, 3];
     const restored = deserialize(JSON.stringify(payload))!;
-    expect(restored.queue).toEqual([]);
+    expect(restored.allowed).toEqual([]);
   });
 
   it('rejects malformed and version-mismatched payloads', () => {

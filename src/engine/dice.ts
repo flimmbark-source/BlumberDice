@@ -1,5 +1,5 @@
 import { FACES, FACE_STAT, type Face, type StatBlock } from './types.ts';
-import { pickWeighted, type RngState } from './rng.ts';
+import { next, pickWeighted, type RngState } from './rng.ts';
 
 export interface Distribution {
   weights: number[]; // index 0 => face 1
@@ -50,6 +50,43 @@ export function sampleFaceExcluding(rng: RngState, dist: Distribution, exclude: 
   weights[exclude - 1] = 0;
   if (weights.every((w) => w <= 0)) return sampleFace(rng, dist);
   return (pickWeighted(rng, weights) + 1) as Face;
+}
+
+/**
+ * Samples inside a restricted set of faces, keeping their relative weights.
+ *
+ * Prepared Roll narrows what the die may land on without flattening it: a
+ * build that has pushed weight onto 5 and 6 still sees that weighting inside
+ * the window it is given.
+ */
+export function sampleFaceAmong(rng: RngState, dist: Distribution, allowed: readonly Face[]): Face {
+  if (allowed.length === 0) return sampleFace(rng, dist);
+  const weights = dist.weights.map((w, i) => (allowed.includes((i + 1) as Face) ? w : 0));
+  if (weights.every((w) => w <= 0)) return allowed[Math.floor(next(rng) * allowed.length)];
+  return (pickWeighted(rng, weights) + 1) as Face;
+}
+
+/**
+ * Draws `n` distinct faces for Prepared Roll's window.
+ *
+ * Uniform among the faces the die can still produce, deliberately. Drawing
+ * the window by weight and then rolling inside it by weight applies the same
+ * bias twice: a High Roller build measured 4.07 average face without the
+ * keystone and 4.91 with it, an effect its wording promises nowhere and
+ * large enough to make the keystone mandatory for that archetype. Uniform
+ * here keeps the keystone what it says it is -- a constraint you can see --
+ * while weight still decides which of the three actually lands. A sealed
+ * face has no weight and so never appears.
+ */
+export function drawFaces(rng: RngState, dist: Distribution, n: number): Face[] {
+  const pool = FACES.filter((f) => dist.weights[f - 1] > 0);
+  const out: Face[] = [];
+  const take = Math.min(n, pool.length);
+  while (out.length < take) {
+    const f = pool[Math.floor(next(rng) * pool.length)];
+    if (!out.includes(f)) out.push(f);
+  }
+  return out.sort((a, b) => a - b);
 }
 
 export function expectedValue(dist: Distribution): number {

@@ -756,15 +756,15 @@ export const NODES: PassiveNode[] = [
     nodeType: 'keystone',
     region: 'control',
     description:
-      'Shows your next 3 results. Rolls take from the front of the queue.',
-    notation: [[note('queue'), die(3), die(1), die(6), to(), note('next roll')],
-      clause('swap', note('swap adjacent'))],
+      'Results can only be one of the 3 numbers shown. Changes every roll.',
+    notation: [[note('only'), die(3), die(1), die(6)],
+      clause('swap', note('new 3 every roll'))],
     costs: { score: 1600 },
     prerequisites: ['ct_flip', 'ct_seal'],
     position: { x: -229, y: -597 },
-    tags: ['keystone', 'queue', 'decision'],
+    tags: ['keystone', 'probability'],
     flags: ['preparedRoll'],
-    modifiers: [{ stat: 'queueLength', op: 'add', value: 3 }],
+    modifiers: [{ stat: 'allowedFaces', op: 'add', value: 3 }],
   },
 
   // -------------------------------------------------------------------------
@@ -832,13 +832,14 @@ export const NODES: PassiveNode[] = [
     region: 'pattern',
     bridges: ['control', 'pattern'],
     description:
-      'Held and queued results count toward patterns once played, and the queue may swap any two results, not just neighbours.',
-    notation: [[slot(true), op('·'), note('queue'), to(), note('enter the pattern history')]],
+      'Narrows the window of possible results from 3 numbers to 2.',
+    notation: [[note('window'), val('3'), to(), val('2', 'accent')]],
     costs: { score: 580 },
     prerequisites: ['ct_reserve'],
     position: { x: -171, y: -475 },
-    tags: ['bridge', 'pattern', 'storage'],
+    tags: ['bridge', 'pattern', 'probability'],
     flags: ['arrange'],
+    modifiers: [{ stat: 'allowedFaces', op: 'add', value: -1 }],
   },
 
   // -------------------------------------------------------------------------

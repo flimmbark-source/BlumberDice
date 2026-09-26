@@ -355,11 +355,11 @@ describe('refunding the web', () => {
     s.held = [4, 2];
     s.sealedFace = 1;
     s.storeNext = true;
-    expect(s.queue.length).toBeGreaterThan(0);
+    expect(s.allowed.length).toBeGreaterThan(0);
 
     refundAll(s);
     expect(s.held).toEqual([]);
-    expect(s.queue).toEqual([]);
+    expect(s.allowed).toEqual([]);
     expect(s.sealedFace).toBeNull();
     expect(s.storeNext).toBe(false);
     expect(getBuild(s).flags.size).toBe(0);

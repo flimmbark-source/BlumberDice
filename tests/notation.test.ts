@@ -239,7 +239,7 @@ describe('prose stays the precision layer, not the explanation', () => {
     const checks: [string, string][] = [
       ['vl_quick', 'bonus roll'], ['hr_edge', 'weight'], ['jp_longodds', 'jackpot'],
       ['jp_hotstreak', 'pressure'], ['hr_climb', 'climb'], ['ct_hold', 'held'],
-      ['ct_prepared', 'queue'], ['ad_pendulum', 'pendulum'], ['br_tickets', 'stacking'],
+      ['ad_pendulum', 'pendulum'], ['br_tickets', 'stacking'],
     ];
     for (const [id, word] of checks) {
       expect(lower, `${word} is not a registered keyword`).toContain(word);

@@ -22,7 +22,7 @@ export type Token =
   | { k: 'die'; face: Face; tone?: 'lit' | 'dim' | 'out' }
   /** A blank die: any value. Never a variable — a letter has to be decoded. */
   | { k: 'any'; text?: string; tone?: 'lit' | 'dim' }
-  /** A storage cell: Hold capacity, a queued result. */
+  /** A storage cell: Hold capacity, a stored result. */
   | { k: 'slot'; filled?: boolean; text?: string }
   /** Connective: an arrow, a comparison, an ellipsis. `over` labels the arrow. */
   | { k: 'op'; text: string; over?: string }
@@ -114,7 +114,6 @@ export const KEYWORDS = [
   'Climb',
   'Pendulum',
   'Hold', 'held',
-  'queue', 'queued',
   'Full Set', 'set window',
   'stacks', 'stacking',
   'wager', 'wagered',

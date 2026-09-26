@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import {
   allocate, createGame, discoverFrameworkB, drain, manualRoll, markStatsSeen, resolveDecision,
-  refundAll, setPolicy, setSeal, setStake, setStoreNext, setUseHeld, swapQueue,
+  refundAll, setPolicy, setSeal, setStake, setStoreNext, setUseHeld,
   switchFramework, tick,
   type DecisionChoice, type DecisionPolicy, type GameState,
 } from '../engine/game.ts';
@@ -133,7 +133,6 @@ export const actions = {
   refund: () => store.act((s) => { refundAll(s); }),
   decide: (choice: DecisionChoice) => store.act((s) => resolveDecision(s, choice)),
   seal: (face: Face | null) => store.act((s) => setSeal(s, face)),
-  swapQueue: (i: number, j: number) => store.act((s) => swapQueue(s, i, j)),
   stake: (n: number) => store.act((s) => setStake(s, n)),
   useHeld: (i: number | null) => store.act((s) => setUseHeld(s, i)),
   storeNext: (on: boolean) => store.act((s) => setStoreNext(s, on)),

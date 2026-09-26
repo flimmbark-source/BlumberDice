@@ -228,11 +228,15 @@ button:disabled { cursor: default; }
 .minidie { display: inline-flex; padding: 0; background: none; border: 0; line-height: 0; }
 .minidie--active .die__body { stroke: var(--accent); stroke-width: 3; }
 button.minidie:hover .die__body { stroke: var(--muted); }
-.queueslot { display: inline-flex; align-items: center; gap: 2px; }
-.queueslot__swap {
-  border: 0; background: none; color: var(--muted); font-size: 13px; padding: 0 2px;
+/* Prepared Roll's window: the faces the next roll may land on. Read-only --
+   there is nothing to reorder now, only something to know. */
+.windowface {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 3px; border-radius: 5px;
+  border: 1px solid rgba(138, 180, 248, 0.35);
+  background: rgba(138, 180, 248, 0.09);
 }
-.queueslot__swap:hover { color: var(--accent); }
+.rail__note--inline { margin-left: 4px; font-size: 10.5px; opacity: 0.7; }
 
 /* ---------------------------------------------------------------- side nav */
 

@@ -1,4 +1,4 @@
-import { createGame, syncQueue, type GameState } from './game.ts';
+import { createGame, syncAllowed, type GameState } from './game.ts';
 import { NODES_BY_ID } from './nodes.ts';
 
 const KEY = 'blumberdice.save.v1';
@@ -56,8 +56,8 @@ export function deserialize(raw: string): GameState | null {
   if (merged.pinned && (!NODES_BY_ID.has(merged.pinned) || merged.allocated.includes(merged.pinned))) {
     merged.pinned = null;
   }
-  // The visible queue must match the restored build before the first roll.
-  syncQueue(merged);
+  // The window must match the restored build before the first roll.
+  syncAllowed(merged);
   return merged;
 }
 

@@ -1,4 +1,7 @@
-import { buildDistribution, OPPOSITE_FACE, sampleFace, sampleFaceExcluding, type Distribution } from './dice.ts';
+import {
+  buildDistribution, drawFaces, OPPOSITE_FACE, sampleFace, sampleFaceAmong, sampleFaceExcluding,
+  type Distribution,
+} from './dice.ts';
 import { NODES_BY_ID } from './nodes.ts';
 import { createPatternState, pushRoll, type PatternHit, type PatternName, type PatternState } from './patterns.ts';
 import { chance, createRng, next, type RngState } from './rng.ts';
@@ -70,8 +73,6 @@ export interface RollIntent {
   depth: number;
   stage: RollStage;
   candidates?: Face[];
-  /** Index into `candidates` that was taken from the prepared queue, if any. */
-  queueCandidate?: number;
   face?: Face;
   staked: number;
   payout: number;
@@ -80,7 +81,7 @@ export interface RollIntent {
 }
 
 export type Decision =
-  | { kind: 'loadedChoice'; intentId: number; options: Face[]; fromQueue?: number }
+  | { kind: 'loadedChoice'; intentId: number; options: Face[] }
   | { kind: 'hold'; intentId: number; face: Face; canStore: boolean; heldOptions: Face[]; reactive: boolean }
   | { kind: 'flip'; intentId: number; face: Face; flipped: Face }
   | { kind: 'letItRide'; intentId: number; amount: number };
@@ -160,7 +161,11 @@ export interface GameState {
 
   // Persistent control state — survives a framework change.
   held: Face[];
-  queue: Face[];
+  /**
+   * Prepared Roll's window: the only faces the next roll may land on. Redrawn
+   * after every roll. Empty when the keystone is not allocated.
+   */
+  allowed: Face[];
   sealedFace: Face | null;
   useHeldNext: number | null;
   /** When set, the next resolved roll is stored instead of resolving. */
@@ -210,7 +215,7 @@ export function createGame(seed = 0x5eed1e): GameState {
     pattern: createPatternState(),
     transient: emptyTransient(),
     held: [],
-    queue: [],
+    allowed: [],
     sealedFace: null,
     useHeldNext: null,
     storeNext: false,
@@ -476,27 +481,49 @@ function purgeExpired(s: GameState): void {
   s.transient.tempStats = s.transient.tempStats.filter((e) => e.expiresAt > s.totalRolls);
 }
 
-function refillQueue(s: GameState, build: ResolvedBuild): void {
-  const want = Math.floor(displayStats(s, build).queueLength);
-  while (s.queue.length < want) {
-    s.queue.push(sampleFace(s.rng, currentDistribution(s, build)));
-  }
-  if (s.queue.length > want) s.queue.length = want;
+/**
+ * Redraws the window of faces the die may land on.
+ *
+ * The faces are drawn weighted and distinct, so a build that has pushed
+ * weight onto 5 and 6 sees them in the window more often — the keystone
+ * narrows the die without overriding what the rest of the build did to it.
+ */
+function drawAllowed(s: GameState, build: ResolvedBuild): void {
+  const want = Math.max(1, Math.floor(displayStats(s, build).allowedFaces));
+  s.allowed = drawFaces(s.rng, currentDistribution(s, build), want);
 }
 
-/** Pre-resolution replacement effects that act on a single determined face. */
+/**
+ * Pre-resolution replacement effects that act on a single determined face.
+ *
+ * Anything here that rolls again rolls inside Prepared Roll's window, and
+ * Raised Floor only lifts a 1 to a 2 when a 2 is in it. Otherwise "results
+ * can only be one of the three shown" would be false whenever one of these
+ * fired. Flip, Hold and Afterimage are excepted on purpose: those are
+ * substitutions the player built to override the die, not rolls.
+ */
 function refineFace(s: GameState, build: ResolvedBuild, face: Face): Face {
   const stats = displayStats(s, build);
+  const window = build.flags.has('preparedRoll') ? s.allowed : null;
+  const resample = (): Face => (window && window.length > 0
+    ? sampleFaceAmong(s.rng, currentDistribution(s, build), window)
+    : sampleFace(s.rng, currentDistribution(s, build)));
   let f = face;
 
   if (f === 1 && stats.rerollOneChance > 0 && chance(s.rng, stats.rerollOneChance)) {
-    f = sampleFace(s.rng, currentDistribution(s, build));
+    f = resample();
   }
-  if (f === 1 && stats.raisedFloorChance > 0 && chance(s.rng, stats.raisedFloorChance)) {
+  if (
+    f === 1 && stats.raisedFloorChance > 0
+    && (!window || window.includes(2))
+    && chance(s.rng, stats.raisedFloorChance)
+  ) {
     f = 2;
   }
   if (build.flags.has('noGoingBack') && s.lastFace === 6 && f === 1) {
-    f = sampleFaceExcluding(s.rng, currentDistribution(s, build), 1);
+    f = window && window.some((x) => x !== 1)
+      ? sampleFaceAmong(s.rng, currentDistribution(s, build), window.filter((x) => x !== 1))
+      : sampleFaceExcluding(s.rng, currentDistribution(s, build), 1);
   }
   return f;
 }
@@ -528,30 +555,23 @@ function processIntent(s: GameState, intent: RollIntent): ProcessResult {
         }
 
         const prepared = build.flags.has('preparedRoll');
-        if (prepared) refillQueue(s, build);
+        if (prepared && s.allowed.length === 0) drawAllowed(s, build);
+        const window = prepared ? s.allowed : null;
+        const draw = (): Face => (window && window.length > 0
+          ? sampleFaceAmong(s.rng, currentDistribution(s, build), window)
+          : sampleFace(s.rng, currentDistribution(s, build)));
 
         if (face === null && build.flags.has('loadedChoice')) {
-          // Both keystones stay live: with Prepared Roll allocated the choice
-          // is between the next queued result and a fresh sample, and only
-          // taking the queued one consumes the queue.
-          const dist = currentDistribution(s, build);
-          const candidates: Face[] = [];
-          if (prepared && s.queue.length > 0) {
-            candidates.push(s.queue[0]);
-            intent.queueCandidate = 0;
-          }
-          while (candidates.length < 2) candidates.push(sampleFace(s.rng, dist));
+          // Both keystones stay live, and compose more simply than before:
+          // the window constrains what may be rolled, so both candidates are
+          // drawn from inside it and the player still picks between them.
+          const candidates: Face[] = [draw(), draw()];
           intent.candidates = candidates;
           intent.stage = 'loadedChoice';
           break;
         }
 
-        if (face === null && prepared && s.queue.length > 0) {
-          face = s.queue.shift()!;
-          refillQueue(s, build);
-        }
-
-        intent.face = refineFace(s, build, face ?? sampleFace(s.rng, currentDistribution(s, build)));
+        intent.face = refineFace(s, build, face ?? draw());
         intent.stage = 'hold';
         break;
       }
@@ -562,7 +582,6 @@ function processIntent(s: GameState, intent: RollIntent): ProcessResult {
         if (policy === 'ask') {
           s.decision = {
             kind: 'loadedChoice', intentId: intent.id, options: opts,
-            fromQueue: intent.queueCandidate,
           };
           return 'suspended';
         }
@@ -643,12 +662,7 @@ function takeCandidate(
 ): void {
   const opts = intent.candidates ?? [];
   const i = index >= 0 && index < opts.length ? index : 0;
-  if (intent.queueCandidate === i && s.queue.length > 0) {
-    s.queue.shift();
-    refillQueue(s, build);
-  }
   intent.face = refineFace(s, build, opts[i]);
-  intent.queueCandidate = undefined;
   intent.stage = 'hold';
 }
 
@@ -732,6 +746,10 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
     window: Math.floor(stats.historyWindow),
     memory: build.flags.has('memory'),
   });
+
+  // "Changes every roll": a fresh window the moment this one is spent, so
+  // what the player is looking at is always the next roll's window.
+  if (build.flags.has('preparedRoll')) drawAllowed(s, build);
   for (const hit of hits) {
     s.stats.patternCounts[hit.name] = (s.stats.patternCounts[hit.name] ?? 0) + 1;
   }
@@ -1109,7 +1127,7 @@ export function allocate(s: GameState, nodeId: string): { ok: boolean; reason?: 
   // Keep persistent control state legal after a capacity change.
   const cap = Math.floor(displayStats(s).holdCapacity);
   if (s.held.length > cap) s.held.length = cap;
-  syncQueue(s);
+  syncAllowed(s);
   return { ok: true };
 }
 
@@ -1149,11 +1167,11 @@ export function refundAll(s: GameState): { score: number; meta: number } | null 
   s.useHeldNext = null;
   s.storeNext = false;
   s.sealedFace = null;
-  s.queue = [];
+  s.allowed = [];
   s.stakeAmount = 0;
   s.riding = 0;
   s.transient = emptyTransient();
-  syncQueue(s);
+  syncAllowed(s);
   log(s, 'system', `Refunded ${Math.round(refunded.score)} Score`
     + (refunded.meta > 0 ? ` and ${Math.round(refunded.meta)} Meta` : ''));
   return refunded;
@@ -1175,32 +1193,24 @@ export function setSeal(s: GameState, face: Face | null): void {
   const build = getBuild(s);
   if (!build.flags.has('seal')) return;
   s.sealedFace = face;
-  // Queued results were drawn from the old distribution.
-  s.queue = [];
-  syncQueue(s);
+  // The window was drawn from the old distribution.
+  s.allowed = [];
+  syncAllowed(s);
 }
 
 /** Brings the visible queue in line with the current build. */
-export function syncQueue(s: GameState, build = getBuild(s)): void {
+export function syncAllowed(s: GameState, build = getBuild(s)): void {
   if (!build.flags.has('preparedRoll')) {
-    s.queue = [];
+    s.allowed = [];
     return;
   }
-  refillQueue(s, build);
+  drawAllowed(s, build);
 }
 
 export function setStoreNext(s: GameState, on: boolean): void {
   const build = getBuild(s);
   if (!build.flags.has('hold')) { s.storeNext = false; return; }
   s.storeNext = on;
-}
-
-export function swapQueue(s: GameState, i: number, j: number): void {
-  const build = getBuild(s);
-  if (!build.flags.has('preparedRoll')) return;
-  if (s.queue[i] === undefined || s.queue[j] === undefined) return;
-  if (!build.flags.has('arrange') && Math.abs(i - j) !== 1) return;
-  [s.queue[i], s.queue[j]] = [s.queue[j], s.queue[i]];
 }
 
 export function setStake(s: GameState, amount: number): void {
