@@ -154,7 +154,13 @@ export function App(): JSX.Element {
             className="desktop-window--goal"
             defaultStyle={{ left: '25%', bottom: 12, width: '50%', height: '38%' }}
           >
-            <GoalBar s={s} onOpenTree={() => focusNode(s.pinned!)} />
+            <GoalBar
+              s={s}
+              onOpenTree={() => {
+                setTab('web');
+                focusNode(s.pinned!);
+              }}
+            />
           </DesktopWindow>
         )}
 
@@ -187,15 +193,15 @@ function TopBar({
         <span className="brand__word"><b>Blumber</b><i>Dice</i></span>
       </div>
 
-      <nav className="tabsx" role="tablist" aria-label="Tech window view">
-        {treeUnlocked && (
-          <>
-            <TabBtn id="web" tab={tab} set={setTab} label="Build" />
-            <TabBtn id="stats" tab={tab} set={setTab} label="Stats" />
-            <TabBtn id="log" tab={tab} set={setTab} label="Log" />
-          </>
-        )}
-      </nav>
+      {treeUnlocked ? (
+        <nav className="tabsx" role="tablist" aria-label="Tech window view">
+          <TabBtn id="web" tab={tab} set={setTab} label="Build" />
+          <TabBtn id="stats" tab={tab} set={setTab} label="Stats" />
+          <TabBtn id="log" tab={tab} set={setTab} label="Log" />
+        </nav>
+      ) : (
+        <div />
+      )}
 
       <div className="topbar__right">
         {treeUnlocked && (
