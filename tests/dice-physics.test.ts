@@ -513,9 +513,11 @@ describe('a roll does not cut short a result the player has not read', () => {
     const world = createWorld(420, 420);
     const showing: DieBody[] = [];
     for (let i = 0; i < 6; i++) showing.push(settledShowing(world, 10 + i, i * 100));
-    // Six standing plus the one this throw must spawn, against a cap of 4.
+    // One of the six standing dice is re-used, so no seventh die is spawned.
+    // Two of the remaining reveals must retire to stay at the cap of four.
     const plan = planThrow(world, 1, 4);
-    expect(plan.retire).toEqual([showing[0], showing[1], showing[2]]);
+    expect(plan.reuse).toEqual([showing[0]]);
+    expect(plan.retire).toEqual([showing[1], showing[2]]);
     expect(plan.retire).not.toContain(showing[5]);
   });
 
@@ -528,8 +530,10 @@ describe('a roll does not cut short a result the player has not read', () => {
     const flying = spawnDie(world);
     throwDie(world, flying, { minTumbleMs: 300 });
     const plan = planThrow(world, 1, 4);
-    // 4 settled + 1 flying + 1 spawned = 6 against a cap of 4.
-    expect(plan.retire.length).toBe(2);
+    // One settled die is re-used, so there is no new spawn: 5 standing
+    // against a cap of 4 means only one other reveal has to retire.
+    expect(plan.reuse).toHaveLength(1);
+    expect(plan.retire.length).toBe(1);
     expect(plan.retire).not.toContain(flying);
   });
 
