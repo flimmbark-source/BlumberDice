@@ -207,11 +207,15 @@ export const TreeView = memo(function TreeView({
     <div className={`tree panel panel--left${expanded ? ' tree--expanded' : ''}`} ref={wrapRef}>
       <h2 className="panel__title">
         Build tree
+        {/* The regions, not the node states: hue is what the eye is actually
+            sorting the web by, and the states read from the nodes anyway. */}
         <span className="tree__key">
-          <i className="dotk dotk--owned" />Owned
-          <i className="dotk dotk--avail" />Available
-          <i className="dotk dotk--locked" />Locked
-          <i className="dotk dotk--goal" />Goal
+          {REGION_NAMES.map(([region, label]) => (
+            <span key={region} className="tree__keyItem"
+              style={{ ['--hue' as string]: REGION_HUE[region] }}>
+              <i className="tree__regionDot" />{label}
+            </span>
+          ))}
         </span>
       </h2>
       <svg
@@ -300,13 +304,6 @@ export const TreeView = memo(function TreeView({
         </g>
       </svg>
 
-      <div className="tree__regions" aria-hidden>
-        {REGION_NAMES.map(([region, label]) => (
-          <span key={region} style={{ ['--hue' as string]: REGION_HUE[region] }}>
-            <i className="tree__regionDot" />{label}
-          </span>
-        ))}
-      </div>
 
       <div className="tree__tools">
         <button type="button" className="iconbtn" aria-label="Zoom out"

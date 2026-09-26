@@ -628,7 +628,18 @@ of them in a tray that now shows one clearly. `sweepSpent` runs every frame
 and retires dice whose number has been gone for a moment, keeping back as
 many as the next throw will use.
 
-### 24. Handful's dice are borrowed, not owned
+### 24. Handful's dice are borrowed, not owned — withdrawn
+
+Reverted. The five-second window was meant for bonus rolls, not for
+Handful, so Handful is a flat `handfulDice: 3` again and its copy is back to
+"Each click throws 3 dice instead of 1." `effectiveDice` survives the
+revert as the one place that answers how many dice a click throws, which
+the tray, the Roll button and the stats panel all read.
+
+Kept below for the record, since the reasoning about what a five-second
+window has to mean still applies wherever it lands.
+
+#### What it said
 
 Reworked on request: **"Dice that last for 5 seconds before disappearing."**
 It was a flat `handfulDice: 3`, so every click threw three forever.
@@ -698,6 +709,17 @@ panel, and at a third of a much taller column it was simply a hole. The
 arena is also centred in what is left rather than dropped to the floor with
 the slack piled above it. The dice area is now 627px against 187px of
 controls, and the Roll button and the milestone card sit at the bottom.
+
+### 26b. The tree's key is its regions
+
+The Build Tree header carried Owned / Available / Locked / Goal. Those
+states are legible from the nodes themselves — a lit node is available, a
+dashed ring is the goal — while hue is the thing the eye is actually
+sorting fifty-four nodes by and had only a second, floating key of its own.
+The regions took the header and the floating copy went.
+
+The game also opens with **The Die** selected, so the upgrade panel says
+something before the player has pointed at anything.
 
 ### 27. The definition sits beside the word again
 

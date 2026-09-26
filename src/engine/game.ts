@@ -36,8 +36,6 @@ export const CONFIG = {
    * and shown in the stats panel rather than hidden.
    */
   maxRollsPerAction: 250,
-  /** How long Handful's extra dice survive without a roll. */
-  extraDiceMs: 5000,
   letItRideMinPayout: 15,
   letItRideMult: 3,
   ticketWeightPerStack: 0.08,
@@ -175,12 +173,6 @@ export interface GameState {
 
   // Pacing
   cooldownRemaining: number;
-  /**
-   * Time left on Handful's extra dice. They are granted by rolling and lapse
-   * if you stop, so the handful is a reward for keeping the tempo up rather
-   * than a flat multiplier.
-   */
-  extraDiceMs: number;
   resolveTimer: number;
   pending: RollIntent[];
   decision: Decision | null;
@@ -228,7 +220,6 @@ export function createGame(seed = 0x5eed1e): GameState {
     useHeldNext: null,
     storeNext: false,
     cooldownRemaining: 0,
-    extraDiceMs: 0,
     resolveTimer: 0,
     pending: [],
     decision: null,
@@ -895,16 +886,9 @@ function completeRoll(
 // Actions
 // ---------------------------------------------------------------------------
 
-/**
- * How many dice this click will actually throw.
- *
- * Handful's extras only exist while their five seconds are running. The
- * first roll after a pause throws one die and lights them; roll again
- * before they lapse and the whole handful goes.
- */
+/** How many dice a click throws. One place, so every reader agrees. */
 export function effectiveDice(s: GameState, build = getBuild(s)): number {
-  const full = Math.max(1, Math.floor(displayStats(s, build).handfulDice));
-  return s.extraDiceMs > 0 ? full : 1;
+  return Math.max(1, Math.floor(displayStats(s, build).handfulDice));
 }
 
 export function canRoll(s: GameState): boolean {
@@ -923,8 +907,6 @@ export function manualRoll(s: GameState): void {
   }
 
   const dice = effectiveDice(s, build);
-  // Rolling is what grants the extras, and what keeps them alive.
-  if (Math.floor(stats.handfulDice) > 1) s.extraDiceMs = CONFIG.extraDiceMs;
   s.actionBudget = Math.max(0, CONFIG.maxRollsPerAction - dice);
   for (let i = 0; i < dice; i++) {
     s.pending.push({
@@ -953,7 +935,6 @@ export function manualRoll(s: GameState): void {
 /** Advances real time. `dt` is milliseconds. */
 export function tick(s: GameState, dt: number): void {
   if (s.cooldownRemaining > 0) s.cooldownRemaining = Math.max(0, s.cooldownRemaining - dt);
-  if (s.extraDiceMs > 0) s.extraDiceMs = Math.max(0, s.extraDiceMs - dt);
   if (s.decision !== null) return;
 
   s.resolveTimer -= dt;

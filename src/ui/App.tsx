@@ -23,7 +23,9 @@ export function App(): JSX.Element {
   const [tab, setTab] = useState<Tab>('web');
   // Which node the panels are describing. Owned by the app because two
   // columns read it: the web sets it, the upgrade panel shows it.
-  const [inspected, setInspected] = useState<string | null>(null);
+  // Opens on the root, so the upgrade panel has something to say before the
+  // player has pointed at anything.
+  const [inspected, setInspected] = useState<string | null>('start');
   const [expanded, setExpanded] = useState(false);
   const knowsB = s.discovered.includes('frameworkB');
   const spent = allocatedCost(s);
