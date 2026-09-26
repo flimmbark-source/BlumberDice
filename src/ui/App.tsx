@@ -8,6 +8,7 @@ import { useCountUp } from './useCountUp.ts';
 import { ControlRail } from './ControlRail.tsx';
 import { DecisionBar } from './DecisionBar.tsx';
 import { GoalBar } from './GoalBar.tsx';
+import { currentGoal } from '../engine/goal.ts';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
@@ -31,6 +32,7 @@ export function App(): JSX.Element {
   const treeUnlocked = s.stats.scoreEarned >= TREE_UNLOCK_SCORE;
   const knowsB = s.discovered.includes('frameworkB');
   const spent = allocatedCost(s);
+  const hasGoalDisplay = treeUnlocked && currentGoal(s).kind !== 'none';
 
   const focusNode = (id: string): void => {
     setInspected(id);
@@ -115,13 +117,13 @@ export function App(): JSX.Element {
                   focus={focus}
                   embedded
                 />
-                {s.pinned && (
+                {hasGoalDisplay && (
                   <div className="tech-build__goal">
                     <GoalBar
                       s={s}
                       onOpenTree={() => {
                         setTab('web');
-                        focusNode(s.pinned!);
+                        if (s.pinned) focusNode(s.pinned);
                       }}
                     />
                   </div>
