@@ -32,8 +32,8 @@ Three labels are used:
 | No merit, morality, enlightenment, balance meter or ratio requirement | *nothing implements one; `tests/tree.test.ts` asserts no pre-discovery Meta cost leaks* |
 | Progressive workspace reveal: Dice + Score first; at 20 Score the tech window appears, with Build / Stats / Log as top-bar tabs | `ui/App.tsx` |
 | Selecting a reachable unowned tree node inspects it and sets/clears it as the current goal; no separate goal button | `ui/TreeView.tsx`, `ui/SelectedUpgrade.tsx` |
-| A pinned goal creates the Next Goal window | `ui/App.tsx`, `ui/GoalBar.tsx` |
-| Windows are movable/minimizable; Align Windows restores the authored non-overlapping layout | `ui/DesktopWindow.tsx`, `ui/App.tsx` |
+| A pinned goal appears at the bottom of the Build view inside the tech window | `ui/App.tsx`, `ui/GoalBar.tsx` |
+| Tech and Selected Upgrade are movable/minimizable windows; the Dice is a fixed central game area; Align Windows restores the authored side-window layout | `ui/DesktopWindow.tsx`, `ui/App.tsx` |
 
 There is no "correct" framework. Framework A remains fully functional after the
 second framework is found, and the passive web contains no node that is only
@@ -826,6 +826,20 @@ would do nothing visible.
 Measured in the browser: five presses walk the five affordable nodes in
 order, the sixth returns to the first, and the selected node lands dead
 centre horizontally and centred in the tree area vertically.
+
+### 30. Dice as the game area
+
+The Dice no longer lives inside desktop-window chrome. It is the fixed central
+game area. The movable window model is reserved for tools around play: the tech
+window on the left and Selected Upgrade on the right.
+
+Next Goal no longer consumes its own window either. When a reachable unowned
+node is selected, that selection sets the goal and the goal strip appears at
+the bottom of the Build view in the tech window. Selecting the current goal
+again clears it; there is no separate Set/Clear Goal button.
+
+Align Windows therefore resets only the movable tool windows, not the central
+game area or the embedded goal.
 
 ---
 
