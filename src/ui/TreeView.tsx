@@ -4,6 +4,7 @@ import { checkAllocation, describeNode, isReachable, isVisible } from '../engine
 import type { DiscoveryFlag, FrameworkId, PassiveNode, Region } from '../engine/types.ts';
 import { actions } from './store.ts';
 import { NotationView, Prose } from './Notation.tsx';
+import { KEYWORDS } from '../engine/glossary.ts';
 
 /**
  * One interconnected web. Build identity is carried by shape, size and
@@ -245,13 +246,22 @@ export const TreeView = memo(function TreeView({
                    this the whole tree was unreachable without a mouse. */
                 tabIndex={0}
                 role="button"
-                aria-label={nodeLabel(n, st, pinned === n.id)}
+                aria-label={nodeLabel(n, st, pinned === n.id, hasKeywords(n, framework))}
                 /* Only genuinely inert nodes are disabled. An unaffordable
                    one is now an active control: pressing it sets the goal. */
                 aria-disabled={st === 'locked' || st === 'allocated'}
                 onPointerEnter={() => setInspected(n.id)}
                 onFocus={() => setInspected(n.id)}
                 onKeyDown={(e) => {
+                  // The popup always describes whatever node has focus, so
+                  // Tab can never walk into it -- it walks to the next node
+                  // and the popup changes underneath. This is the way in.
+                  if (e.key === '?') {
+                    e.preventDefault();
+                    const first = wrapRef.current?.querySelector<HTMLElement>('.kw--known');
+                    first?.focus();
+                    return;
+                  }
                   if (e.key !== 'Enter' && e.key !== ' ') return;
                   // Space also throws the dice; a focused node owns it first.
                   e.preventDefault();
@@ -372,7 +382,13 @@ function Swatch({ type }: { type: PassiveNode['nodeType'] }): JSX.Element {
 
 /** What a screen reader says for a node: what it is, what it costs, and why
  *  it can or cannot be taken. */
-function nodeLabel(n: PassiveNode, st: Status, isGoal: boolean): string {
+/** Whether this node's description contains a term with a definition. */
+function hasKeywords(n: PassiveNode, framework: FrameworkId): boolean {
+  const text = describeNode(n, framework);
+  return KEYWORDS.some((k) => new RegExp(`\\b${k}\\b`).test(text));
+}
+
+function nodeLabel(n: PassiveNode, st: Status, isGoal: boolean, terms: boolean): string {
   const cost = [
     n.costs.score ? `${n.costs.score} Score` : '',
     n.costs.meta ? `${n.costs.meta} Meta` : '',
@@ -385,7 +401,10 @@ function nodeLabel(n: PassiveNode, st: Status, isGoal: boolean): string {
   const act = st === 'available' ? ' Press to allocate.'
     : st === 'unaffordable' ? (isGoal ? ' Current goal. Press to clear.' : ' Press to set as your goal.')
     : '';
-  return `${n.name}, ${n.nodeType}${cost ? `, ${cost}` : ''}. ${state}.${act}`;
+  // Only mentioned where there is something to read, so it does not pad
+  // every one of fifty-four labels.
+  const terms_ = terms ? ' Press question mark for the terms used here.' : '';
+  return `${n.name}, ${n.nodeType}${cost ? `, ${cost}` : ''}. ${state}.${act}${terms_}`;
 }
 
 /** Which currency a cost is in, told by shape as well as by colour. */

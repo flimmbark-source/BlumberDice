@@ -523,6 +523,41 @@ value is nil without one specific keystone — but fixing it means moving the
 node or changing its prerequisites, which is a tree change and out of scope
 here.
 
+### 21. Highlighted terms explain themselves
+
+The tooltips had been highlighting keywords since the notation pass, which
+raised the obvious question they never answered: highlighted *how*, and
+meaning what? A term now opens a small definition on hover, on press, or on
+focus.
+
+The registry and the glossary are one thing. `KEYWORDS` is derived from
+`KEYWORD_FORMS`, so a word is highlighted precisely when there is an entry
+explaining it and a definition can never be written that nothing reaches.
+Inflections (held → Hold, wagered → Wager, stacking → Stacks) share an
+entry rather than repeating one. Entries are held to the same standard as
+node copy — no engine vocabulary, no framework named, a couple of sentences
+— and the test caught the first draft of "bonus roll" saying *resolves*.
+
+Two things the nesting forced:
+
+- **The definition anchors to the card, not to the word.** Anchored to the
+  word it overflowed the left edge of a 296px card whenever the term sat
+  near the margin, and a heuristic about which terms were "near the edge"
+  was guesswork. Anchored to the card it lands in the same place every
+  time and cannot overflow. A card that sits below its node puts the
+  definition below instead, since there is no room above.
+- **Tab cannot reach the popup, so `?` does.** The popup always describes
+  whichever node has focus, so tabbing out of a node moves to the next node
+  and the popup changes underneath — meaning the only popup ever reachable
+  by Tab is the last node's. Pressing `?` on a focused node moves focus to
+  its first term; from there Enter toggles and Escape closes. The node's
+  label mentions the key only when its description actually contains a
+  term, so it does not pad all fifty-four.
+
+The keyword opts back into pointer events for itself alone: the node popup
+sets `pointer-events: none` so the web underneath stays hoverable, and
+without that exception the pointer could never reach a term.
+
 ---
 
 ## Unresolved — deliberately not implemented

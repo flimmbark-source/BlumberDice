@@ -222,6 +222,12 @@ The popup's three classes are told apart before a word is read — a Small is
 blue, a Notable violet, a Keystone gold, a Bridge teal — because the class is
 what says whether a node is a number, a new rule, or a change to the game.
 
+`src/engine/glossary.ts` is both the keyword registry and the definitions
+behind it: `KEYWORDS` is derived from the surface-form map, so a highlighted
+term always has an entry and an entry is always reachable. Hovering,
+pressing or focusing a term opens it; on a focused node, `?` moves into the
+first one.
+
 House style for node copy: say the number, never a vague quantifier; *roll*
 for something that happened and *result* for a stored or candidate value;
 ×N for multiplication; active voice; second person only where the player

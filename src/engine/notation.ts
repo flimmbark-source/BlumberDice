@@ -102,20 +102,7 @@ export const weight = (text: string): Token => ({ k: 'val', text, tone: 'accent'
 export const note = (text: string): Token => ({ k: 'val', text, tone: 'muted' });
 
 /**
- * Terms that name a system rather than describe one. Highlighted identically
- * everywhere they appear, so the same mechanic reads as the same mechanic
- * across the whole tree.
+ * The terms the tree highlights. They live in `glossary.ts`, because a word
+ * is highlighted precisely when there is an entry explaining it.
  */
-export const KEYWORDS = [
-  'bonus roll', 'bonus rolls',
-  'weight',
-  'jackpot',
-  'Pressure',
-  'Climb',
-  'Pendulum',
-  'Hold', 'held',
-  'Full Set', 'set window',
-  'stacks', 'stacking',
-  'wager', 'wagered',
-  'Score', 'Meta',
-] as const;
+export { KEYWORDS } from './glossary.ts';

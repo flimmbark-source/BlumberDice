@@ -1,7 +1,9 @@
+import { lookupKeyword, type GlossaryEntry } from '../engine/glossary.ts';
 import {
   notationFor, isClause, KEYWORDS,
   type ClauseIcon, type Notation, type Row, type Token,
 } from '../engine/notation.ts';
+import { useState } from 'react';
 import type { Face, FrameworkId } from '../engine/types.ts';
 import type { NodeNotation } from '../engine/notation.ts';
 
@@ -168,15 +170,63 @@ const KEYWORD_RE = new RegExp(
 
 /**
  * Marks the terms that name a system rather than describe one, so the same
- * mechanic reads the same way everywhere it is mentioned.
+ * mechanic reads the same way everywhere it is mentioned — and so each of
+ * them can be asked what it means.
  */
 export function Prose({ text }: { text: string }): JSX.Element {
   const parts = text.split(KEYWORD_RE);
   return (
     <p className="nodepop__desc">
       {parts.map((part, i) => (
-        i % 2 === 1 ? <em className="kw" key={i}>{part}</em> : <span key={i}>{part}</span>
+        i % 2 === 1
+          ? <Keyword word={part} key={i} />
+          : <span key={i}>{part}</span>
       ))}
     </p>
+  );
+}
+
+/**
+ * A term that explains itself on hover, focus or press.
+ *
+ * The node popup sets `pointer-events: none` so the web underneath stays
+ * hoverable; the keyword opts back in for itself alone, which is what lets
+ * the pointer reach it without the tooltip swallowing the tree.
+ *
+ * Press latches the definition open, for touch and for anyone who would
+ * rather not hold the pointer still.
+ */
+function Keyword({ word }: { word: string }): JSX.Element {
+  const entry: GlossaryEntry | null = lookupKeyword(word);
+  const [hover, setHover] = useState(false);
+  const [held, setHeld] = useState(false);
+  if (!entry) return <em className="kw">{word}</em>;
+
+  const open = hover || held;
+  return (
+    <em
+      className={`kw kw--known${open ? ' kw--open' : ''}`}
+      tabIndex={0}
+      role="button"
+      aria-label={`${entry.term}: what it means`}
+      aria-expanded={open}
+      onPointerEnter={() => setHover(true)}
+      onPointerLeave={() => setHover(false)}
+      onFocus={() => setHover(true)}
+      onBlur={() => { setHover(false); setHeld(false); }}
+      onClick={(e) => { e.stopPropagation(); setHeld((v) => !v); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setHeld((v) => !v); }
+        if (e.key === 'Escape') { setHeld(false); setHover(false); }
+      }}
+    >
+      {word}
+      {open && (
+        <span className="kwpop" role="tooltip">
+          <span className="kwpop__term">{entry.term}</span>
+          <span className="kwpop__text">{entry.text}</span>
+        </span>
+      )}
+    </em>
   );
 }

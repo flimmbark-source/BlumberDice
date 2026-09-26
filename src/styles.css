@@ -468,6 +468,41 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 }
 .kw { font-style: normal; color: #c3cddc; font-weight: 600; }
 
+/* A term that can be asked what it means. The dotted rule is the usual
+   convention and stays quiet enough not to speckle the paragraph. */
+.kw--known {
+  /* Deliberately not positioned: the definition anchors to the card, not to
+     the word, so it lands in the same place every time and cannot be pushed
+     off the edge by a term near the margin. */
+  /* The node popup ignores the pointer so the web stays hoverable; the
+     keyword opts back in for itself alone. */
+  pointer-events: auto;
+  cursor: help;
+  border-bottom: 1px dotted rgba(174, 185, 203, 0.5);
+}
+.kw--known:hover, .kw--open { color: var(--accent); border-bottom-color: var(--accent); }
+.kw--known:focus { outline: none; }
+.kw--known:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; border-radius: 2px; }
+
+.kwpop {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); z-index: 7;
+  display: block;
+  padding: 7px 9px 8px;
+  border: 1px solid #3a4658; border-radius: 7px;
+  background: #11161d;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.66);
+  font-weight: 400; font-style: normal;
+  cursor: default;
+}
+/* A card that sits below its node has no room above it for the definition. */
+.nodepop--below .kwpop { bottom: auto; top: calc(100% + 8px); }
+.kwpop__term {
+  display: block; margin-bottom: 2px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--accent); font-weight: 650;
+}
+.kwpop__text { display: block; font-size: 11px; line-height: 1.45; color: #9aa6b6; }
+
 /* 4. Cost and state, secondary to the mechanic. */
 .nodepop__foot {
   display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;
