@@ -80,8 +80,17 @@ describe('archetypes are mechanically distinct under Framework A', () => {
   it('Pattern earns a large share of its Score from sequence rewards', () => {
     const pat = A(FIXTURES.pattern);
     const base = A(FIXTURES.baseline);
-    // Pattern adds no probability or frequency modifiers at all.
-    expect(pat.rollsPerManual).toBeCloseTo(base.rollsPerManual, 1);
+    const vol = A(FIXTURES.volume);
+    // This used to assert Pattern rolled exactly as often as the baseline.
+    // That stopped being true when a bonus roll started leaving a die
+    // behind for five seconds: Run grants a bonus roll, so Pattern now
+    // gains rolls too. What still separates them is where the Score comes
+    // from — Pattern from valuable rolls, Volume from cheap ones.
+    expect(pat.scoreEarned / pat.resolvedRolls)
+      .toBeGreaterThan((base.scoreEarned / base.resolvedRolls) * 2.5);
+    expect(vol.scoreEarned / vol.resolvedRolls)
+      .toBeLessThan(base.scoreEarned / base.resolvedRolls);
+    // Pattern still leaves the die itself alone.
     expect(Math.abs(pat.averageFace - base.averageFace)).toBeLessThan(0.1);
     // Yet it earns substantially more than the raw face value.
     expect(pat.scorePerManual).toBeGreaterThan(base.scorePerManual * 2.5);

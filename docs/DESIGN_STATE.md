@@ -748,6 +748,52 @@ definition, which correctly went below.
 Cleaned up with it: fourteen rules for the floating tooltip the three-column
 redesign deleted. Only its prose rule was still doing anything.
 
+### 28. A bonus roll leaves a die behind
+
+**"Dice that last for 5 seconds before disappearing"**, and this is where it
+was meant to land. A bonus roll still resolves immediately as it always
+did; it now *also* leaves a die that rolls alongside yours for five
+seconds. Each die runs on its own clock from when it was granted, and
+rolling does not top it up.
+
+A cap was not optional. Each of those dice rolls, each roll can earn
+another bonus roll, so the loop feeds itself; `maxBonusDice` is 6, which
+with Handful's three puts a click at the nine dice the tray can show.
+
+**This is a very large buff, and it does not price out.** Against the
+previous table:
+
+| build | rolls/action | Score/sec |
+| --- | --- | --- |
+| volume | 9.9 → **29.0** | 36 → **106** |
+| pattern | 1.0 → **7.2** | 20 → **140** |
+| comboEngine | 2.2 → **15.7** | 43 → **310** |
+| slotMachine | 3.6 → **25.6** | 54 → **389** |
+
+The cap is the knob: at 2 it is roughly a third of that, at 3 about half.
+The costs in the tree were tuned against the old numbers and have not been
+revisited.
+
+It also breaks an invariant the spec cares about. `tests/builds.test.ts`
+asserted Pattern rolled exactly as often as the baseline, because Pattern
+adds no frequency modifiers — except Run grants a bonus roll, so Pattern
+now gains rolls at **any** cap above zero. The assertion was rewritten to
+the thing that still separates the archetypes: Pattern earns from valuable
+rolls (Score per roll well above baseline) and Volume from cheap ones
+(below baseline). Pattern still leaves the die's probabilities alone.
+
+Two bugs found building it:
+
+- **The clock stopped.** The store only ticked while something was pending
+  or the cooldown was running, so the five seconds never elapsed and the
+  dice accumulated for ever. The loop now also turns while bonus dice are
+  out.
+- **The floor was too small.** Sized for one die, seven of them heaped over
+  each other and spilled out of the panel. The surface now grows with the
+  dice standing on it — not merely with what the next click throws, since a
+  cascade leaves more out than a click uses — and the drawing zooms to fit,
+  so a quiet game still shows one big die.
+
 ---
 
 ## Unresolved — deliberately not implemented

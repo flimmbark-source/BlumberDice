@@ -36,6 +36,14 @@ export const CONFIG = {
    * and shown in the stats panel rather than hidden.
    */
   maxRollsPerAction: 250,
+  /** How long a die left behind by a bonus roll keeps rolling with you. */
+  bonusDieMs: 5000,
+  /**
+   * Ceiling on those dice. Each one rolls, each roll can grant another bonus
+   * roll, so without a cap the loop feeds itself; this also keeps a click
+   * inside what the tray can show.
+   */
+  maxBonusDice: 6,
   letItRideMinPayout: 15,
   letItRideMult: 3,
   ticketWeightPerStack: 0.08,
@@ -173,6 +181,11 @@ export interface GameState {
 
   // Pacing
   cooldownRemaining: number;
+  /**
+   * Time left on each die a bonus roll left behind, newest last. They roll
+   * alongside yours until they lapse, and rolling does not extend them.
+   */
+  bonusDice: number[];
   resolveTimer: number;
   pending: RollIntent[];
   decision: Decision | null;
@@ -220,6 +233,7 @@ export function createGame(seed = 0x5eed1e): GameState {
     useHeldNext: null,
     storeNext: false,
     cooldownRemaining: 0,
+    bonusDice: [],
     resolveTimer: 0,
     pending: [],
     decision: null,
@@ -397,6 +411,8 @@ function queueBonusRolls(s: GameState, count: number, depth: number): void {
       metaBefore: 0,
     });
     s.stats.bonusRolls += 1;
+    // The roll resolves now, and also leaves a die behind for a while.
+    if (s.bonusDice.length < CONFIG.maxBonusDice) s.bonusDice.push(CONFIG.bonusDieMs);
   }
   s.transient.rollsSinceBonus = 0;
 }
@@ -886,9 +902,13 @@ function completeRoll(
 // Actions
 // ---------------------------------------------------------------------------
 
-/** How many dice a click throws. One place, so every reader agrees. */
+/**
+ * How many dice a click throws: the build's handful plus whatever dice
+ * bonus rolls have left lying around. One place, so every reader agrees.
+ */
 export function effectiveDice(s: GameState, build = getBuild(s)): number {
-  return Math.max(1, Math.floor(displayStats(s, build).handfulDice));
+  const base = Math.max(1, Math.floor(displayStats(s, build).handfulDice));
+  return base + s.bonusDice.length;
 }
 
 export function canRoll(s: GameState): boolean {
@@ -935,6 +955,11 @@ export function manualRoll(s: GameState): void {
 /** Advances real time. `dt` is milliseconds. */
 export function tick(s: GameState, dt: number): void {
   if (s.cooldownRemaining > 0) s.cooldownRemaining = Math.max(0, s.cooldownRemaining - dt);
+  if (s.bonusDice.length > 0) {
+    // Each one runs down on its own clock; rolling does not top them up.
+    for (let i = 0; i < s.bonusDice.length; i++) s.bonusDice[i] -= dt;
+    s.bonusDice = s.bonusDice.filter((ms) => ms > 0);
+  }
   if (s.decision !== null) return;
 
   s.resolveTimer -= dt;
@@ -1173,6 +1198,7 @@ export function refundAll(s: GameState): { score: number; meta: number } | null 
   s.storeNext = false;
   s.sealedFace = null;
   s.allowed = [];
+  s.bonusDice = [];
   s.stakeAmount = 0;
   s.riding = 0;
   s.transient = emptyTransient();

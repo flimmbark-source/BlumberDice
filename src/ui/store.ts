@@ -71,7 +71,9 @@ class GameStore {
 
   private step(dt: number, now: number): void {
     const s = this.state;
-    if (s.pending.length > 0 || s.cooldownRemaining > 0) {
+    // Bonus dice run on a clock of their own, so the loop has to keep
+    // turning for them even when nothing is rolling and the cooldown is up.
+    if (s.pending.length > 0 || s.cooldownRemaining > 0 || s.bonusDice.length > 0) {
       tick(s, dt);
       this.notify();
     }

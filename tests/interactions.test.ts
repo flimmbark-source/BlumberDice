@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   drain, getBuild, manualRoll, resolveDecision, setSeal, setStoreNext, setStake,
-  setUseHeld, switchFramework, syncAllowed, type GameState,
+  setUseHeld, switchFramework, syncAllowed, CONFIG, effectiveDice, tick, type GameState,
+  refundAll,
 } from '../src/engine/game.ts';
 import { makeBuild, runManualRolls } from '../src/engine/sim.ts';
 import type { Face } from '../src/engine/types.ts';
@@ -455,5 +456,57 @@ describe('build flags only switch on when allocated', () => {
     drain(s);
     expect(s.allowed).toEqual([]);
     expect(s.held).toEqual([]);
+  });
+});
+
+describe('a bonus roll leaves a die behind', () => {
+  const vol = ['vl_quick', 'vl_lowgear', 'vl_cycle', 'vl_follow', 'vl_echo'];
+
+  it('adds a die to later clicks without taking the roll away', () => {
+    const s = makeBuild({ seed: 9, nodes: vol });
+    const before = effectiveDice(s);
+    s.bonusDice.push(CONFIG.bonusDieMs);
+    expect(effectiveDice(s)).toBe(before + 1);
+  });
+
+  it('lets each die run down on its own clock', () => {
+    const s = makeBuild({ seed: 9, nodes: vol });
+    s.bonusDice.push(CONFIG.bonusDieMs);
+    tick(s, 2000);
+    s.bonusDice.push(CONFIG.bonusDieMs);
+    // The older one goes first, and takes the younger one nowhere with it.
+    tick(s, CONFIG.bonusDieMs - 2000 + 50);
+    expect(s.bonusDice.length).toBe(1);
+    tick(s, 2100);
+    expect(s.bonusDice.length).toBe(0);
+  });
+
+  it('does not extend them when the player rolls', () => {
+    const s = makeBuild({ seed: 9, nodes: vol });
+    s.bonusDice = [CONFIG.bonusDieMs];
+    tick(s, 3000);
+    const left = s.bonusDice[0];
+    s.cooldownRemaining = 0;
+    manualRoll(s);
+    expect(s.bonusDice[0]).toBe(left);
+  });
+
+  it('caps them, since each one can earn another', () => {
+    const s = makeBuild({ seed: 9, nodes: vol, startingScore: 0 });
+    for (let i = 0; i < 40; i++) { s.cooldownRemaining = 0; manualRoll(s); drain(s, false); }
+    expect(s.bonusDice.length).toBeLessThanOrEqual(CONFIG.maxBonusDice);
+  });
+
+  it('grants none to a build that earns no bonus rolls', () => {
+    const s = makeBuild({ seed: 9, nodes: ['hr_edge'] });
+    for (let i = 0; i < 20; i++) { s.cooldownRemaining = 0; manualRoll(s); drain(s, false); }
+    expect(s.bonusDice).toEqual([]);
+  });
+
+  it('gives them up with the build on a refund', () => {
+    const s = makeBuild({ seed: 9, nodes: vol });
+    s.bonusDice = [CONFIG.bonusDieMs, CONFIG.bonusDieMs];
+    refundAll(s);
+    expect(s.bonusDice).toEqual([]);
   });
 });

@@ -48,6 +48,8 @@ export function deserialize(raw: string): GameState | null {
     decision: null,
     resolveTimer: 0,
     cooldownRemaining: 0,
+    // Pacing state, like the cooldown: a run does not resume mid-window.
+    bonusDice: [],
     actionBudget: 0,
   };
   merged.allocated = (merged.allocated ?? ['start']).filter((id) => NODES_BY_ID.has(id));

@@ -16,13 +16,24 @@ const MAX_DICE = 9;
 /** Surface side in world units. Fixed, so the dice always read the same size. */
 const SURFACE_SIDE_IN_DICE = 4.8;
 /**
+ * How wide the surface has to be to hold `n` dice without them piling up.
+ *
+ * Bonus rolls can leave six dice lying around, and a floor built for one
+ * die had them heaped over each other and out of the panel. The surface
+ * grows with the dice actually in play and the drawing zooms to fit, so a
+ * single die still fills the arena.
+ */
+function sideFor(dice: number): number {
+  return DIE * Math.max(SURFACE_SIDE_IN_DICE, 2.35 * Math.sqrt(Math.max(1, dice)));
+}
+/**
  * Fraction of the canvas height kept above the surface for the throw.
  *
  * Reserved space, not wasted space — a thrown die uses it. But at a third
  * of a now much taller panel it was an obvious hole above the arena, and
  * the throw arc does not need to grow with the panel.
  */
-const HEADROOM = 0.2;
+const HEADROOM = 0.28;
 
 /** How long a die must tumble. Big cascades speed up so the tray keeps pace. */
 function tumbleFor(backlog: number): number {
@@ -42,6 +53,8 @@ export function DiceTray({ s, rollRef }: {
   const cursorRef = useRef<number>(0);
   const stateRef = useRef(s);
   stateRef.current = s;
+  /** Current surface width, so the frame loop can spot when it must change. */
+  const sideRef = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -58,6 +71,16 @@ export function DiceTray({ s, rollRef }: {
     let viewW = 0;
     let viewH = 0;
 
+    /**
+     * How many dice the floor has to hold: what the next click throws, but
+     * never fewer than are standing on it. A cascade can leave more dice out
+     * than a click uses, and sizing only for the click heaped them up.
+     */
+    const neededDice = (): number => Math.max(
+      effectiveDice(stateRef.current),
+      world.dice.filter((die) => !die.retiring).length,
+    );
+
     const resize = (): void => {
       const rect = wrap.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -69,9 +92,10 @@ export function DiceTray({ s, rollRef }: {
       viewH = rect.height;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // The surface keeps a fixed size in world units so a die always reads
-      // the same size relative to it; the drawing is zoomed to fit instead.
-      const side = DIE * SURFACE_SIDE_IN_DICE;
+      // The surface is sized for the dice in play; the drawing is zoomed to
+      // fit, so the arena always fills the panel whatever that size is.
+      const side = sideFor(neededDice());
+      sideRef.current = side;
       setWorldSize(world, side, side);
 
       // With w == d the surface projects to a diamond whose top corner is the
@@ -83,7 +107,7 @@ export function DiceTray({ s, rollRef }: {
       // would otherwise make the zoom negative and leave the tray blank until
       // the next resize, which may never come.
       zoom = Math.max(0.15, Math.min(
-        (rect.width - 22) / diamondW,
+        (rect.width - 40) / diamondW,
         ((rect.height - 12) * (1 - HEADROOM)) / diamondH,
       ));
       originX = rect.width / 2;
@@ -159,6 +183,10 @@ export function DiceTray({ s, rollRef }: {
         for (const rec of fresh) assign(rec, backlog);
         cursorRef.current = fresh[fresh.length - 1].id;
       }
+
+      // Re-fit the floor when the dice in play change, not only on resize.
+      // Hysteresis, so a die landing and fading does not rescale every frame.
+      if (Math.abs(sideFor(neededDice()) - sideRef.current) > DIE * 0.4) resize();
 
       step(world, dt);
       // Keep the surface to what the next throw will actually use.
