@@ -471,7 +471,10 @@ export function step(world: World, dtMs: number): void {
         // The hop has to land like everything else does.
         const strength = Math.min(1, die.alignHop / (H * 1.1));
         die.impacts.push({ t: 0, strength, x: die.pos.x, y: die.pos.y });
-        world.shake = Math.min(world.shake + strength * 3, 10);
+        const jackpot = die.procs.some((proc) => proc.kind === 'jackpot');
+        const pattern = die.procs.some((proc) => proc.kind === 'pattern');
+        const procKick = jackpot ? 5 : pattern ? 1.8 : die.procs.length > 0 ? 1.1 : 0;
+        world.shake = Math.min(world.shake + strength * 3 + procKick, 12);
       }
       continue;
     }
