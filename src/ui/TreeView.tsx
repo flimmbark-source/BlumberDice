@@ -26,6 +26,16 @@ const NODE_RADIUS: Record<PassiveNode['nodeType'], number> = {
 };
 
 const POPUP_WIDTH = 296;
+
+/**
+ * Smallest a Small node may be drawn before the view zooms in to compensate.
+ *
+ * Fitting all 54 nodes into the panel is the right default on a wide screen,
+ * where a Small lands at about 15px. In a short panel the same fit put it at
+ * 5px, which is not a target anyone can hit. Below this the web starts zoomed
+ * and centred on `start`, and the player pans.
+ */
+const MIN_NODE_PX = 14;
 /** Pointer travel, in pixels, past which a press counts as a pan not a click. */
 const DRAG_SLOP = 3;
 
@@ -58,6 +68,13 @@ function nodeScreenPos(
 const REGION_HUE: Record<Region, number> = {
   core: 45, high: 18, volume: 150, jackpot: 330, control: 205, pattern: 265, adaptive: 90,
 };
+
+/** Hue is what tells the archetypes apart on the web, so it needs a key of
+ *  its own; the shape legend only ever explained the three node classes. */
+const REGION_NAMES: [Region, string][] = [
+  ['high', 'high roll'], ['volume', 'volume'], ['jackpot', 'jackpot'],
+  ['pattern', 'pattern'], ['control', 'control'], ['adaptive', 'switching'],
+];
 
 type Status = 'allocated' | 'available' | 'unaffordable' | 'locked' | 'hidden';
 
@@ -93,7 +110,20 @@ export const TreeView = memo(function TreeView({
   );
 
   const [view, setView] = useState({ x: 0, y: 0, zoom: 1 });
+  const userZoomed = useRef(false);
+
   const [size, setSize] = useState({ w: 0, h: 0 });
+  // Keep the smallest node hittable. `scale(z) translate(t)` maps a node at p
+  // to z*(p+t), so holding `start` in the middle of the viewBox means t = C/z.
+  useEffect(() => {
+    if (userZoomed.current || size.w === 0 || size.h === 0) return;
+    const fit = Math.min(size.w / VB.w, size.h / VB.h);
+    const drawn = NODE_RADIUS.small * 2 * fit;
+    const z = drawn >= MIN_NODE_PX ? 1 : Math.min(3, MIN_NODE_PX / drawn);
+    const cx = VB.minX + VB.w / 2;
+    const cy = VB.minY + VB.h / 2;
+    setView({ x: z === 1 ? 0 : cx / z, y: z === 1 ? 0 : cy / z, zoom: z });
+  }, [size.w, size.h]);
   // The panel holds the last node the player looked at or pressed, so it does
   // not empty out the moment the pointer moves away.
   const [inspected, setInspected] = useState<string | null>(null);
@@ -129,6 +159,7 @@ export const TreeView = memo(function TreeView({
 
   const onWheel = (e: React.WheelEvent): void => {
     const z = Math.min(3, Math.max(0.5, view.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+    userZoomed.current = true;
     setView((v) => ({ ...v, zoom: z }));
   };
 
@@ -208,7 +239,23 @@ export const TreeView = memo(function TreeView({
                 transform={`translate(${n.position.x} ${n.position.y})`}
                 className={`node node--${n.nodeType} node--${st}${inspected === n.id ? ' node--inspected' : ''}`}
                 style={{ ['--hue' as string]: REGION_HUE[n.region] }}
+                /* Every visible node is focusable, not only the affordable
+                   ones: reading the web is half of using it, and without
+                   this the whole tree was unreachable without a mouse. */
+                tabIndex={0}
+                role="button"
+                aria-label={nodeLabel(n, st)}
+                aria-disabled={st !== 'available'}
                 onPointerEnter={() => setInspected(n.id)}
+                onFocus={() => setInspected(n.id)}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter' && e.key !== ' ') return;
+                  // Space also throws the dice; a focused node owns it first.
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setConfirmRefund(false);
+                  if (st === 'available') actions.allocate(n.id);
+                }}
                 onClick={() => {
                   setInspected(n.id);
                   // Touching the web is an answer of sorts: stop asking.
@@ -237,6 +284,14 @@ export const TreeView = memo(function TreeView({
           size={size}
         />
       )}
+
+      <div className="tree__regions" aria-hidden>
+        {REGION_NAMES.map(([region, label]) => (
+          <span key={region} style={{ ['--hue' as string]: REGION_HUE[region] }}>
+            <i className="tree__regionDot" />{label}
+          </span>
+        ))}
+      </div>
 
       <div className="tree__legend">
         <span><Swatch type="small" /> small</span>
@@ -306,6 +361,20 @@ function Swatch({ type }: { type: PassiveNode['nodeType'] }): JSX.Element {
       </g>
     </svg>
   );
+}
+
+/** What a screen reader says for a node: what it is, what it costs, and why
+ *  it can or cannot be taken. */
+function nodeLabel(n: PassiveNode, st: Status): string {
+  const cost = [
+    n.costs.score ? `${n.costs.score} Score` : '',
+    n.costs.meta ? `${n.costs.meta} Meta` : '',
+  ].filter(Boolean).join(' and ');
+  const state = st === 'allocated' ? 'allocated'
+    : st === 'available' ? 'available'
+    : st === 'unaffordable' ? 'cannot afford'
+    : 'locked, connect an adjacent node first';
+  return `${n.name}, ${n.nodeType}${cost ? `, ${cost}` : ''}. ${state}.`;
 }
 
 /** Which currency a cost is in, told by shape as well as by colour. */

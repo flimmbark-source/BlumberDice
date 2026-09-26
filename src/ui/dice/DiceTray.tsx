@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { canRoll, displayStats, type GameState, type RollRecord } from '../../engine/game.ts';
+import { prefersReducedMotion } from '../motion.ts';
 import { actions, store } from '../store.ts';
 import { ISO_X, ISO_Y, project, v3 } from './math3d.ts';
 import {
@@ -23,6 +24,8 @@ function tumbleFor(backlog: number): number {
 
 export function DiceTray({ s }: { s: GameState }): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /** Set by the frame loop so a real control can throw the dice too. */
+  const rollRef = useRef<(() => void) | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<World>(createWorld());
   const cursorRef = useRef<number>(0);
@@ -189,16 +192,21 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
         throwing.splice(throwing.indexOf(hit), 1);
         throwing.unshift(hit);
       }
+      const calm = prefersReducedMotion();
       throwing.forEach((die, i) => {
         throwDie(world, die, {
-          minTumbleMs: 300 + i * 70,
+          // Reduced motion keeps the throw but drops the long tumble: the die
+          // is steered onto its face as soon as the physics allows.
+          minTumbleMs: calm ? 0 : 300 + i * 70,
           fromClick: i === 0,
-          power: i === 0 ? 1.05 : 1,
+          power: calm ? 0.45 : i === 0 ? 1.05 : 1,
         });
       });
 
       actions.roll();
     };
+
+    rollRef.current = () => doRoll(null);
 
     const onDown = (e: PointerEvent): void => {
       const p = toWorldScreen(e.clientX, e.clientY);
@@ -207,7 +215,11 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
 
     const onKey = (e: KeyboardEvent): void => {
       if (e.code !== 'Space') return;
-      if ((e.target as HTMLElement)?.closest('input,button,select,textarea')) return;
+      // Anything focusable owns its own Space: the passive web's nodes are
+      // activated with it, and they are not <button> elements.
+      if ((e.target as HTMLElement)?.closest(
+        'input,button,select,textarea,[role="button"],[tabindex]',
+      )) return;
       e.preventDefault();
       doRoll(null);
     };
@@ -235,9 +247,21 @@ export function DiceTray({ s }: { s: GameState }): JSX.Element {
 
   return (
     <div className="tray" ref={wrapRef}>
-      <canvas className="tray__canvas" ref={canvasRef} />
+      <canvas className="tray__canvas" ref={canvasRef} aria-hidden />
+      {/* The canvas cannot be focused or announced, so the die was reachable
+          only by a Space shortcut nothing advertised. This is the real
+          control: off-screen until focused, then visible like any button. */}
+      <button
+        type="button"
+        className="tray__roll"
+        disabled={!ready}
+        onClick={() => rollRef.current?.()}
+      >
+        {dice > 1 ? `Throw ${dice} dice` : 'Roll the die'}
+      </button>
       <div className={`tray__hint${ready && s.totalRolls < 6 ? ' tray__hint--show' : ''}`}>
         {dice > 1 ? `click to throw ${dice} dice` : 'click the die to roll'}
+        <span className="tray__hintKey"> · or press Space</span>
       </div>
       {resolving && s.pending.length > 3 && (
         <div className="tray__queue">{s.pending.length} rolls resolving</div>

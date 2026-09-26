@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { prefersReducedMotion } from './motion.ts';
 
 /** Time constant for the approach, in seconds. */
 const TAU = 0.16;
@@ -26,7 +27,13 @@ export function useCountUp(
   const hold = useRef(getHold);
   hold.current = getHold;
 
+  // A total that eases upward is still motion, and the hold that keeps it in
+  // step with the fading ghost is only there to match an animation we are no
+  // longer playing. Under the setting, the number is simply the number.
+  const calm = prefersReducedMotion();
+
   useEffect(() => {
+    if (calm) return;
     let raf = 0;
     let last = performance.now();
 
@@ -48,7 +55,9 @@ export function useCountUp(
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [calm]);
+
+  if (calm) return { value: target, moving: false };
 
   const revealed = target - (getHold?.() ?? 0);
   return { value: shown, moving: Math.abs(revealed - shown) >= SNAP };

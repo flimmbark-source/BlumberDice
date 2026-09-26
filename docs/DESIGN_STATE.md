@@ -336,6 +336,51 @@ slot-machine build reads 53.9 score/sec against the 31.9 previously reported —
 so any balance conclusion drawn from the old hybrid rows should be re-checked.
 The single-archetype rows are unaffected; they were already closed.
 
+### 16. The interface had to be operable without a mouse
+
+A pass over the running app, not the code. Six defects, four of them real
+breakages rather than matters of taste:
+
+- **Below 900px the passive web vanished.** Stacked, the grid was
+  `auto 1fr` and the tray's 660px cap took the whole viewport, squeezing the
+  side panel to zero — including the tab bar, so there was no way back to it.
+  Half the game was unreachable at a narrow window. The tray now takes a
+  share of the viewport and the web keeps a 300px floor.
+- **The web could not be used without a mouse.** All 54 nodes were bare SVG
+  `<g>` elements: no `tabindex`, no role, no label. Tab reached three tab
+  buttons and nothing else. Nodes are now focusable and activate on Enter or
+  Space, announce their name, class, cost and why they can or cannot be
+  taken, and show the popup on focus as well as hover.
+- **The die had no control at all.** Space rolled, via a global key handler,
+  but nothing advertised it and no assistive technology could find it. There
+  is now a real button, off-screen until focused, and the hint says so.
+- **Nothing honoured `prefers-reduced-motion`.** A tumbling die, a hop, a
+  fading ghost and an easing total are exactly what the setting is for. Under
+  it the throw stays but the long tumble does not, and the total is simply
+  the number — which also means dropping the hold that keeps the counter in
+  step with a ghost that is no longer animating.
+- **Colour was unexplained.** Hue carries the archetype and shape carries the
+  class, and only shape was legended. There is a region key now.
+- **Targets were 5px at narrow widths.** Fitting all 54 nodes into a short
+  panel shrank a Small below anything clickable. Below a floor the web now
+  starts zoomed and centred, and the player pans.
+
+Not fixed, and worth deciding rather than drifting:
+
+- A Small is 15px even on a wide screen, under the usual 24px guidance. Fixing
+  it properly means larger nodes or invisible hit padding, and padding risks
+  stealing hover from neighbours at the current spacing.
+- The resting die sits in the lower half of its tray, leaving about 40% dead
+  space above. The headroom is real — thrown dice use it — but at rest the
+  composition reads as unbalanced rather than as reserved space.
+- The cooldown is a 3px full-bleed line at the bottom of the play area. It
+  reads as a divider, not as a meter, and it is nowhere near the die it gates.
+- Nothing states a next goal. An incremental game usually shows the next
+  milestone; here a new player sees a number going up and no target.
+- The whole 54-node web is drawn at zero progress, which sits awkwardly with
+  the progressive disclosure the specification asks for. Path of Exile can do
+  this because its tree is the pitch; here it is 49 unreachable dots.
+
 ---
 
 ## Unresolved — deliberately not implemented

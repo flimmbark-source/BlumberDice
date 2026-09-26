@@ -75,7 +75,17 @@ button:disabled { cursor: default; }
 .main { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(420px, 1.25fr); flex: 1; min-height: 0; }
 
 @media (max-width: 900px) {
-  .main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  /* Stacked, the tray's 660px cap ate the whole viewport and squeezed the
+     passive web to nothing -- with no tab bar left to get back to it, which
+     removed half the game. The tray gets a share of the viewport here, and
+     the web keeps a floor. */
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, auto) minmax(300px, 1fr);
+  }
+  .game { border-right: none; border-bottom: 1px solid var(--line); min-height: 0; }
+  .tray { max-height: 38vh; min-height: 200px; }
+  .side { min-height: 0; }
   .topbar { flex-wrap: wrap; gap: 12px; }
 }
 
@@ -111,6 +121,21 @@ button:disabled { cursor: default; }
 }
 .tray__hint--show { opacity: 1; animation: hintpulse 2.6s ease-in-out infinite; }
 @keyframes hintpulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+.tray__hintKey { opacity: 0.62; }
+
+/* Off-screen until focused: the mouse has the canvas, the keyboard has this. */
+.tray__roll {
+  position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+  padding: 7px 16px; border-radius: 999px;
+  border: 1px solid var(--accent); background: var(--bg-3); color: var(--text);
+  font-size: 13px;
+  opacity: 0; pointer-events: none;
+}
+.tray__roll:focus-visible {
+  opacity: 1; pointer-events: auto;
+  outline: 2px solid #ffffff; outline-offset: 2px;
+}
 
 .tray__queue {
   position: absolute; right: 14px; top: 12px;
@@ -456,6 +481,25 @@ button.minidie:hover .die__body { stroke: var(--muted); }
   margin-left: auto; font-size: 10.5px; color: #5f6a79; white-space: nowrap;
 }
 
+.node:focus { outline: none; }
+.node:focus-visible .node__shape {
+  stroke: #ffffff; stroke-width: 3;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.55));
+}
+
+/* Region key: colour carries the archetype, and only shape was ever legended. */
+.tree__regions {
+  position: absolute; left: 12px; top: 10px; z-index: 3;
+  display: flex; flex-wrap: wrap; gap: 3px 12px; max-width: 60%;
+  font-size: 10.5px; color: var(--muted);
+}
+.tree__regions span { display: inline-flex; align-items: center; gap: 5px; }
+.tree__regionDot {
+  width: 8px; height: 8px; border-radius: 50%;
+  border: 1.5px solid hsl(var(--hue) 70% 62%);
+  background: hsl(var(--hue) 70% 62% / 0.25);
+}
+
 .tree__tools {
   position: absolute; right: 12px; bottom: 9px; z-index: 4;
   display: flex; align-items: center; gap: 7px;
@@ -513,3 +557,18 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 .debug__row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
 .debug__row span { color: var(--muted); }
 .debug__row b { font-variant-numeric: tabular-nums; margin-right: 6px; }
+
+/* ------------------------------------------------------- reduced motion */
+/* A tumbling die, a hopping settle, a fading ghost and a counting total are
+   this game's entire texture, and every one of them is vestibular motion.
+   Honour the system setting: the dice still throw, but they stop being a
+   sustained animation, and nothing pulses or eases. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .tray__hint--show { animation: none; opacity: 1; }
+  .cooldown__fill { transition: none; }
+}
