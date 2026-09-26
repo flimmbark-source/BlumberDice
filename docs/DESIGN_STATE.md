@@ -30,7 +30,7 @@ Three labels are used:
 | The main interaction is visually dominant | `ui/dice/` — a physics tray the player throws |
 | Seeded RNG, deterministic state layer, local save | `engine/rng.ts`, `engine/save.ts` |
 | No merit, morality, enlightenment, balance meter or ratio requirement | *nothing implements one; `tests/tree.test.ts` asserts no pre-discovery Meta cost leaks* |
-| Progressive workspace reveal: Dice + Score first; at 20 Score, Build Tree + Stats + Log appear | `ui/App.tsx` |
+| Progressive workspace reveal: Dice + Score first; at 20 Score the tech window appears, with Build / Stats / Log as top-bar tabs | `ui/App.tsx` |
 | Selecting a reachable unowned tree node inspects it and sets/clears it as the current goal; no separate goal button | `ui/TreeView.tsx`, `ui/SelectedUpgrade.tsx` |
 | A pinned goal creates the Next Goal window | `ui/App.tsx`, `ui/GoalBar.tsx` |
 | Windows are movable/minimizable; Align Windows restores the authored non-overlapping layout | `ui/DesktopWindow.tsx`, `ui/App.tsx` |
@@ -45,7 +45,7 @@ useful in one of them except where its own text says so.
 
 ### 0. Persistent 20-Score reveal
 
-**Confirmed threshold.** The user explicitly set the Build Tree, Stats and Log reveal at 20 Score.
+**Confirmed threshold.** The user explicitly set the tech window reveal at 20 Score, with Build / Stats / Log remaining alternate views selected from the top-bar tabs.
 
 **Implementation detail.** The prototype records that threshold against lifetime `scoreEarned`, rather than current spendable Score, so buying an upgrade cannot make those windows disappear again.
 
