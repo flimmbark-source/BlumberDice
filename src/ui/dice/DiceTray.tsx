@@ -15,8 +15,14 @@ import { drawBackdrop, drawWorld, THEME_A, THEME_B } from './render.ts';
 const MAX_DICE = 9;
 /** Surface side in world units. Fixed, so the dice always read the same size. */
 const SURFACE_SIDE_IN_DICE = 4.8;
-/** Fraction of the canvas height kept above the surface for the throw. */
-const HEADROOM = 0.34;
+/**
+ * Fraction of the canvas height kept above the surface for the throw.
+ *
+ * Reserved space, not wasted space — a thrown die uses it. But at a third
+ * of a now much taller panel it was an obvious hole above the arena, and
+ * the throw arc does not need to grow with the panel.
+ */
+const HEADROOM = 0.2;
 
 /** How long a die must tumble. Big cascades speed up so the tray keeps pace. */
 function tumbleFor(backlog: number): number {
@@ -78,10 +84,15 @@ export function DiceTray({ s, rollRef }: {
       // the next resize, which may never come.
       zoom = Math.max(0.15, Math.min(
         (rect.width - 22) / diamondW,
-        ((rect.height - 18) * (1 - HEADROOM)) / diamondH,
+        ((rect.height - 12) * (1 - HEADROOM)) / diamondH,
       ));
       originX = rect.width / 2;
-      originY = Math.max(diamondH * zoom * 0.1, rect.height - 12 - diamondH * zoom);
+      // Centre the arena in what is left, rather than dropping it to the
+      // floor of the panel with all the slack piled above it.
+      originY = Math.max(
+        diamondH * zoom * 0.12,
+        rect.height - diamondH * zoom - (rect.height - diamondH * zoom) * 0.42,
+      );
     };
     resize();
     const ro = new ResizeObserver(resize);

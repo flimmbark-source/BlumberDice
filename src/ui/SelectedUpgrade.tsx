@@ -1,4 +1,3 @@
-import { currentGoal } from '../engine/goal.ts';
 import { checkAllocation, describeNode, isVisible } from '../engine/tree.ts';
 import { NODES, NODES_BY_ID } from '../engine/nodes.ts';
 import type { GameState } from '../engine/game.ts';
@@ -38,9 +37,6 @@ export function SelectedUpgrade({ s, nodeId, onReveal }: {
   const state: 'owned' | 'available' | 'short' | 'locked' = owned ? 'owned'
     : check.ok ? 'available'
     : reachable ? 'short' : 'locked';
-  const goal = currentGoal(s);
-  const isGoal = goal.kind === 'target' && goal.node.id === node.id;
-
   return (
     <aside className="panel panel--right">
       <h2 className="panel__title">Selected upgrade</h2>
@@ -84,16 +80,12 @@ export function SelectedUpgrade({ s, nodeId, onReveal }: {
             Allocate
           </button>
         )}
-        {state === 'short' && (
-          <button type="button" className="btn btn--primary"
-            onClick={() => actions.pin(isGoal ? null : node.id)}>
-            {isGoal ? 'Clear goal' : 'Set as goal'}
-          </button>
-        )}
+        {/* No goal button here: pressing the node in the web sets and clears
+            it, and the goal card by the dice carries its own control. An
+            owned node needs no sentence either — the chip above says so. */}
         {state === 'locked' && (
           <p className="upg__note">Connect an adjacent node first.</p>
         )}
-        {state === 'owned' && <p className="upg__note">Already part of your build.</p>}
       </div>
 
       <Chain s={s} node={node} onReveal={onReveal} />

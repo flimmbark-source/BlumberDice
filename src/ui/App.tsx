@@ -252,11 +252,6 @@ function GamePanel({ s, onOpenTree }: {
         <GoalBar s={s} onOpenTree={onOpenTree} />
         {s.decision && <DecisionBar decision={s.decision} />}
         <ControlRail s={s} />
-        <div className="feed">
-          {s.log.slice(-3).reverse().map((e) => (
-            <div key={e.id} className={`feed__line feed__line--${e.kind}`}>{e.text}</div>
-          ))}
-        </div>
       </div>
     </section>
   );

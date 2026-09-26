@@ -675,6 +675,30 @@ carries it. And the top bar gained a stacking context, because the settings
 menu hangs below the bar and was being painted under the right-hand column,
 which swallowed its clicks.
 
+### 26. The dice get the room
+
+Four trims, all in the same direction.
+
+The upgrade panel lost its **Set as goal** button and its *"Already part of
+your build"* line. Pinning is unchanged and still done by pressing the node
+in the web, which is where the player already is when they decide; the goal
+card by the dice keeps its own *clear*. The owned sentence said nothing the
+**Owned** chip two lines above had not. The locked note stays, because
+"connect an adjacent node first" tells you why you cannot buy it, which is
+not a restatement of anything.
+
+The one-line log strip under the dice is gone. Nothing was lost — the Log
+tab has all of it, in full, and the strip only ever showed the last three
+entries.
+
+That space, plus a smaller reserve above the arena, goes to the dice. The
+throw's headroom dropped from 34% of the canvas to 20%: it is real reserved
+space that a thrown die uses, but the arc does not need to grow with the
+panel, and at a third of a much taller column it was simply a hole. The
+arena is also centred in what is left rather than dropped to the floor with
+the slack piled above it. The dice area is now 627px against 187px of
+controls, and the Roll button and the milestone card sit at the bottom.
+
 ---
 
 ## Unresolved — deliberately not implemented

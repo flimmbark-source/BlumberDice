@@ -918,11 +918,12 @@ button.chain__btn:hover { border-color: var(--accent); }
 
 .game__score { margin-left: auto; }
 .game__score .currency__value { font-size: 20px; }
-.game__arena { position: relative; flex: 1 1 auto; min-height: 220px; }
+.game__arena { position: relative; flex: 1 1 auto; min-height: 260px; }
 .tray { position: absolute; inset: 0; max-height: none; min-height: 0; }
 .game__controls {
-  flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px;
-  padding: 12px 14px 13px;
+  /* Pinned to the bottom of the column so the arena keeps everything else. */
+  flex: 0 0 auto; display: flex; flex-direction: column; gap: 9px;
+  padding: 11px 14px 12px;
   border-top: 1px solid rgba(77, 166, 255, 0.14);
 }
 
