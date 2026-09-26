@@ -38,8 +38,6 @@ export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false }: {
   const state: 'owned' | 'available' | 'short' | 'locked' = owned ? 'owned'
     : check.ok ? 'available'
     : reachable ? 'short' : 'locked';
-  const isGoal = s.pinned === node.id;
-  const canTarget = !owned && state !== 'locked';
   return (
     <aside className="panel panel--right">
       {!embedded && <h2 className="panel__title">Selected upgrade</h2>}
@@ -76,16 +74,6 @@ export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false }: {
             {!node.costs.score && !node.costs.meta && <span className="coin">—</span>}
           </span>
         </div>
-
-        {canTarget && (
-          <button
-            type="button"
-            className={`btn btn--goal${state === 'short' ? ' btn--goal-primary' : ''}`}
-            onClick={() => actions.pin(isGoal ? null : node.id)}
-          >
-            {isGoal ? 'Clear goal' : 'Set as goal'}
-          </button>
-        )}
 
         {state === 'available' && (
           <button type="button" className="btn btn--primary"
