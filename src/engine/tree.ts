@@ -17,13 +17,19 @@ export function describeNode(node: PassiveNode, framework: FrameworkId): string 
   return typeof node.description === 'string' ? node.description : node.description[framework];
 }
 
+export interface ResolvedTrigger {
+  trigger: Trigger;
+  sourceName: string;
+}
+
 export interface ResolvedBuild {
   /** Stats with every unconditional modifier applied. */
   stats: StatBlock;
   /** Modifiers whose `when` must be checked per resolved roll. */
   conditional: StatModifier[];
   flags: Set<FlagKey>;
-  triggers: Trigger[];
+  /** Trigger plus the upgrade that supplied it, for mechanical feedback. */
+  triggers: ResolvedTrigger[];
   regionCounts: Record<Region, number>;
 }
 
@@ -39,7 +45,7 @@ export function resolveBuild(allocated: ReadonlySet<string>): ResolvedBuild {
   const unconditional: StatModifier[] = [];
   const conditional: StatModifier[] = [];
   const flags = new Set<FlagKey>();
-  const triggers: Trigger[] = [];
+  const triggers: ResolvedTrigger[] = [];
   const regionCounts = {
     core: 0, high: 0, volume: 0, jackpot: 0, control: 0, pattern: 0, adaptive: 0,
   } as Record<Region, number>;
@@ -51,7 +57,7 @@ export function resolveBuild(allocated: ReadonlySet<string>): ResolvedBuild {
     if (node.bridges) for (const r of node.bridges) if (r !== node.region) regionCounts[r] += 1;
     for (const m of node.modifiers ?? []) (m.when?.length ? conditional : unconditional).push(m);
     for (const f of node.flags ?? []) flags.add(f);
-    for (const t of node.triggers ?? []) triggers.push(t);
+    for (const t of node.triggers ?? []) triggers.push({ trigger: t, sourceName: node.name });
   }
 
   applyModifiers(stats, unconditional);
