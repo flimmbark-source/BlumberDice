@@ -537,8 +537,9 @@ export function step(world: World, dtMs: number): void {
  * moves before the player has seen what they rolled, so each roll's change is
  * withheld until its ghost has gone.
  *
- * Dice that are re-thrown or removed drop out on their own: `throwDie` clears
- * `rollId`, and a die that has left the world is no longer counted.
+ * If a die is re-thrown before its number fades, that reveal is detached
+ * from the physical cube and continues independently at the landing spot.
+ * A die that actually leaves the world is no longer counted.
  */
 export function releaseFadedGhosts(world: World): { score: number; meta: number } {
   let score = 0;
