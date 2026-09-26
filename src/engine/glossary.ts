@@ -21,13 +21,13 @@ export interface GlossaryEntry {
 export const GLOSSARY: Record<string, GlossaryEntry> = {
   score: {
     term: 'Score',
-    text: 'The currency rolls pay out in. It buys nodes in the web, and a few '
-      + 'nodes stake it on a roll.',
+    text: 'The main currency. Framework A rolls gain Score from their face value '
+      + 'and other effects; it buys nodes in the web. Framework B rolls can reduce it.',
   },
   meta: {
     term: 'Meta',
-    text: 'The second currency. It accrues on rolls that do not add Score, and '
-      + 'the deepest nodes cost it as well.',
+    text: 'The second currency. In Framework B, every resolved roll grants exactly '
+      + '1 Meta, regardless of the face rolled. Some deeper nodes cost Meta.',
   },
   'bonus roll': {
     term: 'Bonus roll',
@@ -46,33 +46,38 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   pressure: {
     term: 'Pressure',
-    text: 'A counter that rises on every roll missing the jackpot, up to a cap. '
-      + 'A jackpot pays the whole of it out as Score, then clears it.',
+    text: 'A jackpot counter. Each miss adds Pressure; when a jackpot hits, all '
+      + 'current Pressure is added to the jackpot payout and then resets to 0. '
+      + 'Its starting cap is 25 and other nodes can raise it.',
   },
   climb: {
     term: 'Climb',
-    text: 'A stack gained for each roll strictly higher than the one before it. '
-      + 'Any roll that is not higher clears every stack at once.',
+    text: 'A streak stack gained whenever a roll is strictly higher than the '
+      + 'previous roll, up to 5 stacks. Each Climb stack gives faces 4, 5, and 6 '
+      + '+0.3 weight. A roll that is not higher clears all Climb stacks.',
   },
   pendulum: {
     term: 'Pendulum',
-    text: 'A counter that rises on every roll, up to a cap. Changing framework '
-      + 'spends it across the rolls that follow.',
+    text: 'A counter that gains 1 per roll, up to 25. Changing framework stores '
+      + 'that amount for the next 3 rolls: each pays Pendulum ÷ 5 Score in '
+      + 'Framework A or Pendulum ÷ 10 Meta in Framework B.',
   },
   hold: {
     term: 'Hold',
-    text: 'Storage for one result. A held result pays nothing while it sits '
-      + 'there — no Score, no Meta — until you swap it into a later roll.',
+    text: 'Storage for rolled results. A held result pays no Score or Meta while '
+      + 'stored; when played later, it replaces that roll’s result. Hold starts '
+      + 'with 1 slot and Reserve increases its capacity.',
   },
   'full set': {
     term: 'Full Set',
-    text: 'All six faces rolled since the last set completed. Finishing one '
-      + 'pays out and starts the count again.',
+    text: 'A set is complete once all six faces have appeared since the previous '
+      + 'Full Set. Completing it pays its reward, then clears the collected faces '
+      + 'and starts a new set.',
   },
   'set window': {
     term: 'Set window',
-    text: 'The span since the last Full Set completed. A face counts as new the '
-      + 'first time it appears inside it.',
+    text: 'The rolls since the last Full Set completed. Collector treats a face '
+      + 'as new only the first time that face appears during this window.',
   },
   stacks: {
     term: 'Stacks',
@@ -81,8 +86,9 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   wager: {
     term: 'Wager',
-    text: 'Score staked on a roll before it happens. A jackpot returns it '
-      + 'multiplied; any other result loses it.',
+    text: 'Score removed before a roll and staked on that result. With Stake, a '
+      + 'jackpot returns the wager multiplied by 2.5; a miss loses it unless '
+      + 'another effect refunds part of it.',
   },
 };
 
