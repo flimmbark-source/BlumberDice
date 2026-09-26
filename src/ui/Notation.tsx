@@ -3,7 +3,7 @@ import {
   notationFor, isClause, KEYWORDS,
   type ClauseIcon, type Notation, type Row, type Token,
 } from '../engine/notation.ts';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { Face, FrameworkId } from '../engine/types.ts';
 import type { NodeNotation } from '../engine/notation.ts';
 
@@ -196,15 +196,47 @@ export function Prose({ text }: { text: string }): JSX.Element {
  * Press latches the definition open, for touch and for anyone who would
  * rather not hold the pointer still.
  */
+/** Width of the definition, also used to keep it inside the window. */
+const KWPOP_W = 244;
+const KWPOP_GAP = 8;
+const KWPOP_EDGE = 10;
+
 function Keyword({ word }: { word: string }): JSX.Element {
   const entry: GlossaryEntry | null = lookupKeyword(word);
   const [hover, setHover] = useState(false);
   const [held, setHeld] = useState(false);
+  const wordRef = useRef<HTMLElement>(null);
+  const popRef = useRef<HTMLSpanElement>(null);
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  const open = (hover || held) && entry !== null;
+
+  /**
+   * Put the definition beside the word it explains.
+   *
+   * Measured rather than guessed. An earlier version pinned it to the panel
+   * instead, because anchoring to the word ran it off the edge whenever the
+   * term sat near a margin — but the fix for that is to clamp, not to move
+   * it away from what it is about. Fixed positioning, so a scrolling panel
+   * cannot clip it.
+   */
+  useLayoutEffect(() => {
+    if (!open) { setAt(null); return; }
+    const w = wordRef.current?.getBoundingClientRect();
+    if (!w) return;
+    const h = popRef.current?.offsetHeight ?? 96;
+    const left = Math.max(
+      KWPOP_EDGE,
+      Math.min(w.left + w.width / 2 - KWPOP_W / 2, window.innerWidth - KWPOP_W - KWPOP_EDGE),
+    );
+    const above = w.top - h - KWPOP_GAP;
+    setAt({ left, top: above >= KWPOP_EDGE ? above : w.bottom + KWPOP_GAP });
+  }, [open, word]);
+
   if (!entry) return <em className="kw">{word}</em>;
 
-  const open = hover || held;
   return (
     <em
+      ref={wordRef}
       className={`kw kw--known${open ? ' kw--open' : ''}`}
       tabIndex={0}
       role="button"
@@ -222,7 +254,16 @@ function Keyword({ word }: { word: string }): JSX.Element {
     >
       {word}
       {open && (
-        <span className="kwpop" role="tooltip">
+        <span
+          ref={popRef}
+          className="kwpop"
+          role="tooltip"
+          // Hidden for the one frame before it has been measured, so it is
+          // never seen in the wrong place.
+          style={at
+            ? { left: at.left, top: at.top }
+            : { left: 0, top: 0, visibility: 'hidden' }}
+        >
           <span className="kwpop__term">{entry.term}</span>
           <span className="kwpop__text">{entry.text}</span>
         </span>
@@ -230,3 +271,4 @@ function Keyword({ word }: { word: string }): JSX.Element {
     </em>
   );
 }
+

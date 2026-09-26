@@ -315,47 +315,8 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 .tree__legend span { display: inline-flex; align-items: center; gap: 4px; }
 .tree__hint { margin-left: 6px; opacity: 0.7; }
 
-.nodepop {
-  /* Tinted by node class, so the three kinds of node are told apart before
-     a word is read: a number, a new rule, or a change to the game. */
-  --pop-tint: #7d9bcd;
-  position: absolute; z-index: 5;
-  transform: translate(-50%, -100%);
-  padding: 11px 13px 10px;
-  border: 1px solid color-mix(in srgb, var(--pop-tint) 38%, transparent);
-  border-radius: var(--radius);
-  background: rgba(13, 17, 23, 0.975);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 color-mix(in srgb, var(--pop-tint) 14%, transparent);
-  /* Never eat a pointer event: the web underneath stays hoverable. */
-  pointer-events: none;
-}
-.nodepop--notable { --pop-tint: #a98ff0; }
-.nodepop--keystone { --pop-tint: var(--score); }
-.nodepop--bridge { --pop-tint: var(--meta); }
-.nodepop--below { transform: translate(-50%, 0); }
 
-/* A small tail pointing back at the node. */
-.nodepop::after {
-  content: ''; position: absolute; left: 50%; margin-left: -7px;
-  border: 7px solid transparent;
-}
-.nodepop:not(.nodepop--below)::after { top: 100%; border-top-color: rgba(13, 17, 23, 0.975); }
-.nodepop--below::after { bottom: 100%; border-bottom-color: rgba(13, 17, 23, 0.975); }
 
-/* 1. Name, with the class understated in the corner. */
-.nodepop__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.nodepop__name { font-weight: 650; font-size: 14px; letter-spacing: 0.01em; }
-.nodepop__type {
-  flex: none;
-  padding: 2px 6px 2.5px; border-radius: 4px;
-  font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.12em;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--pop-tint) 88%, #ffffff);
-  background: color-mix(in srgb, var(--pop-tint) 15%, transparent);
-  border: 1px solid color-mix(in srgb, var(--pop-tint) 34%, transparent);
-}
 
 /* 2. The mechanic. The strongest element on the card. */
 .nt {
@@ -469,7 +430,7 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 }
 
 /* 3. Prose. Clarifies the notation; keywords tie systems together. */
-.nodepop__desc {
+.upg__desc, .nodepop__desc {
   margin: 0; font-size: 12px; line-height: 1.5; color: #96a2b3;
 }
 .kw { font-style: normal; color: #c3cddc; font-weight: 600; }
@@ -477,9 +438,8 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 /* A term that can be asked what it means. The dotted rule is the usual
    convention and stays quiet enough not to speckle the paragraph. */
 .kw--known {
-  /* Deliberately not positioned: the definition anchors to the card, not to
-     the word, so it lands in the same place every time and cannot be pushed
-     off the edge by a term near the margin. */
+  /* The definition is positioned against the window, not this element, so
+     a scrolling panel cannot clip it. */
   /* The node popup ignores the pointer so the web stays hoverable; the
      keyword opts back in for itself alone. */
   pointer-events: auto;
@@ -491,17 +451,15 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 .kw--known:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; border-radius: 2px; }
 
 .kwpop {
-  position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); z-index: 7;
-  display: block;
-  padding: 7px 9px 8px;
-  border: 1px solid #3a4658; border-radius: 7px;
-  background: #11161d;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.66);
+  position: fixed; z-index: 60;
+  display: block; width: 244px;
+  padding: 8px 10px 9px;
+  border: 1px solid var(--line-2); border-radius: 8px;
+  background: #0b1524;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.72);
   font-weight: 400; font-style: normal;
-  cursor: default;
+  cursor: default; pointer-events: none;
 }
-/* A card that sits below its node has no room above it for the definition. */
-.nodepop--below .kwpop { bottom: auto; top: calc(100% + 8px); }
 .kwpop__term {
   display: block; margin-bottom: 2px;
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
@@ -509,22 +467,12 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 }
 .kwpop__text { display: block; font-size: 11px; line-height: 1.45; color: #9aa6b6; }
 
-/* 4. Cost and state, secondary to the mechanic. */
-.nodepop__foot {
-  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;
-  margin-top: 8px; padding-top: 7px;
-  border-top: 1px solid rgba(125, 155, 205, 0.09);
-}
-.nodepop__costs { display: inline-flex; gap: 11px; font-size: 12px; font-weight: 650; }
 .cost__mark { margin-right: 4px; vertical-align: -0.5px; fill: currentColor; opacity: 0.85; }
 .cost { color: var(--score); }
 .cost::after { content: ' Score'; font-size: 9.5px; font-weight: 500; opacity: 0.6; }
 .cost--alt { color: var(--meta); }
 .cost--alt::after { content: ' Meta'; }
 .cost--short { color: var(--risk); }
-.nodepop__status {
-  margin-left: auto; font-size: 10.5px; color: #5f6a79; white-space: nowrap;
-}
 
 .node:focus { outline: none; }
 .node:focus-visible .node__shape {

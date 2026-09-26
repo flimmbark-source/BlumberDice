@@ -699,6 +699,33 @@ arena is also centred in what is left rather than dropped to the floor with
 the slack piled above it. The dice area is now 627px against 187px of
 controls, and the Roll button and the milestone card sit at the bottom.
 
+### 27. The definition sits beside the word again
+
+Entry 21 anchored the glossary popup to the card rather than the word,
+because anchoring it to the word ran it off the edge whenever a term sat
+near a margin — and the heuristic I had written to guess which terms were
+"near the edge" was guesswork. Pinning it to the card was the right call
+against that guesswork, but it was the wrong fix for the actual problem: a
+definition belongs next to the thing it defines.
+
+It is measured now instead of guessed. On open the word's rectangle is
+read, the definition is centred on it and clamped to stay ten pixels inside
+the window, and it goes above unless there is no room, in which case it
+goes below. It is positioned against the window rather than an ancestor,
+because the upgrade panel scrolls and would otherwise clip it. For the one
+frame before the measurement it renders hidden, so it is never seen in the
+wrong place.
+
+Verified at three window sizes: centred on the word to the pixel, eight
+pixels above it, wholly on screen every time. The clamp and the flip are
+guards rather than everyday paths — the panel is 330px against a 244px
+definition, and the top bar keeps any word below the height where a flip
+would be needed — so the flip was exercised by forcing an oversized
+definition, which correctly went below.
+
+Cleaned up with it: fourteen rules for the floating tooltip the three-column
+redesign deleted. Only its prose rule was still doing anything.
+
 ---
 
 ## Unresolved — deliberately not implemented
