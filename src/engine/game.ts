@@ -76,7 +76,7 @@ export type DecisionPolicy = {
 export type RollStage = 'generate' | 'loadedChoice' | 'hold' | 'flip' | 'finalize' | 'ride';
 
 export interface RollProc {
-  kind: 'jackpot' | 'pattern' | 'bonus';
+  kind: 'jackpot' | 'pattern' | 'bonus' | 'ability';
   /** Short mechanical name shown at the die that caused it. */
   label: string;
   /** Compact result text, e.g. "+14 Score" or "+1 Bonus Roll". */
@@ -567,7 +567,12 @@ function drawAllowed(s: GameState, build: ResolvedBuild): void {
  * fired. Flip, Hold and Afterimage are excepted on purpose: those are
  * substitutions the player built to override the die, not rolls.
  */
-function refineFace(s: GameState, build: ResolvedBuild, face: Face): Face {
+function refineFace(
+  s: GameState,
+  build: ResolvedBuild,
+  face: Face,
+  procs: RollProc[],
+): Face {
   const stats = displayStats(s, build);
   const window = build.flags.has('preparedRoll') ? s.allowed : null;
   const resample = (): Face => (window && window.length > 0
@@ -576,19 +581,25 @@ function refineFace(s: GameState, build: ResolvedBuild, face: Face): Face {
   let f = face;
 
   if (f === 1 && stats.rerollOneChance > 0 && chance(s.rng, stats.rerollOneChance)) {
+    const before = f;
     f = resample();
+    procs.push({ kind: 'ability', label: 'SECOND LOOK', detail: `${before} → ${f}` });
   }
   if (
     f === 1 && stats.raisedFloorChance > 0
     && (!window || window.includes(2))
     && chance(s.rng, stats.raisedFloorChance)
   ) {
+    const before = f;
     f = 2;
+    procs.push({ kind: 'ability', label: 'RAISED FLOOR', detail: `${before} → ${f}` });
   }
   if (build.flags.has('noGoingBack') && s.lastFace === 6 && f === 1) {
+    const before = f;
     f = window && window.some((x) => x !== 1)
       ? sampleFaceAmong(s.rng, currentDistribution(s, build), window.filter((x) => x !== 1))
       : sampleFaceExcluding(s.rng, currentDistribution(s, build), 1);
+    procs.push({ kind: 'ability', label: 'NO GOING BACK', detail: `${before} → ${f}` });
   }
   return f;
 }
@@ -617,6 +628,11 @@ function processIntent(s: GameState, intent: RollIntent): ProcessResult {
           && s.faceBeforeSwitch !== null
         ) {
           face = s.faceBeforeSwitch;
+          intent.procs.push({
+            kind: 'ability',
+            label: 'AFTERIMAGE',
+            detail: `→ ${face}`,
+          });
         }
 
         const prepared = build.flags.has('preparedRoll');
@@ -636,7 +652,7 @@ function processIntent(s: GameState, intent: RollIntent): ProcessResult {
           break;
         }
 
-        intent.face = refineFace(s, build, face ?? draw());
+        intent.face = refineFace(s, build, face ?? draw(), intent.procs);
         intent.stage = 'hold';
         break;
       }
@@ -702,6 +718,7 @@ function processIntent(s: GameState, intent: RollIntent): ProcessResult {
         const wants = policy === 'higher' ? flipped > face : flipped < face;
         if (wants) {
           intent.face = flipped;
+          intent.procs.push({ kind: 'ability', label: 'FLIP', detail: `${face} → ${flipped}` });
           s.transient.flipCooldown = Math.floor(displayStats(s, build).flipPeriod);
         }
         intent.stage = 'finalize';
@@ -727,7 +744,7 @@ function takeCandidate(
 ): void {
   const opts = intent.candidates ?? [];
   const i = index >= 0 && index < opts.length ? index : 0;
-  intent.face = refineFace(s, build, opts[i]);
+  intent.face = refineFace(s, build, opts[i], intent.procs);
   intent.stage = 'hold';
 }
 
@@ -783,9 +800,15 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
     s.awaitingReflection = false;
     if (build.flags.has('reflection') && s.faceBeforeSwitch === face) {
       const mult = build.flags.has('duality') ? 2 : 1;
-      queueBonusRolls(s, 2 * mult, depth);
-      if (inA) { grantScore(s, 60 * mult); log(s, 'score', `Reflection +${60 * mult} Score`); }
-      else { grantMeta(s, 4 * mult); log(s, 'meta', `Reflection +${4 * mult} Meta`); }
+      const queued = queueBonusRolls(s, 2 * mult, depth);
+      const reward = inA ? `+${60 * mult} Score` : `+${4 * mult} Meta`;
+      if (inA) { grantScore(s, 60 * mult); log(s, 'score', `Reflection ${reward}`); }
+      else { grantMeta(s, 4 * mult); log(s, 'meta', `Reflection ${reward}`); }
+      intent.procs.push({
+        kind: 'ability',
+        label: 'REFLECTION',
+        detail: queued > 0 ? `${reward} · +${queued} Bonus Roll${queued === 1 ? '' : 's'}` : reward,
+      });
     }
   }
 
@@ -1124,6 +1147,7 @@ export function resolveDecision(s: GameState, choice: DecisionChoice): void {
         s.held.splice(choice.swapIndex, 1);
         if (s.held.length < Math.floor(displayStats(s, build).holdCapacity)) s.held.push(d.face);
         intent.face = swapped;
+        intent.procs.push({ kind: 'ability', label: 'HOLD', detail: `${d.face} → ${swapped}` });
         log(s, 'system', `Swapped in ${swapped}`);
       }
       intent.stage = 'flip';
@@ -1133,6 +1157,7 @@ export function resolveDecision(s: GameState, choice: DecisionChoice): void {
       if (choice.kind !== 'flip') return;
       if (choice.flip) {
         intent.face = d.flipped;
+        intent.procs.push({ kind: 'ability', label: 'FLIP', detail: `${d.face} → ${d.flipped}` });
         s.transient.flipCooldown = Math.floor(displayStats(s, build).flipPeriod);
       }
       intent.stage = 'finalize';
