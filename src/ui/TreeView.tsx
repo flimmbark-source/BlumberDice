@@ -3,6 +3,7 @@ import { EDGES, NODES, NODES_BY_ID } from '../engine/nodes.ts';
 import { checkAllocation, describeNode, isReachable, isVisible } from '../engine/tree.ts';
 import type { DiscoveryFlag, FrameworkId, PassiveNode, Region } from '../engine/types.ts';
 import { KEYWORDS } from '../engine/glossary.ts';
+import { actions } from './store.ts';
 
 /**
  * One interconnected web. Build identity is carried by shape, size and
@@ -284,8 +285,7 @@ export const TreeView = memo(function TreeView({
                 tabIndex={0}
                 role="button"
                 aria-label={nodeLabel(n, st, pinned === n.id, hasKeywords(n, framework))}
-                /* Only genuinely inert nodes are disabled. An unaffordable
-                   one is now an active control: pressing it sets the goal. */
+                /* Selecting a reachable unowned node also makes it the goal. */
                 onFocus={() => setInspected(n.id)}
                 onKeyDown={(e) => {
                   if (e.key === '?') {
@@ -295,13 +295,11 @@ export const TreeView = memo(function TreeView({
                     return;
                   }
                   if (e.key !== 'Enter' && e.key !== ' ') return;
-                  // Selecting a node only opens its inspector. Spending and
-                  // setting a goal are explicit actions in that window.
                   e.preventDefault();
                   e.stopPropagation();
-                  setInspected(n.id);
+                  selectNode(n.id, st, pinned, setInspected);
                 }}
-                onClick={() => setInspected(n.id)}
+                onClick={() => selectNode(n.id, st, pinned, setInspected)}
               >
                 <NodeShape type={n.nodeType} />
                 {(n.nodeType === 'keystone' || n.nodeType === 'notable') && st === 'allocated' && (
@@ -330,6 +328,20 @@ export const TreeView = memo(function TreeView({
     </div>
   );
 });
+
+function selectNode(
+  id: string,
+  status: Status,
+  pinned: string | null,
+  setInspected: (id: string | null) => void,
+): void {
+  setInspected(id);
+  // Selection is the goal gesture. Reachable unowned nodes become the goal;
+  // selecting the current goal again clears it. Locked/owned nodes remain
+  // inspectable without disturbing the current target.
+  if (status !== 'available' && status !== 'unaffordable') return;
+  actions.pin(pinned === id ? null : id);
+}
 
 function NodeShape({ type }: { type: PassiveNode['nodeType'] }): JSX.Element {
   switch (type) {
