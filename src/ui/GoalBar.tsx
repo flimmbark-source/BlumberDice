@@ -1,5 +1,5 @@
 import { currentGoal, successorOf, type Goal } from '../engine/goal.ts';
-import { NODES_BY_ID } from '../engine/nodes.ts';
+import { NODES, NODES_BY_ID } from '../engine/nodes.ts';
 import { checkAllocation } from '../engine/tree.ts';
 import type { DiscoveryFlag } from '../engine/types.ts';
 import type { GameState } from '../engine/game.ts';
@@ -25,6 +25,7 @@ export function GoalBar({ s, onOpenTree, selectedNodeId = null }: {
   selectedNodeId?: string | null;
 }): JSX.Element | null {
   const goal = selectedNodeGoal(s, selectedNodeId) ?? currentGoal(s);
+  const availableToBuy = purchasableCount(s);
   // Follows the same eased total as the HUD, so the bar and the number agree.
   const { value: shownScore } = useCountUp(s.score, () => store.heldBack.score);
   const { value: shownMeta } = useCountUp(s.meta, () => store.heldBack.meta);
@@ -91,12 +92,19 @@ export function GoalBar({ s, onOpenTree, selectedNodeId = null }: {
           {/* Always offered while a goal is set: the point is reaching the
               node, which matters as much while saving as when able to buy. */}
           <button type="button" className="goal__open" onClick={onOpenTree}>
-            Open in Tree
+            {availableToBuy} Available to Buy
           </button>
         </>
       )}
     </div>
   );
+}
+
+function purchasableCount(s: GameState): number {
+  const allocated = new Set(s.allocated);
+  const discovered = new Set(s.discovered as DiscoveryFlag[]);
+  const ctx = { allocated, discovered, score: s.score, meta: s.meta };
+  return NODES.reduce((count, node) => count + (checkAllocation(node.id, ctx).ok ? 1 : 0), 0);
 }
 
 function selectedNodeGoal(s: GameState, id: string | null): Goal | null {
