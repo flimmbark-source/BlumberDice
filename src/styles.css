@@ -1,20 +1,67 @@
+/* ===========================================================================
+ * BlumberDice — inked parchment.
+ *
+ * The workspace is a page from a pressed-flower notebook: warm paper, brown
+ * ink, a green board across the top, and botanical growth at the edges. Every
+ * rule below is presentation only. Nothing here hides a control, renames a
+ * label, or changes what a number means; the structure the markup describes
+ * is exactly the structure it described before.
+ *
+ * Colour carries three jobs and no more:
+ *   gold  — Score, and the thing being saved for
+ *   teal  — Meta, the second framework
+ *   rust  — loss, risk, anything that takes something away
+ * Everything else is paper, ink, and leaf.
+ * ======================================================================== */
+
 :root {
-  --bg: #050912;
-  --bg-2: #0a1120;
-  --bg-3: #101c31;
-  --line: #1d3255;
-  --line-2: rgba(77, 166, 255, 0.22);
-  --text: #dbe7f7;
-  --muted: #7b90ad;
-  --score: #ffc233;
-  --meta: #3fe0d0;
-  --risk: #ff6b6b;
-  --good: #58d68d;
-  --accent: #4da6ff;
-  --accent-2: #00d4ff;
-  --goal: #ff3fa4;
-  --radius: 12px;
-  color-scheme: dark;
+  /* paper */
+  --paper: #f4e8cc;
+  --paper-warm: #efe0bd;
+  --paper-deep: #e7d5ab;
+  --paper-shade: #dcc794;
+  --paper-lit: #fbf3de;
+
+  /* ink */
+  --ink: #221e17;
+  --ink-2: #3c362a;
+  --ink-soft: #6a6150;
+  --ink-faint: #958b73;
+  --rule: #c6b083;
+  --rule-strong: #a08a5c;
+
+  /* board and leaf */
+  --moss: #2f4a39;
+  --moss-2: #3b5a45;
+  --moss-deep: #223829;
+  --leaf: #7c9a62;
+  --leaf-deep: #55703f;
+
+  /* the three meanings */
+  --score: #b0801f;
+  --score-lit: #d9a636;
+  --meta: #3b7b72;
+  --meta-lit: #57a396;
+  --risk: #a5442a;
+  --good: #5b7f43;
+  --goal: #9c4570;
+
+  /* aliases kept so every historical rule still resolves */
+  --bg: var(--paper);
+  --bg-2: var(--paper-warm);
+  --bg-3: var(--paper-deep);
+  --line: var(--rule);
+  --line-2: var(--rule);
+  --text: var(--ink);
+  --muted: var(--ink-soft);
+  --accent: var(--score);
+  --accent-2: var(--score-lit);
+
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+    Georgia, "Times New Roman", serif;
+  --radius: 10px;
+  --nums: lining-nums tabular-nums;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -23,339 +70,586 @@ html, body, #root { height: 100%; margin: 0; }
 
 body {
   background:
-    radial-gradient(1100px 620px at 50% -12%, #12274a 0%, rgba(8, 14, 28, 0) 62%),
-    radial-gradient(900px 700px at 85% 110%, #0d1c36 0%, rgba(5, 9, 18, 0) 58%),
-    var(--bg);
-  color: var(--text);
-  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    radial-gradient(1200px 700px at 50% -10%, #fbf2da 0%, rgba(251, 242, 218, 0) 60%),
+    radial-gradient(900px 640px at 92% 108%, #e8d6ac 0%, rgba(232, 214, 172, 0) 62%),
+    radial-gradient(760px 520px at 4% 96%, #e9d8b1 0%, rgba(233, 216, 177, 0) 58%),
+    var(--paper);
+  color: var(--ink);
+  font: 14.5px/1.55 var(--serif);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Paper fibre. One static noise tile, multiplied over everything at a
+   strength that reads as tooth rather than as dirt. */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 100001;
+  pointer-events: none; mix-blend-mode: multiply; opacity: 0.062;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.86' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 button { font: inherit; color: inherit; cursor: pointer; }
 button:disabled { cursor: default; }
-.muted { color: var(--muted); }
+.muted { color: var(--ink-soft); }
 
-.app { display: flex; flex-direction: column; height: 100%; }
+.app { display: flex; flex-direction: column; height: 100%; gap: 0; }
+
+/* ------------------------------------------------------------- ornaments */
+
+.orn { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.orn__corner { position: absolute; opacity: 0.9; }
+.orn--tl { left: -14px; top: -10px; }
+.orn--tr { right: -14px; top: -10px; transform: scaleX(-1); }
+.orn--bl { left: -14px; bottom: -10px; transform: scaleY(-1); }
+.orn--br { right: -14px; bottom: -10px; transform: scale(-1); }
+
+.orn__stem {
+  fill: none; stroke: var(--leaf-deep); stroke-width: 2.1;
+  stroke-linecap: round; opacity: 0.78;
+}
+.orn__tendril {
+  fill: none; stroke: var(--leaf-deep); stroke-width: 1.5;
+  stroke-linecap: round; opacity: 0.6;
+}
+.orn__leaf { fill: var(--leaf); stroke: var(--leaf-deep); stroke-width: 1.1; opacity: 0.8; }
+.orn__vein { fill: none; stroke: var(--leaf-deep); stroke-width: 0.8; opacity: 0.5; }
+.orn__petal { fill: #fbf4e2; stroke: var(--rule-strong); stroke-width: 0.9; opacity: 0.92; }
+.orn__pollen { fill: var(--score-lit); opacity: 0.9; }
+.orn__rule { fill: none; stroke: var(--rule); stroke-width: 1.1; stroke-linecap: round; }
+
+.flourish { display: block; margin: 7px auto; opacity: 0.85; }
 
 /* ---------------------------------------------------------------- top bar */
 
 .topbar {
-  display: flex; align-items: center; gap: 24px;
-  padding: 10px 20px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(13, 16, 20, 0.7);
-  backdrop-filter: blur(8px);
+  /* The settings/refund menu must always sit above movable desktop windows.
+     Those windows raise their z-index as they are focused, so this layer
+     needs to live outside that normal desktop stacking range. */
+  position: relative; z-index: 100000;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 16px; padding: 9px 20px 10px;
+  border-bottom: 2px solid var(--moss-deep);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.16)),
+    var(--moss);
+  box-shadow: 0 3px 0 rgba(120, 96, 52, 0.18), 0 10px 22px rgba(60, 46, 20, 0.16);
+  color: #f2e8cf;
 }
-.brand { font-weight: 650; letter-spacing: 0.02em; color: var(--muted); }
-.currencies { display: flex; gap: 22px; margin-left: auto; }
-.currency { display: flex; align-items: baseline; gap: 7px; }
+
+.brand { display: flex; align-items: center; gap: 11px; }
+.brand__mark { filter: none; opacity: 0.95; }
+.brand__mark rect { fill: #f2e8cf; stroke: var(--moss-deep); stroke-width: 1.8; }
+.brand__mark circle { fill: var(--moss-deep); }
+.brand__word {
+  font-size: 27px; letter-spacing: 0.005em; color: #f6eeda;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.32);
+}
+.brand__word b { font-weight: 700; color: #f8f1e0; }
+.brand__word i { font-style: normal; font-weight: 700; color: #f8f1e0; }
+
+.tabsx {
+  display: flex; gap: 3px; padding: 3px;
+  border: 1px solid rgba(20, 34, 24, 0.5); border-radius: 8px;
+  background: rgba(20, 34, 24, 0.3);
+}
+.tab {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 22px; border: 1px solid transparent; border-radius: 6px;
+  background: none; color: #d8e0cc;
+  font-size: 13.5px; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase;
+}
+.tab:hover { color: #fbf4e2; background: rgba(255, 255, 255, 0.07); }
+.tab--on {
+  color: #f7efd9;
+  background: #1c1a15;
+  border-color: #0f0e0b;
+  box-shadow: inset 0 0 0 1px rgba(226, 203, 148, 0.28);
+}
+.tab__badge {
+  min-width: 17px; padding: 0 5px; border-radius: 999px;
+  background: var(--score-lit); color: #2a1f05;
+  font-size: 10.5px; font-weight: 700; text-align: center;
+  font-variant-numeric: var(--nums);
+}
+.tab__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--meta-lit); }
+
+/* The old stacked tab strip, kept for any view that still renders it. */
+.tabs { display: flex; gap: 2px; padding: 8px 12px 0; border-bottom: 1px solid var(--rule); }
+
+.topbar__right { display: flex; align-items: center; justify-content: flex-end; gap: 14px; }
+.topbar__spacer { min-width: 1px; display: flex; justify-content: center; }
+
+.currencies {
+  display: flex; align-items: center; gap: 18px;
+  padding: 5px 15px; border-radius: 8px;
+  border: 1px solid rgba(20, 34, 24, 0.5);
+  background: rgba(20, 34, 24, 0.3);
+}
+.currency { display: inline-flex; align-items: baseline; gap: 8px; }
+.currency::before {
+  content: '◆'; font-size: 14px; color: var(--score-lit);
+}
+.currency--alt::before { content: '❧'; color: var(--meta-lit); font-size: 15px; }
 .currency__value {
-  font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums;
-  color: var(--score);
+  font-size: 24px; font-weight: 700; color: #f8f1e0;
+  font-variant-numeric: var(--nums); line-height: 1;
   transition: color 0.18s, text-shadow 0.18s;
 }
-.currency__value--up { text-shadow: 0 0 14px currentColor; }
-.currency__value--down { color: var(--risk); }
-.currency--alt .currency__value--down { color: var(--risk); }
-.currency--alt .currency__value { color: var(--meta); }
-.currency__label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.currency__value--up { color: #fff6dd; text-shadow: 0 0 12px rgba(217, 166, 54, 0.75); }
+.currency__value--down { color: #efb3a0; }
+.currency--alt .currency__value { color: #eaf2e8; font-size: 20px; }
+.currency--alt .currency__value--down { color: #efb3a0; }
+.currency__label {
+  font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(242, 232, 207, 0.62);
+}
+.game__score { margin-left: auto; }
+.game__score .currency__value { font-size: 20px; }
 
 .fwtoggle {
-  display: flex; border: 1px solid var(--line); border-radius: var(--radius);
-  overflow: hidden; background: var(--bg-2);
+  display: flex; border: 1px solid rgba(20, 34, 24, 0.5); border-radius: 8px;
+  overflow: hidden; background: rgba(20, 34, 24, 0.3);
 }
 .fwtoggle__btn {
   display: flex; align-items: center; gap: 8px;
-  padding: 7px 14px; background: none; border: 0; color: var(--muted);
+  padding: 7px 14px; background: none; border: 0; color: #cfdac3;
   transition: background 0.15s, color 0.15s;
 }
-.fwtoggle__btn:hover:not(:disabled) { background: var(--bg-3); }
-.fwtoggle__btn--on { background: var(--bg-3); color: var(--text); }
-.fwtoggle__btn:first-child.fwtoggle__btn--on { color: var(--score); }
-.fwtoggle__btn:last-child.fwtoggle__btn--on { color: var(--meta); }
+.fwtoggle__btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); color: #fbf4e2; }
+.fwtoggle__btn--on { background: #1c1a15; color: #f7efd9; }
+.fwtoggle__btn:first-child.fwtoggle__btn--on { color: var(--score-lit); }
+.fwtoggle__btn:last-child.fwtoggle__btn--on { color: var(--meta-lit); }
 .fwtoggle__glyph { font-size: 16px; font-weight: 700; width: 14px; text-align: center; }
-.fwtoggle__text { font-size: 12px; }
+.fwtoggle__text { font-size: 12.5px; }
+
+.window-arrange {
+  padding: 6px 14px;
+  border: 1px solid rgba(20, 34, 24, 0.55); border-radius: 7px;
+  background: rgba(20, 34, 24, 0.28); color: #dfe6d5;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+}
+.window-arrange:hover { color: #fbf4e2; background: #1c1a15; border-color: #0f0e0b; }
+
+.iconbtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0;
+  border: 1px solid var(--rule-strong); border-radius: 7px;
+  background: var(--paper-warm); color: var(--ink-2);
+  font-size: 15px; line-height: 1;
+}
+.iconbtn:hover { color: var(--ink); border-color: var(--ink-soft); background: var(--paper-lit); }
+.topbar .iconbtn {
+  border-color: rgba(20, 34, 24, 0.55);
+  background: rgba(20, 34, 24, 0.28);
+  color: #e4ebdb;
+}
+.topbar .iconbtn:hover { color: #fbf4e2; background: #1c1a15; border-color: #0f0e0b; }
+
+.gear { position: relative; }
+.gear__menu {
+  position: absolute; right: 0; top: calc(100% + 9px); z-index: 20;
+  width: 244px; padding: 6px;
+  border: 1px solid var(--rule-strong); border-radius: 9px;
+  background: var(--paper-lit);
+  box-shadow: 0 16px 34px rgba(60, 46, 20, 0.28);
+}
+.gear__item {
+  display: block; width: 100%; padding: 8px 10px; text-align: left;
+  border: 0; border-radius: 6px; background: none; color: var(--ink); font-size: 13.5px;
+}
+.gear__item:hover:not(:disabled) { background: var(--paper-deep); }
+.gear__item:disabled { opacity: 0.42; }
+.gear__item--danger { color: var(--risk); }
+.gear__item--danger:hover:not(:disabled) { background: rgba(165, 68, 42, 0.12); }
+.gear__sub { display: block; margin-top: 2px; font-size: 11.5px; color: var(--ink-soft); }
 
 /* ------------------------------------------------------------------ layout */
 
-.main { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(420px, 1.25fr); flex: 1; min-height: 0; }
+.main {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr) 330px;
+  gap: 14px; padding: 14px;
+  flex: 1; min-height: 0;
+}
+.col { display: flex; min-height: 0; }
+.col--left { min-width: 0; grid-column: 1; grid-row: 1; }
+.game { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; min-height: 0; }
+.panel--right { grid-column: 3; grid-row: 1; overflow: auto; }
+.side { display: flex; flex-direction: column; min-height: 0; }
+.side__body { flex: 1; min-height: 0; display: flex; }
 
-@media (max-width: 900px) {
-  /* Stacked, the tray's 660px cap ate the whole viewport and squeezed the
-     passive web to nothing -- with no tab bar left to get back to it, which
-     removed half the game. The tray gets a share of the viewport here, and
-     the web keeps a floor. */
-  .main {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, auto) minmax(300px, 1fr);
-  }
-  .game { border-right: none; border-bottom: 1px solid var(--line); min-height: 0; }
-  .tray { max-height: 38vh; min-height: 200px; }
-  .side { min-height: 0; }
-  .topbar { flex-wrap: wrap; gap: 12px; }
+/* A panel: the chrome every pane shares — pressed paper with a ruled edge. */
+.panel {
+  position: relative;
+  display: flex; flex-direction: column; min-height: 0; flex: 1;
+  border: 1px solid var(--rule-strong); border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--paper-lit) 0%, var(--paper-warm) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 8px 20px rgba(84, 66, 32, 0.14);
+  overflow: hidden;
+}
+.panel__title {
+  display: flex; align-items: center; gap: 7px 12px; flex-wrap: wrap;
+  margin: 0; padding: 11px 14px 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--rule);
+}
+.panel__body { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; }
+.panel__empty { margin: 0; padding: 20px 16px; font-size: 13px; color: var(--ink-soft); font-style: italic; }
+
+/* ------------------------------------------------------------ game panel */
+
+.game { border-right: 0; gap: 0; }
+.game__arena { position: relative; flex: 1 1 auto; min-height: 260px; }
+.game__lower {
+  flex: 0 1 auto; display: flex; flex-direction: column; gap: 14px;
+  padding: 14px 20px 20px; overflow-y: auto; min-height: 0; max-height: 40vh;
+}
+.game__controls {
+  flex: 0 0 auto; display: flex; flex-direction: column; gap: 9px;
+  padding: 11px 14px 12px;
 }
 
-/* -------------------------------------------------------------- game panel */
-
-.game {
-  display: flex; flex-direction: column; min-height: 0;
-  border-right: 1px solid var(--line);
+/* The arch the die is thrown under. It stands behind the arena floor, so the
+   ground plane the dice bounce on crosses its feet — which is what puts the
+   throw in front of the illustration instead of on top of it. */
+.arch {
+  position: absolute; left: 50%; bottom: 34%; transform: translateX(-50%);
+  width: min(46%, 360px); height: 62%;
+  pointer-events: none;
+  --arch-sky-top: #bacfc9;
+  --arch-sky-bottom: #e9e2c6;
 }
+.arch__stone { fill: #d4cbaf; stroke: #86795b; stroke-width: 2.4; stroke-linejoin: round; }
+.arch__joint line { stroke: #86795b; stroke-width: 1.3; opacity: 0.7; }
+.arch__hill { fill: #93a894; opacity: 0.9; }
+.arch__hill--near { fill: #7b9074; opacity: 0.9; }
+.arch__keep { fill: #55684f; opacity: 0.95; }
 
 /* --- inline svg dice (decision bar, rail, stats) -------------------------- */
 
-.die__body { fill: var(--bg-3); stroke: var(--line); stroke-width: 2; }
-.die__pip { fill: var(--text); }
-.die__empty { fill: var(--muted); font-size: 46px; }
+.die__body { fill: var(--paper-lit); stroke: var(--ink-2); stroke-width: 2; }
+.die__pip { fill: var(--ink); }
+.die__empty { fill: var(--ink-faint); font-size: 46px; }
 
 /* --- dice tray ----------------------------------------------------------- */
 
 .tray {
-  position: relative; flex: 1 1 auto; min-height: 340px; max-height: 660px;
+  position: absolute; inset: 0;
   overflow: hidden;
-  background: #0c1016;
-  border-bottom: 1px solid var(--line);
+  background: transparent;
+  border-radius: var(--radius);
 }
-.tray__canvas { display: block; width: 100%; height: 100%; touch-action: manipulation; }
+.tray__canvas { display: block; width: 100%; height: 100%; touch-action: manipulation; position: relative; }
 
 .tray__hint {
   position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
-  padding: 5px 14px; border-radius: 999px;
-  background: rgba(12, 16, 22, 0.72); border: 1px solid var(--line);
-  color: var(--muted); font-size: 12px; letter-spacing: 0.03em;
+  padding: 5px 15px; border-radius: 999px;
+  background: rgba(251, 243, 222, 0.82); border: 1px solid var(--rule);
+  color: var(--ink-soft); font-size: 12.5px; font-style: italic; letter-spacing: 0.02em;
   opacity: 0; transition: opacity 0.5s; pointer-events: none;
 }
 .tray__hint--show { opacity: 1; animation: hintpulse 2.6s ease-in-out infinite; }
-@keyframes hintpulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
-
-.tray__hintKey { opacity: 0.62; }
+@keyframes hintpulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+.tray__hintKey { opacity: 0.66; }
 
 /* Off-screen until focused: the mouse has the canvas, the keyboard has this. */
 .tray__roll {
   position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
   padding: 7px 16px; border-radius: 999px;
-  border: 1px solid var(--accent); background: var(--bg-3); color: var(--text);
+  border: 1px solid var(--rule-strong); background: var(--paper-lit); color: var(--ink);
   font-size: 13px;
   opacity: 0; pointer-events: none;
 }
 .tray__roll:focus-visible {
   opacity: 1; pointer-events: auto;
-  outline: 2px solid #ffffff; outline-offset: 2px;
+  outline: 2px solid var(--ink); outline-offset: 2px;
 }
 
 .tray__queue {
   position: absolute; right: 14px; top: 12px;
-  padding: 4px 11px; border-radius: 999px;
-  background: rgba(12, 16, 22, 0.8); border: 1px solid var(--line);
-  color: var(--accent); font-size: 11.5px; font-variant-numeric: tabular-nums;
+  padding: 4px 12px; border-radius: 999px;
+  background: rgba(251, 243, 222, 0.88); border: 1px solid var(--rule);
+  color: var(--ink-2); font-size: 11.5px; font-variant-numeric: var(--nums);
   pointer-events: none;
 }
 
-
 /* --- readiness ----------------------------------------------------------- */
 
-.cooldown { position: relative; height: 3px; background: var(--bg-2); flex: 0 0 auto; }
-.cooldown__fill {
-  display: block; height: 100%; background: #3d4d63;
-  transition: width 0.06s linear;
-}
-.cooldown--ready .cooldown__fill { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.cooldown { position: relative; height: 3px; background: var(--paper-shade); flex: 0 0 auto; }
+.cooldown__fill { display: block; height: 100%; background: var(--rule-strong); transition: width 0.06s linear; }
+.cooldown--ready .cooldown__fill { background: var(--score-lit); }
 
-/* --- feed and rail ------------------------------------------------------- */
+/* --- the roll -------------------------------------------------------------
+   The one loud object on the page: pressed black, gilt rule, cut serif. */
 
-.game__lower {
-  flex: 0 1 auto; display: flex; flex-direction: column; gap: 14px;
-  padding: 14px 20px 20px; overflow-y: auto; min-height: 0; max-height: 40vh;
+.rollbtn {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 20px; border-radius: 9px;
+  border: 1px solid #0f0e0b;
+  background: linear-gradient(180deg, #2b2720, #16140f);
+  box-shadow:
+    inset 0 0 0 1px rgba(226, 203, 148, 0.3),
+    0 6px 16px rgba(48, 36, 14, 0.32);
+  color: #f7efd9;
 }
-
-.feed {
-  display: flex; flex-direction: column-reverse; gap: 2px;
-  min-height: 72px; font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
+.rollbtn:hover:not(:disabled) { filter: brightness(1.16); }
+.rollbtn:disabled {
+  opacity: 1; color: rgba(247, 239, 217, 0.66);
+  background: linear-gradient(180deg, #514a3c, #3a352b);
+  border-color: #2b2720; box-shadow: inset 0 0 0 1px rgba(226, 203, 148, 0.16);
 }
-.feed__line { color: var(--muted); }
-.feed__line--score, .feed__line--jackpot { color: var(--score); }
-.feed__line--meta, .feed__line--pattern { color: var(--meta); }
-.feed__line--loss { color: var(--risk); }
-.logpanel { padding: 16px 18px; overflow-y: auto; font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.logpanel .feed__line { padding: 1px 0; }
+.rollbtn__pip { display: inline-flex; }
+.rollbtn__pip rect { fill: rgba(226, 203, 148, 0.16); stroke: var(--score-lit); stroke-width: 1.6; }
+.rollbtn__pip circle { fill: #f7efd9; }
+.rollbtn__label {
+  flex: 1; text-align: center;
+  font-size: 21px; font-weight: 700; letter-spacing: 0.17em; text-transform: uppercase;
+}
+.rollbtn__time {
+  font-size: 13px; font-variant-numeric: var(--nums);
+  letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.72;
+}
+.rollbtn__fill {
+  position: absolute; left: 0; bottom: 0; height: 3px;
+  background: var(--score-lit);
+}
+.rollbtn:not(:disabled) .rollbtn__fill { display: none; }
 
 /* ---------------------------------------------------------------- decision */
 
 .decision {
-  flex: 0 0 auto; margin: 14px 20px 0; padding: 14px 16px;
-  border: 1px solid var(--accent); border-radius: var(--radius);
-  background: var(--bg-2);
+  flex: 0 0 auto; margin: 0; padding: 13px 15px;
+  border: 1px solid var(--rule-strong); border-radius: var(--radius);
+  background: var(--paper-lit);
+  box-shadow: 0 6px 16px rgba(84, 66, 32, 0.14);
 }
-.decision--hot { border-color: var(--score); }
-.decision__label { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+.decision--hot { border-color: var(--score); background: linear-gradient(180deg, #fdf3d9, #f6e6bd); }
+.decision__label { font-size: 13.5px; color: var(--ink-2); margin-bottom: 10px; }
 .decision__row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .decision__die {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 10px 16px; background: var(--bg-3);
-  border: 1px solid var(--line); border-radius: var(--radius);
-  font-weight: 650; font-size: 15px;
+  padding: 9px 16px; background: var(--paper-warm);
+  border: 1px solid var(--rule-strong); border-radius: 8px;
+  font-weight: 650; font-size: 15px; font-variant-numeric: var(--nums);
 }
-.decision__die:hover { border-color: var(--accent); }
-.decision__tag { font-size: 10px; font-weight: 500; color: var(--accent); letter-spacing: 0.04em; }
+.decision__die:hover { border-color: var(--ink-soft); background: var(--paper-lit); }
+.decision__tag { font-size: 10px; font-weight: 500; color: var(--score); letter-spacing: 0.06em; }
+
+/* ------------------------------------------------------------------ buttons */
 
 .btn {
-  padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent);
-  background: rgba(138, 180, 248, 0.14);
+  padding: 8px 15px; border-radius: 7px;
+  border: 1px solid var(--ink-2);
+  background: var(--paper-lit); color: var(--ink);
 }
-.btn:hover { background: rgba(138, 180, 248, 0.24); }
-.btn--ghost { border-color: var(--line); background: var(--bg-3); }
-.btn--ghost:hover { border-color: var(--muted); background: var(--bg-3); }
-.btn--risk { border-color: var(--risk); background: rgba(224, 104, 95, 0.14); }
-.btn--risk:hover { background: rgba(224, 104, 95, 0.26); }
+.btn:hover { background: var(--paper-deep); }
+.btn--ghost { border-color: var(--rule-strong); background: var(--paper-warm); color: var(--ink-2); }
+.btn--ghost:hover { border-color: var(--ink-soft); background: var(--paper-lit); }
+.btn--risk { border-color: var(--risk); color: var(--risk); background: rgba(165, 68, 42, 0.08); }
+.btn--risk:hover { background: rgba(165, 68, 42, 0.16); }
+.btn--sm { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+.btn--sm:disabled { opacity: 0.42; }
+.btn--sm:disabled:hover { border-color: var(--rule-strong); background: var(--paper-warm); }
+
+.btn--primary {
+  display: block; width: 100%; padding: 11px; border-radius: 8px;
+  border: 1px solid #0f0e0b;
+  background: linear-gradient(180deg, #2b2720, #16140f);
+  color: #f7efd9; font-size: 15px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px rgba(226, 203, 148, 0.28), 0 5px 13px rgba(48, 36, 14, 0.28);
+}
+.btn--primary:hover { filter: brightness(1.16); }
 
 /* ------------------------------------------------------------ control rail */
 
 .rail {
   display: flex; flex-direction: column; gap: 12px;
-  padding-top: 12px; border-top: 1px solid var(--line);
+  padding-top: 12px; border-top: 1px solid var(--rule);
 }
 .rail__block { display: flex; flex-direction: column; gap: 6px; }
-.rail__title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
-.rail__hot { color: var(--score); text-transform: none; letter-spacing: 0; }
+.rail__title {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.16em;
+  color: var(--ink-soft); font-weight: 700;
+}
+.rail__hot { color: var(--score); text-transform: none; letter-spacing: 0; font-weight: 600; }
 .rail__row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.rail__muted { color: var(--muted); font-size: 12px; }
-.rail__note { font-size: 11.5px; color: var(--accent); }
+.rail__muted { color: var(--ink-faint); font-size: 12.5px; font-style: italic; }
+.rail__note { font-size: 12px; color: var(--ink-2); font-style: italic; }
 .rail__policy { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.rail__policylabel { font-size: 12px; color: var(--muted); min-width: 74px; }
+.rail__policylabel { font-size: 12.5px; color: var(--ink-soft); min-width: 74px; }
 .rail input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--score); }
+.rail__note--inline { margin-left: 4px; font-size: 11px; opacity: 0.72; }
 
 .chip {
-  padding: 3px 9px; font-size: 12px; border-radius: 999px;
-  border: 1px solid var(--line); background: var(--bg-2); color: var(--muted);
+  padding: 3px 11px; font-size: 12.5px; border-radius: 999px;
+  border: 1px solid var(--rule-strong); background: var(--paper-warm); color: var(--ink-soft);
 }
-.chip:hover { border-color: var(--muted); color: var(--text); }
-.chip--on { border-color: var(--accent); color: var(--text); background: rgba(138, 180, 248, 0.15); }
+.chip:hover { border-color: var(--ink-soft); color: var(--ink); background: var(--paper-lit); }
+.chip--on {
+  border-color: #0f0e0b; color: #f7efd9;
+  background: linear-gradient(180deg, #2b2720, #16140f);
+}
 
 .minidie { display: inline-flex; padding: 0; background: none; border: 0; line-height: 0; }
-.minidie--active .die__body { stroke: var(--accent); stroke-width: 3; }
-button.minidie:hover .die__body { stroke: var(--muted); }
+.minidie--active .die__body { stroke: var(--score); stroke-width: 3; }
+button.minidie:hover .die__body { stroke: var(--ink-soft); }
+
 /* Prepared Roll's window: the faces the next roll may land on. Read-only --
    there is nothing to reorder now, only something to know. */
 .windowface {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 3px; border-radius: 5px;
-  border: 1px solid rgba(138, 180, 248, 0.35);
-  background: rgba(138, 180, 248, 0.09);
+  border: 1px solid var(--rule); background: rgba(176, 128, 31, 0.08);
 }
-.rail__note--inline { margin-left: 4px; font-size: 10.5px; opacity: 0.7; }
 
-/* ---------------------------------------------------------------- side nav */
-
-.side { display: flex; flex-direction: column; min-height: 0; }
-.tabs { display: flex; gap: 2px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); }
-.tab {
-  padding: 7px 14px; border: 1px solid transparent; border-bottom: 0;
-  border-radius: 8px 8px 0 0; background: none; color: var(--muted); font-size: 13px;
-}
-.tab:hover { color: var(--text); }
-.tab--on { background: var(--bg-2); border-color: var(--line); color: var(--text); }
-.tab__badge {
-  margin-left: 7px; padding: 0 6px; border-radius: 999px;
-  background: var(--accent); color: #0d1014; font-size: 11px; font-weight: 650;
-}
-.tab__dot {
-  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--meta); margin-left: 7px; vertical-align: 2px;
-}
-.side__body { flex: 1; min-height: 0; display: flex; }
-
-/* ------------------------------------------------------------ passive tree */
+/* ------------------------------------------------------------ passive web */
 
 .tree {
-  position: relative; flex: 1; min-height: 0; background: var(--bg-2);
+  position: relative; flex: 1; min-height: 0;
+  background:
+    radial-gradient(120% 100% at 50% 0%, var(--paper-lit) 0%, rgba(251, 243, 222, 0) 65%),
+    var(--paper-warm);
   overflow: hidden;
 }
 .tree__svg {
-  width: 100%;
-  height: 100%;
-  touch-action: none;
-  cursor: grab;
-  display: block;
-  user-select: none;
+  width: 100%; height: 100%;
+  touch-action: none; cursor: grab; display: block; user-select: none;
 }
 .tree__svg:active,
 .tree__svg--dragging,
-.tree__svg--dragging .node {
-  cursor: grabbing !important;
-}
+.tree__svg--dragging .node { cursor: grabbing !important; }
 
-.edge { stroke: #2b3644; stroke-width: 2.5; fill: none; }
-.edge--live { stroke: #3d4c5d; }
-.edge--on { stroke: #6a89a6; stroke-width: 4; }
+.edge { stroke: rgba(120, 100, 62, 0.52); stroke-width: 2.5; fill: none; }
+.edge--live { stroke: rgba(106, 97, 80, 0.75); }
+.edge--on { stroke: var(--ink-soft); stroke-width: 3.6; }
 
 .node { cursor: default; }
 .node__shape {
-  fill: var(--bg-3);
-  stroke: hsl(var(--hue) 24% 38%);
-  stroke-width: 2.5;
+  fill: var(--paper-lit);
+  stroke: hsl(var(--hue) 28% 40%);
+  stroke-width: 2.4;
   transition: fill 0.12s, stroke 0.12s;
 }
-.node__inner { fill: hsl(var(--hue) 20% 26%); stroke: none; }
+.node__inner { fill: hsl(var(--hue) 30% 56%); stroke: none; }
 .node__name {
-  fill: #9aa7b8; font-size: 17px; text-anchor: middle; pointer-events: none;
-  paint-order: stroke; stroke: var(--bg-2); stroke-width: 5px;
+  fill: var(--ink-2); font-size: 17px; text-anchor: middle; pointer-events: none;
+  paint-order: stroke; stroke: var(--paper-warm); stroke-width: 5px;
+  font-family: var(--serif);
 }
 
-.node--locked { opacity: 0.55; }
-.node--unaffordable .node__shape { stroke: hsl(var(--hue) 30% 42%); }
+.node--keystone .node__shape { stroke-width: 3.4; }
 .node--available { cursor: pointer; }
-.node--available .node__shape {
-  stroke: hsl(var(--hue) 62% 58%);
-  filter: drop-shadow(0 0 5px hsl(var(--hue) 62% 48% / 0.65));
-}
-.node--available:hover .node__shape { fill: hsl(var(--hue) 40% 22%); }
-.node--allocated .node__shape { fill: hsl(var(--hue) 45% 34%); stroke: hsl(var(--hue) 65% 66%); }
-.node--allocated .node__inner { fill: hsl(var(--hue) 70% 76%); }
-.node--inspected .node__shape { stroke: #fff; }
-.node--hidden { fill: #26303b; }
+.node--available:hover .node__shape { fill: hsl(var(--hue) 60% 90%); }
+.node--hidden { fill: #cbb98e; stroke: var(--rule-strong); }
 
-.node--keystone .node__shape { stroke-width: 4; }
+.node--locked { opacity: 0.82; }
+.node--locked .node__shape { fill: #e1d2ab; stroke: #998764; }
+.node--unaffordable .node__shape {
+  fill: hsl(var(--hue) 40% 86%); stroke: hsl(var(--hue) 34% 36%);
+}
+.node--available .node__shape {
+  fill: hsl(var(--hue) 68% 84%); stroke: hsl(var(--hue) 48% 29%);
+  filter: drop-shadow(0 0 4px hsl(var(--hue) 55% 42% / 0.45));
+}
+.node--allocated .node__shape {
+  fill: hsl(var(--hue) 52% 62%); stroke: hsl(var(--hue) 46% 22%);
+}
+.node--allocated .node__inner { fill: hsl(var(--hue) 40% 24%); }
+.node--inspected .node__shape { stroke: var(--ink); stroke-width: 3.4; }
+.node--pinned .node__shape { stroke: var(--goal); stroke-dasharray: 3 2.5; }
+
+.node:focus { outline: none; }
+.node:focus-visible .node__shape {
+  stroke: var(--ink); stroke-width: 3.4;
+  filter: drop-shadow(0 0 5px rgba(34, 30, 23, 0.4));
+}
 
 .swatch { vertical-align: middle; }
 
 .tree__legend {
   position: absolute; left: 12px; bottom: 10px;
   display: flex; align-items: center; gap: 14px;
-  font-size: 11.5px; color: var(--muted); pointer-events: none;
+  font-size: 11.5px; color: var(--ink-soft); pointer-events: none;
 }
 .tree__legend span { display: inline-flex; align-items: center; gap: 4px; }
-.tree__hint { margin-left: 6px; opacity: 0.7; }
+.tree__hint { margin-left: 6px; opacity: 0.72; }
 
-
-
-
-/* 2. The mechanic. The strongest element on the card. */
-.nt {
-  /* No panel around it. The notation IS the card's body, so boxing it only
-     pushed it back down the hierarchy. */
-  display: flex; flex-direction: column; gap: 5px;
-  margin: 10px 0 9px;
+.tree__key {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 3px 11px;
+  width: 100%;
+  letter-spacing: 0.04em; font-size: 10px; color: var(--ink-soft);
+  text-transform: none; font-weight: 500;
 }
+.tree__keyItem { display: inline-flex; align-items: center; gap: 5px; }
+
+.tree__regions {
+  position: absolute; left: 12px; top: 10px; z-index: 3;
+  display: flex; flex-wrap: wrap; gap: 3px 12px; max-width: 60%;
+  font-size: 10.5px; color: var(--ink-soft);
+}
+.tree__regionDot {
+  width: 8px; height: 8px; border-radius: 50%;
+  border: 1.5px solid hsl(var(--hue) 40% 40%);
+  background: hsl(var(--hue) 55% 78%);
+}
+
+.tree__tools {
+  position: absolute; left: 12px; right: 12px; bottom: 10px; z-index: 4;
+  display: flex; align-items: center; gap: 7px;
+}
+.tree__tools .btn { margin-left: auto; }
+
+.tree--expanded {
+  position: fixed; inset: 64px 14px 14px; z-index: 40;
+  /* Opaque: at 54 nodes the layout underneath showing through is noise. */
+  background: linear-gradient(180deg, var(--paper-lit), var(--paper-deep));
+  box-shadow: 0 0 0 100vmax rgba(60, 46, 20, 0.44), 0 24px 60px rgba(60, 46, 20, 0.32);
+}
+
+/* The mark a purchase leaves. */
+.spark__ring {
+  fill: none; stroke: hsl(var(--hue) 55% 42%); stroke-width: 2.4;
+  transform-origin: 0 0;
+  animation: sparkRing 700ms ease-out forwards;
+}
+.spark__rays { transform-origin: 0 0; animation: sparkRay 700ms cubic-bezier(0.16, 0.9, 0.3, 1) forwards; }
+.spark__rays line { stroke: hsl(var(--hue) 60% 38%); stroke-width: 2.6; stroke-linecap: round; }
+@keyframes sparkRing {
+  from { opacity: 0.9; transform: scale(0.55); }
+  to { opacity: 0; transform: scale(2.3); }
+}
+@keyframes sparkRay {
+  0% { opacity: 0; transform: scale(0.5); }
+  22% { opacity: 1; }
+  100% { opacity: 0; transform: scale(2.1); }
+}
+
+/* ------------------------------------------------------------- notation */
+/* The mechanic. The strongest element on a card, and no panel around it. */
+
+.nt { display: flex; flex-direction: column; gap: 5px; margin: 10px 0 9px; }
 .nt__row {
   display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
   min-height: 24px;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--nums);
 }
 
 /* A clause: a secondary rule, inset and quieter than the statement above. */
 .nt__row--clause {
-  gap: 4px;
-  padding: 4px 7px;
-  border-radius: 5px;
-  background: rgba(125, 155, 205, 0.06);
-  border: 1px solid rgba(125, 155, 205, 0.08);
+  gap: 4px; padding: 4px 7px; border-radius: 5px;
+  background: rgba(160, 138, 92, 0.1);
+  border: 1px solid rgba(160, 138, 92, 0.2);
   font-size: 0.95em;
 }
-.nt__clauseIcon { flex: none; fill: none; stroke-width: 1.3; stroke-linecap: round; opacity: 0.85; }
+.nt__clauseIcon { flex: none; fill: none; stroke-width: 1.3; stroke-linecap: round; opacity: 0.9; }
 .nt__clauseIcon--score { stroke: var(--score); }
-.nt__clauseIcon--roll { stroke: var(--accent); }
-.nt__clauseIcon--streak { stroke: #d08a5a; }
+.nt__clauseIcon--roll { stroke: var(--ink-2); }
+.nt__clauseIcon--streak { stroke: #9c6435; }
 .nt__clauseIcon--swap { stroke: var(--meta); }
 .nt__clauseIcon--deny { stroke: var(--risk); }
 .nt__row--clause .nt__cell { min-width: 18px; height: 18px; }
@@ -364,208 +658,490 @@ button.minidie:hover .die__body { stroke: var(--muted); }
 .nt__cell {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 24px; height: 24px; padding: 0 2px;
-  border: 1px solid #3c4a60; border-radius: 5px;
-  background: linear-gradient(#1a222e, #141b25);
+  border: 1px solid var(--rule-strong); border-radius: 5px;
+  background: linear-gradient(180deg, #fbf3de, #efe0bd);
 }
-.nt__cell--any { font-size: 10.5px; font-weight: 600; color: #b9c6d8; padding: 0 5px; }
-.nt__anyMark { fill: none; stroke: #5d6b80; stroke-width: 1.2; stroke-dasharray: 2.4 2; }
-.nt__cell--dim { opacity: 0.45; }
-.nt__cell--out { opacity: 0.55; position: relative; }
+.nt__cell--any { font-size: 10.5px; font-weight: 600; color: var(--ink-2); padding: 0 5px; }
+.nt__anyMark { fill: none; stroke: var(--ink-faint); stroke-width: 1.2; stroke-dasharray: 2.4 2; }
+.nt__cell--dim { opacity: 0.5; }
+.nt__cell--out { opacity: 0.6; position: relative; }
 .nt__cell--out::after {
   content: ''; position: absolute; inset: 50% -2px auto -2px;
   border-top: 1.5px solid var(--risk);
 }
 .nt__die { display: block; }
 .nt__dieBody { fill: none; stroke: none; }
-.nt__diePip { fill: #d7e0ec; }
-.nt__cell--dim .nt__diePip, .nt__cell--out .nt__diePip { fill: #8b97a8; }
+.nt__diePip { fill: var(--ink); }
+.nt__cell--dim .nt__diePip, .nt__cell--out .nt__diePip { fill: var(--ink-faint); }
 
 .nt__slot {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 18px; height: 24px; padding: 0 5px;
-  border: 1px dashed #3d4b60; border-radius: 4px;
-  font-size: 10px; color: var(--muted);
+  border: 1px dashed var(--rule-strong); border-radius: 4px;
+  font-size: 10px; color: var(--ink-soft);
 }
-.nt__slot--filled {
-  border-style: solid; background: rgba(138, 180, 248, 0.14); border-color: #4a5f7d;
-}
+.nt__slot--filled { border-style: solid; background: rgba(176, 128, 31, 0.14); border-color: var(--score); }
 
-.nt__op { color: #6d7a8c; font-size: 12px; padding: 0 1px; }
-.nt__op--arrow { color: #8fa3bd; font-size: 13px; }
+.nt__op { color: var(--ink-faint); font-size: 12px; padding: 0 1px; }
+.nt__op--arrow { color: var(--ink-soft); font-size: 13px; }
 .nt__arrow { display: inline-flex; flex-direction: column; align-items: center; line-height: 1; }
-.nt__arrowLabel { font-size: 9px; color: var(--accent); font-weight: 650; margin-bottom: -1px; }
+.nt__arrowLabel { font-size: 9px; color: var(--score); font-weight: 700; margin-bottom: -1px; }
 
-.nt__val { font-size: 12px; font-weight: 650; }
-.nt__val--accent { color: var(--accent); }
+.nt__val { font-size: 12.5px; font-weight: 700; }
+.nt__val--accent { color: var(--ink-2); }
 .nt__val--score { color: var(--score); }
 .nt__val--meta { color: var(--meta); }
 .nt__val--warn { color: var(--risk); }
-.nt__val--muted { color: #6f7b8b; font-weight: 500; font-size: 11px; }
+.nt__val--muted { color: var(--ink-faint); font-weight: 500; font-size: 11.5px; }
 
 .nt__roll {
   display: inline-flex; align-items: center; gap: 3px;
-  height: 24px; padding: 0 7px;
-  border: 1px solid rgba(138, 180, 248, 0.38); border-radius: 10px;
-  background: rgba(138, 180, 248, 0.12);
-  font-size: 11px; font-weight: 650; color: #a9c5f2;
+  height: 24px; padding: 0 8px;
+  border: 1px solid var(--rule-strong); border-radius: 10px;
+  background: rgba(176, 128, 31, 0.1);
+  font-size: 11px; font-weight: 700; color: var(--ink-2);
 }
 .nt__rollGlyph { display: block; }
-.nt__rollGlyph rect { fill: none; stroke: currentColor; stroke-width: 1; opacity: 0.8; }
+.nt__rollGlyph rect { fill: none; stroke: currentColor; stroke-width: 1; opacity: 0.85; }
 .nt__rollGlyph circle { fill: currentColor; opacity: 0.9; }
 
 .nt__meter {
   position: relative; display: inline-flex; align-items: center;
   height: 24px; min-width: 96px; padding: 0 8px;
-  border: 1px solid #3a4658; border-radius: 4px;
-  background: #151b24; overflow: hidden;
+  border: 1px solid var(--rule-strong); border-radius: 4px;
+  background: var(--paper-deep); overflow: hidden;
 }
 .nt__meterFill {
   position: absolute; inset: 0 auto 0 0;
-  background: rgba(138, 180, 248, 0.2);
+  background: rgba(176, 128, 31, 0.32);
   transition: width 0.14s linear;
 }
-.nt__meterText { position: relative; font-size: 10px; color: #98a6b8; font-weight: 600; }
+.nt__meterText { position: relative; font-size: 10px; color: var(--ink-2); font-weight: 700; }
 
 /* A countable threshold, drawn countable. */
 .nt__pips {
   display: inline-flex; align-items: center; gap: 6px;
   height: 24px; padding: 0 8px;
-  border: 1px solid #3a4658; border-radius: 5px; background: #151b24;
+  border: 1px solid var(--rule-strong); border-radius: 5px; background: var(--paper-deep);
 }
 .nt__pipRow { display: inline-flex; gap: 3px; }
 .nt__pip {
   width: 7px; height: 7px; border-radius: 50%;
-  border: 1px solid #4a5a72;
+  border: 1px solid var(--rule-strong);
   transition: background-color 0.12s linear, border-color 0.12s linear;
 }
-.nt__pip--on { background: var(--accent); border-color: var(--accent); }
-.nt__pipText { font-size: 10px; color: #98a6b8; font-weight: 600; }
+.nt__pip--on { background: var(--ink-2); border-color: var(--ink-2); }
+.nt__pipText { font-size: 10px; color: var(--ink-2); font-weight: 700; }
 
-.nt__off {
-  font-size: 11px; color: #5f6a79; font-style: italic;
-  padding: 1px 0;
-}
+.nt__off { font-size: 11.5px; color: var(--ink-faint); font-style: italic; padding: 1px 0; }
 
-/* 3. Prose. Clarifies the notation; keywords tie systems together. */
-.upg__desc, .nodepop__desc {
-  margin: 0; font-size: 12px; line-height: 1.5; color: #96a2b3;
-}
-.kw { font-style: normal; color: #c3cddc; font-weight: 600; }
+/* Prose. Clarifies the notation; keywords tie systems together. */
+.upg__desc, .nodepop__desc { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+.kw { font-style: normal; color: var(--ink); font-weight: 700; }
 
-/* A term that can be asked what it means. The dotted rule is the usual
-   convention and stays quiet enough not to speckle the paragraph. */
 .kw--known {
-  /* The definition is positioned against the window, not this element, so
-     a scrolling panel cannot clip it. */
-  /* The node popup ignores the pointer so the web stays hoverable; the
-     keyword opts back in for itself alone. */
-  pointer-events: auto;
-  cursor: help;
-  border-bottom: 1px dotted rgba(174, 185, 203, 0.5);
+  pointer-events: auto; cursor: help;
+  border-bottom: 1px dotted rgba(106, 97, 80, 0.6);
 }
-.kw--known:hover, .kw--open { color: var(--accent); border-bottom-color: var(--accent); }
+.kw--known:hover, .kw--open { color: var(--score); border-bottom-color: var(--score); }
 .kw--known:focus { outline: none; }
-.kw--known:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; border-radius: 2px; }
+.kw--known:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 2px; }
 
 .kwpop {
   position: fixed; z-index: 60;
-  display: block; width: 244px;
-  padding: 8px 10px 9px;
-  border: 1px solid var(--line-2); border-radius: 8px;
-  background: #0b1524;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.72);
+  display: block; width: 248px;
+  padding: 9px 11px 10px;
+  border: 1px solid var(--rule-strong); border-radius: 8px;
+  background: var(--paper-lit);
+  box-shadow: 0 12px 28px rgba(60, 46, 20, 0.3);
   font-weight: 400; font-style: normal;
   cursor: default; pointer-events: none;
 }
 .kwpop__term {
-  display: block; margin-bottom: 2px;
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
-  color: var(--accent); font-weight: 650;
+  display: block; margin-bottom: 3px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em;
+  color: var(--score); font-weight: 700;
 }
-.kwpop__text { display: block; font-size: 11px; line-height: 1.45; color: #9aa6b6; }
+.kwpop__text { display: block; font-size: 12px; line-height: 1.5; color: var(--ink-2); }
 
-.cost__mark { margin-right: 4px; vertical-align: -0.5px; fill: currentColor; opacity: 0.85; }
-.cost { color: var(--score); }
-.cost::after { content: ' Score'; font-size: 9.5px; font-weight: 500; opacity: 0.6; }
+/* --------------------------------------------------------------- currency */
+
+.cost__mark { margin-right: 4px; vertical-align: -0.5px; fill: currentColor; opacity: 0.9; }
+.cost { color: var(--score); font-variant-numeric: var(--nums); }
+.cost::after { content: ' Score'; font-size: 9.5px; font-weight: 500; opacity: 0.66; }
 .cost--alt { color: var(--meta); }
 .cost--alt::after { content: ' Meta'; }
 .cost--short { color: var(--risk); }
 
-.node:focus { outline: none; }
-.node:focus-visible .node__shape {
-  stroke: #ffffff; stroke-width: 3;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.55));
-}
+.coin { font-size: 19px; font-weight: 700; font-variant-numeric: var(--nums); }
+.coin--score { color: var(--score); }
+.coin--score::before { content: '◆ '; font-size: 12px; }
+.coin--meta { color: var(--meta); margin-left: 10px; }
+.coin--meta::before { content: '❧ '; font-size: 12px; }
 
-/* Region key: colour carries the archetype, and only shape was ever legended. */
-.tree__regions {
-  position: absolute; left: 12px; top: 10px; z-index: 3;
-  display: flex; flex-wrap: wrap; gap: 3px 12px; max-width: 60%;
-  font-size: 10.5px; color: var(--muted);
-}
-.tree__regionDot {
-  width: 8px; height: 8px; border-radius: 50%;
-  border: 1.5px solid hsl(var(--hue) 70% 62%);
-  background: hsl(var(--hue) 70% 62% / 0.25);
-}
+/* ========================================================== selected upgrade */
 
-.tree__tools {
-  position: absolute; right: 12px; bottom: 9px; z-index: 4;
-  display: flex; align-items: center; gap: 7px;
+.upg { padding: 14px 15px 15px; }
+.upg__head { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+.upg__name { display: block; font-size: 22px; font-weight: 700; letter-spacing: 0; }
+.upg__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+.chipx {
+  padding: 2px 9px; border-radius: 999px;
+  border: 1px solid var(--rule-strong); background: var(--paper-warm);
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft);
 }
-.btn--sm { padding: 5px 11px; font-size: 12px; border-radius: 7px; }
-.btn--sm:disabled { opacity: 0.4; }
-.btn--sm:disabled:hover { border-color: var(--line); background: var(--bg-3); }
+.chipx--available { border-color: var(--good); background: rgba(91, 127, 67, 0.16); color: #40602c; }
+.chipx--owned { border-color: var(--score); background: rgba(176, 128, 31, 0.18); color: #7d5a10; }
+.chipx--short { border-color: var(--risk); background: rgba(165, 68, 42, 0.1); color: var(--risk); }
+
+.upg__nt { margin: 2px 0 10px; }
+.upg__cost {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 14px 0 11px; padding: 9px 12px;
+  border: 1px solid #0f0e0b; border-radius: 8px;
+  background: linear-gradient(180deg, #2b2720, #16140f);
+  box-shadow: inset 0 0 0 1px rgba(226, 203, 148, 0.24);
+}
+.upg__costLabel {
+  font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #cbbc97;
+}
+.upg__cost .coin--score { color: #f0d99a; }
+.upg__cost .coin--meta { color: #a9d5cb; }
+.upg__cost .coin { color: #f7efd9; }
+.upg__note { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-soft); font-style: italic; }
+
+.chain {
+  margin: 0 15px 15px; padding: 11px 12px 12px;
+  border: 1px solid var(--rule); border-radius: 9px; background: rgba(220, 199, 148, 0.24);
+}
+.chain__title {
+  margin: 0 0 9px; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--ink-soft); font-weight: 700;
+}
+.chain__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.chain__btn {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 6px 8px; border: 1px solid transparent; border-radius: 7px;
+  background: var(--paper-lit); color: var(--ink); font-size: 13.5px; text-align: left;
+}
+button.chain__btn:hover { border-color: var(--ink-soft); }
+.chain__btn--hidden { color: var(--ink-faint); background: rgba(251, 243, 222, 0.5); }
+.chain__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chain__row--owned .chain__name { color: var(--score); font-weight: 600; }
+.chain__lock { font-size: 11px; opacity: 0.6; }
+.chain__btn .coin { font-size: 13px; }
+
+.nmark__shape {
+  fill: hsl(var(--hue) 58% 84%);
+  stroke: hsl(var(--hue) 42% 32%);
+  stroke-width: 2;
+}
+.nmark--dim .nmark__shape { fill: var(--paper-deep); stroke: var(--rule-strong); }
+.nmark__glyph {
+  fill: none; stroke: hsl(var(--hue) 45% 24%);
+  stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+}
+.nmark--dim .nmark__glyph { stroke: var(--ink-faint); }
+
+/* ------------------------------------------------------------------- goal */
+/* The goal card: gold, because it is the thing being saved for. */
+
+.goal {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--score); border-radius: 10px;
+  background: linear-gradient(180deg, rgba(217, 166, 54, 0.16), rgba(217, 166, 54, 0.05));
+}
+.goal > * { width: 100%; }
+.goal--ready { background: linear-gradient(180deg, rgba(217, 166, 54, 0.3), rgba(217, 166, 54, 0.1)); }
+
+.goal__head {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.2em;
+  color: #8a6512; font-weight: 700;
+}
+.goal--ready .goal__head { color: #7d5a10; }
+.goal__mark { font-size: 9px; }
+
+.goal__row { display: flex; align-items: baseline; gap: 10px; }
+.goal__name { font-size: 18px; font-weight: 700; letter-spacing: 0; }
+.goal__lead { margin-block: 0; font-size: 14.5px; font-weight: 600; }
+.goal__unpin {
+  margin-left: auto; padding: 1px 8px;
+  border: 1px solid var(--rule-strong); border-radius: 5px; background: none;
+  color: var(--ink-soft); font-size: 10.5px;
+}
+.goal__unpin:hover { color: var(--ink); border-color: var(--ink-soft); }
+
+/* The upgrade previews itself, in the grammar the cards already use. */
+.goal__nt { margin-block: -1px 1px; }
+.goal__nt .nt { margin: 0; gap: 4px; }
+.goal__nt .nt__row { min-height: 22px; }
+.goal__nt .nt__row--clause { display: none; }
+
+.goal__note { margin-block: 0; font-size: 11.5px; color: var(--ink-soft); }
+.goal__after {
+  margin-block: 1px 0; font-size: 11px; color: var(--ink-faint);
+  display: flex; align-items: baseline; gap: 6px;
+}
+.goal__afterLabel { text-transform: uppercase; letter-spacing: 0.16em; font-size: 8.5px; opacity: 0.8; }
+
+.goal__open {
+  align-self: flex-start; margin-top: 3px; padding: 5px 14px;
+  border: 1px solid #0f0e0b; border-radius: 7px;
+  background: linear-gradient(180deg, #2b2720, #16140f); color: #f0d99a;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px rgba(226, 203, 148, 0.22);
+}
+.goal__open:hover { filter: brightness(1.18); }
+
+.goalbar { display: flex; flex-direction: column; gap: 3px; }
+.goalbar__nums {
+  display: flex; align-items: baseline; gap: 4px;
+  font-size: 14px; font-variant-numeric: var(--nums);
+}
+.goalbar__cur { font-weight: 700; color: var(--ink); }
+.goalbar__sep, .goalbar__need { color: var(--ink-soft); }
+.goalbar__cy {
+  margin-left: auto; font-size: 9.5px; text-transform: uppercase;
+  letter-spacing: 0.14em; color: #8a6512;
+}
+.goalbar--alt .goalbar__cy { color: var(--meta); }
+.goalbar__track {
+  height: 7px; border-radius: 4px; overflow: hidden;
+  background: rgba(120, 100, 62, 0.22);
+  box-shadow: inset 0 1px 2px rgba(84, 66, 32, 0.24);
+}
+.goalbar__fill {
+  display: block; height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #b0801f, #e0b44c);
+  transition: width 0.12s linear;
+}
+.goalbar--alt .goalbar__fill { background: linear-gradient(90deg, #3b7b72, #6fbcaf); }
+
+/* --------------------------------------------------------------- feed/log */
+
+.feed {
+  display: flex; flex-direction: column-reverse; gap: 2px;
+  min-height: 72px; font-size: 12.5px;
+  font-variant-numeric: var(--nums);
+  color: var(--ink-soft);
+}
+.feed__line { color: var(--ink-soft); }
+.feed__line--score, .feed__line--jackpot { color: #8a6512; }
+.feed__line--meta, .feed__line--pattern { color: var(--meta); }
+.feed__line--loss { color: var(--risk); }
+.logpanel { padding: 16px 18px; overflow-y: auto; font-size: 13px; font-variant-numeric: var(--nums); }
+.logpanel .feed__line { padding: 1.5px 0; border-bottom: 1px solid rgba(198, 176, 131, 0.35); }
 
 /* ------------------------------------------------------------ stats panel */
 
 .stats { flex: 1; overflow-y: auto; padding: 16px 18px 40px; }
 .statsection { margin-bottom: 22px; }
 .statsection__title {
-  margin: 0 0 8px; font-size: 11px; text-transform: uppercase;
-  letter-spacing: 0.1em; color: var(--muted); font-weight: 600;
+  margin: 0 0 8px; font-size: 10.5px; text-transform: uppercase;
+  letter-spacing: 0.18em; color: var(--ink-soft); font-weight: 700;
+  padding-bottom: 5px; border-bottom: 1px solid var(--rule);
 }
 .statrow {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 3px 0; font-size: 13px; width: 100%;
+  padding: 3px 0; font-size: 13.5px; width: 100%;
   background: none; border: 0; text-align: left;
 }
-.statrow__label { color: var(--muted); }
-.statrow__value { font-variant-numeric: tabular-nums; }
+.statrow__label { color: var(--ink-soft); }
+.statrow__value { font-variant-numeric: var(--nums); color: var(--ink); font-weight: 600; }
 .statrow__value.hist { display: inline-flex; gap: 3px; align-items: center; }
 
 .statrow--button { border-radius: 6px; padding: 3px 6px; margin: 0 -6px; }
 .statrow--live { cursor: pointer; }
-.statrow--live:hover { background: var(--bg-3); }
+.statrow--live:hover { background: var(--paper-deep); }
 .statrow--live:hover .statrow__value { color: var(--meta); }
 .statrow--hint .statrow__value { animation: breathe 2.8s ease-in-out infinite; }
 @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
 .bars { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; }
-.bar { display: grid; grid-template-columns: 14px 1fr 52px; align-items: center; gap: 8px; font-size: 12px; }
-.bar__label { color: var(--muted); text-align: center; }
-.bar__track { height: 8px; background: var(--bg-3); border-radius: 4px; overflow: hidden; }
-.bar__fill { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
-.bar__fill--alt { background: #47566a; }
-.bar__value { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.bar { display: grid; grid-template-columns: 14px 1fr 52px; align-items: center; gap: 8px; font-size: 12.5px; }
+.bar__label { color: var(--ink-soft); text-align: center; }
+.bar__track {
+  height: 8px; background: var(--paper-deep); border-radius: 4px; overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(84, 66, 32, 0.2);
+}
+.bar__fill { display: block; height: 100%; background: var(--score); border-radius: 4px; }
+.bar__fill--alt { background: var(--rule-strong); }
+.bar__value { text-align: right; font-variant-numeric: var(--nums); color: var(--ink-soft); }
 
 .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
 .tag {
-  padding: 2px 8px; border-radius: 999px; background: var(--bg-3);
-  font-size: 11.5px; color: var(--muted);
+  padding: 2px 9px; border-radius: 999px; background: var(--paper-deep);
+  border: 1px solid var(--rule); font-size: 11.5px; color: var(--ink-soft);
 }
 
-/* ---------------------------------------------------------------- debug */
+/* ------------------------------------------------------------------ debug */
 
 .debug {
   position: fixed; right: 12px; bottom: 12px; z-index: 50;
   padding: 10px 12px; border: 1px solid var(--risk); border-radius: var(--radius);
-  background: rgba(20, 25, 32, 0.97); font-size: 12px;
+  background: var(--paper-lit); font-size: 12.5px;
+  box-shadow: 0 12px 28px rgba(60, 46, 20, 0.3);
 }
-.debug__title { color: var(--risk); margin-bottom: 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.debug__title { color: var(--risk); margin-bottom: 8px; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; }
 .debug__row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
-.debug__row span { color: var(--muted); }
-.debug__row b { font-variant-numeric: tabular-nums; margin-right: 6px; }
+.debug__row span { color: var(--ink-soft); }
+.debug__row b { font-variant-numeric: var(--nums); margin-right: 6px; }
+
+/* ===================================================== modular desktop UI */
+/*
+ * The workspace is progressive rather than a fixed three-column dashboard:
+ * Dice exists first; tree, Stats and Log appear after 20 lifetime Score.
+ * Selecting a reachable node creates the Inspector. Windows can be moved and
+ * minimized without changing game state.
+ */
+
+.desktop {
+  position: relative;
+  flex: 1; min-height: 0; overflow: hidden;
+  background:
+    radial-gradient(1000px 620px at 50% 0%, rgba(255, 252, 240, 0.7) 0%, rgba(255, 252, 240, 0) 62%),
+    radial-gradient(760px 520px at 8% 100%, rgba(199, 176, 128, 0.22) 0%, rgba(199, 176, 128, 0) 60%),
+    radial-gradient(760px 520px at 94% 96%, rgba(199, 176, 128, 0.22) 0%, rgba(199, 176, 128, 0) 60%),
+    var(--paper);
+}
+
+.desktop-window {
+  position: absolute;
+  display: flex; flex-direction: column;
+  min-width: 240px; min-height: 42px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 9px;
+  background: var(--paper-warm);
+  box-shadow: 0 12px 28px rgba(72, 56, 24, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+}
+.desktop-window:focus-within { border-color: var(--ink-soft); }
+
+.desktop-window__bar {
+  flex: 0 0 31px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 5px 0 11px;
+  border-bottom: 1px solid var(--rule-strong);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.18)), var(--moss-2);
+  color: #f1e9d3;
+  cursor: move; user-select: none; touch-action: none;
+}
+.desktop-window__title {
+  flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+}
+.desktop-window__minimize {
+  width: 24px; height: 22px; padding: 0;
+  border: 1px solid rgba(20, 34, 24, 0.55); border-radius: 4px;
+  background: rgba(20, 34, 24, 0.3); color: #e4ebdb;
+  line-height: 18px;
+}
+.desktop-window__minimize:hover { color: #fbf4e2; border-color: #0f0e0b; background: #1c1a15; }
+
+.desktop-window__body { flex: 1; min-height: 0; overflow: hidden; }
+.desktop-window--minimized { width: 220px !important; height: 32px !important; min-height: 32px; }
+.desktop-window--minimized .desktop-window__bar { border-bottom: 0; }
+
+.desktop-window__body > .panel {
+  width: 100%; height: 100%;
+  border: 0; border-radius: 0; box-shadow: none;
+  background: var(--paper-warm);
+}
+
+.desktop-window--dice .game { border: 0; }
+.desktop-window--dice .game__arena { min-height: 180px; }
+.desktop-window--dice .game__controls { border-top-color: var(--rule); }
+.desktop-window--tree .tree { height: 100%; }
+.desktop-window--upgrade .panel--right { overflow: auto; }
+.desktop-window--goal .desktop-window__body { overflow: auto; }
+.desktop-window--goal .goal {
+  min-height: 100%; border: 0; border-radius: 0;
+  background: rgba(217, 166, 54, 0.12);
+}
+
+.tree__embeddedKey {
+  display: flex; align-items: center; margin: 0;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-deep);
+  min-height: 37px;
+}
+.tree__embeddedKey .tree__key { padding: 0; }
+
+/* The die is the game itself, not another desktop tool. It owns the fixed
+   centre workspace while the movable utility windows live around it. */
+.game-area {
+  position: absolute;
+  left: 26%; right: 26%; top: 24px; bottom: 24px;
+  display: flex; min-width: 0; z-index: 1;
+}
+.game-area__panel {
+  width: 100%; height: 100%; min-height: 0;
+  display: flex; flex-direction: column; overflow: hidden;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+}
+.game-area .game__arena { flex: 1 1 auto; min-height: 0; }
+.game-area .game__controls {
+  margin: 0 auto; width: min(560px, calc(100% - 24px));
+  border-top: 0;
+  background: none;
+}
+
+/* Build is one view of the tech window. Its goal belongs to that view, under
+   the tree, rather than occupying another movable window. */
+.tech-build { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.tech-build > .tree { flex: 1 1 auto; height: auto; min-height: 0; }
+.tech-build__goal {
+  /* Keep the tree viewport physically stable while goal content changes.
+     With an auto-height footer, selecting a more detailed unbought node made
+     the SVG shorter; its viewBox then re-fit and looked like the tree had
+     snapped back toward The Die even though the pan transform never changed. */
+  flex: 0 0 170px; height: 170px; min-height: 170px; max-height: 170px;
+  overflow: auto;
+  border-top: 1px solid var(--rule-strong);
+}
+.tech-build__goal .goal {
+  min-height: 100%;
+  border: 0; border-radius: 0;
+  padding: 10px 13px 12px;
+  background: rgba(217, 166, 54, 0.13);
+}
+.tech-build__goal .goal__unpin { display: none; }
+
+/* ------------------------------------------------------------- responsive */
+
+@media (max-width: 900px) {
+  .topbar { flex-wrap: wrap; gap: 12px; }
+  .main { grid-template-columns: 1fr; grid-template-rows: minmax(0, auto) minmax(300px, 1fr); }
+  .game { border-right: none; border-bottom: 1px solid var(--rule); min-height: 0; }
+  .side { min-height: 0; }
+
+  .desktop {
+    overflow: auto;
+    display: flex; flex-direction: column; gap: 10px; padding: 10px;
+  }
+  .desktop-window {
+    position: relative !important;
+    left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;
+    width: 100% !important;
+    height: min(62vh, 620px) !important;
+    min-height: 320px;
+  }
+  .desktop-window--goal { height: auto !important; min-height: 150px; }
+  .desktop-window--minimized { height: 32px !important; min-height: 32px; }
+
+  .game-area {
+    position: relative;
+    left: auto; right: auto; top: auto; bottom: auto;
+    width: 100%;
+    min-height: min(62vh, 620px);
+    flex: 0 0 min(62vh, 620px);
+  }
+  .orn__corner { width: 130px; height: 130px; }
+}
 
 /* ------------------------------------------------------- reduced motion */
 /* A tumbling die, a hopping settle, a fading ghost and a counting total are
@@ -579,664 +1155,6 @@ button.minidie:hover .die__body { stroke: var(--muted); }
     transition-duration: 0.001ms !important;
   }
   .tray__hint--show { animation: none; opacity: 1; }
-  .cooldown__fill { transition: none; }
-}
-
-/* ------------------------------------------------------------------- goal */
-/* Beside the die, not in the topbar: this is what the player watches while
-   rolling. Compact on purpose -- it is a strip, not a second card. */
-.goal {
-  flex: 0 0 auto;
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 9px 14px 11px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(20, 25, 32, 0.55);
-}
-.goal--ready { background: rgba(232, 192, 90, 0.07); border-bottom-color: rgba(232, 192, 90, 0.28); }
-/* The band spans the column, the content does not: a 5px bar 600px wide
-   stops reading as a bar. */
-.goal > * { width: 100%; max-width: 430px; margin-inline: auto; }
-
-.goal__head {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.15em;
-  color: var(--muted); font-weight: 650;
-}
-.goal--ready .goal__head { color: var(--score); }
-.goal__mark { font-size: 9px; }
-
-.goal__row { display: flex; align-items: baseline; gap: 10px; }
-.goal__name { font-size: 15px; font-weight: 650; letter-spacing: 0.01em; }
-.goal__lead { margin-block: 0; font-size: 14px; font-weight: 600; }
-.goal__unpin {
-  margin-left: auto; padding: 1px 7px;
-  border: 1px solid var(--line); border-radius: 5px; background: none;
-  color: var(--muted); font-size: 10.5px;
-}
-.goal__unpin:hover { color: var(--text); border-color: #435063; }
-
-/* The upgrade previews itself, in the grammar the cards already use. */
-.goal__nt { margin-block: -1px 1px; }
-.goal__nt .nt { margin: 0; gap: 4px; }
-.goal__nt .nt__row { min-height: 22px; }
-.goal__nt .nt__row--clause { display: none; }
-
-.goal__note { margin-block: 0; font-size: 11px; color: var(--muted); }
-.goal__after {
-  margin-block: 1px 0; font-size: 10.5px; color: #626d7d;
-  display: flex; align-items: baseline; gap: 6px;
-}
-.goal__afterLabel { text-transform: uppercase; letter-spacing: 0.13em; font-size: 8.5px; opacity: 0.75; }
-
-.goal__open {
-  align-self: flex-start; margin-top: 2px; padding: 4px 12px;
-  border: 1px solid var(--score); border-radius: 7px;
-  background: rgba(232, 192, 90, 0.1); color: var(--score);
-  font-size: 12px; font-weight: 600;
-}
-.goal__open:hover { background: rgba(232, 192, 90, 0.18); }
-
-.goalbar { display: flex; flex-direction: column; gap: 3px; }
-.goalbar__nums {
-  display: flex; align-items: baseline; gap: 4px;
-  font-size: 12px; font-variant-numeric: tabular-nums;
-}
-.goalbar__cur { font-weight: 650; color: var(--text); }
-.goalbar__sep, .goalbar__need { color: var(--muted); }
-.goalbar__cy {
-  margin-left: auto; font-size: 9.5px; text-transform: uppercase;
-  letter-spacing: 0.1em; color: var(--score);
-}
-.goalbar--alt .goalbar__cy { color: var(--meta); }
-.goalbar__track {
-  height: 5px; border-radius: 3px; overflow: hidden;
-  background: rgba(125, 155, 205, 0.12);
-}
-.goalbar__fill {
-  display: block; height: 100%; border-radius: 3px;
-  background: var(--score); transition: width 0.12s linear;
-}
-.goalbar--alt .goalbar__fill { background: var(--meta); }
-
-/* The goal in the web itself. */
-.node--pinned .node__shape {
-  stroke-dasharray: 3 2.5;
-  filter: drop-shadow(0 0 5px hsl(var(--hue) 75% 60% / 0.7));
-}
-
-@media (prefers-reduced-motion: reduce) { .goalbar__fill { transition: none; } }
-
-/* =================================================================== shell */
-
-.app { display: flex; flex-direction: column; height: 100%; gap: 0; }
-
-.main {
-  display: grid;
-  grid-template-columns: 340px minmax(0, 1fr) 330px;
-  gap: 14px;
-  padding: 14px;
-  flex: 1; min-height: 0;
-}
-.col { display: flex; min-height: 0; }
-.col--left { min-width: 0; grid-column: 1; grid-row: 1; }
-.game { grid-column: 2; grid-row: 1; }
-.panel--right { grid-column: 3; grid-row: 1; }
-
-/* A panel: the chrome every column shares. */
-.panel {
-  position: relative;
-  display: flex; flex-direction: column; min-height: 0; flex: 1;
-  border: 1px solid var(--line-2); border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(20, 38, 68, 0.62) 0%, rgba(8, 14, 28, 0.72) 100%);
-  box-shadow: inset 0 1px 0 rgba(120, 190, 255, 0.07), 0 10px 30px rgba(0, 0, 0, 0.45);
-  overflow: hidden;
-}
-.panel__title {
-  display: flex; align-items: center; gap: 7px 12px; flex-wrap: wrap;
-  margin: 0; padding: 11px 14px 10px;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
-  color: #8fb6e2;
-  border-bottom: 1px solid rgba(77, 166, 255, 0.14);
-}
-.panel__body { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; }
-.panel__empty { margin: 0; padding: 18px 14px; font-size: 12.5px; color: var(--muted); }
-.panel--right { overflow: auto; }
-
-/* ================================================================== topbar */
-
-.topbar {
-  /* The settings/refund menu must always sit above movable desktop windows.
-     Those windows raise their z-index as they are focused, so this layer
-     needs to live outside that normal desktop stacking range. */
-  position: relative; z-index: 100000;
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-  gap: 16px; padding: 10px 18px;
-  border-bottom: 1px solid var(--line-2);
-  background: linear-gradient(180deg, rgba(12, 24, 46, 0.92), rgba(6, 11, 22, 0.86));
-}
-.brand { display: flex; align-items: center; gap: 11px; }
-.brand__mark { filter: drop-shadow(0 0 8px rgba(77, 166, 255, 0.6)); }
-.brand__mark rect { fill: url(#none); fill: #1b4f96; stroke: var(--accent-2); stroke-width: 1.6; }
-.brand__mark circle { fill: #eaf4ff; }
-.brand__word { font-size: 23px; letter-spacing: -0.01em; }
-.brand__word b { font-weight: 800; color: #ffffff; }
-.brand__word i { font-style: normal; font-weight: 800; color: var(--accent); }
-
-.tabsx {
-  display: flex; gap: 4px; padding: 4px;
-  border: 1px solid var(--line-2); border-radius: 999px;
-  background: rgba(8, 16, 32, 0.7);
-}
-.tab {
-  position: relative;
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 18px; border: 1px solid transparent; border-radius: 999px;
-  background: none; color: #9fb6d4; font-size: 14px; font-weight: 600;
-}
-.tab:hover { color: var(--text); }
-.tab--on {
-  color: #ffffff;
-  background: linear-gradient(180deg, #2f7fe0, #1b5cb4);
-  border-color: rgba(120, 200, 255, 0.55);
-  box-shadow: 0 0 16px rgba(45, 130, 235, 0.55);
-}
-.tab__badge {
-  min-width: 17px; padding: 0 5px; border-radius: 999px;
-  background: var(--score); color: #241a00;
-  font-size: 10.5px; font-weight: 800; text-align: center;
-}
-.tab__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); }
-
-.topbar__right { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
-.currencies { display: flex; align-items: baseline; gap: 16px; }
-.currency { display: inline-flex; align-items: baseline; gap: 7px; }
-.currency::before {
-  content: '✦'; font-size: 15px; color: var(--score);
-  filter: drop-shadow(0 0 6px rgba(255, 194, 51, 0.6));
-}
-.currency--alt::before { content: '◈'; color: var(--meta); filter: none; }
-.currency__value {
-  font-size: 26px; font-weight: 800; color: var(--score);
-  font-variant-numeric: tabular-nums; line-height: 1;
-}
-.currency--alt .currency__value { color: var(--meta); font-size: 21px; }
-.currency__label {
-  font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #7b90ad;
-}
-
-.iconbtn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; padding: 0;
-  border: 1px solid var(--line-2); border-radius: 8px;
-  background: rgba(12, 24, 46, 0.7); color: #9fb6d4;
-  font-size: 15px; line-height: 1;
-}
-.iconbtn:hover { color: #ffffff; border-color: var(--accent); }
-.gear { position: relative; }
-.gear__menu {
-  position: absolute; right: 0; top: calc(100% + 8px); z-index: 20;
-  width: 236px; padding: 6px;
-  border: 1px solid var(--line-2); border-radius: 10px;
-  background: #0b1524; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6);
-}
-.gear__item {
-  display: block; width: 100%; padding: 8px 10px; text-align: left;
-  border: 0; border-radius: 7px; background: none; color: var(--text); font-size: 13px;
-}
-.gear__item:hover:not(:disabled) { background: rgba(77, 166, 255, 0.12); }
-.gear__item:disabled { opacity: 0.4; }
-.gear__item--danger { color: #ff9b9b; }
-.gear__item--danger:hover:not(:disabled) { background: rgba(255, 107, 107, 0.12); color: #ffc2c2; }
-.gear__sub { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
-
-/* =============================================================== build tree */
-
-.tree__key {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 3px 11px;
-  width: 100%;
-  letter-spacing: 0.04em; font-size: 9.5px; color: var(--muted);
-  text-transform: none; font-weight: 500;
-}
-.tree__keyItem { display: inline-flex; align-items: center; gap: 5px; }
-.tree__tools {
-  position: absolute; left: 12px; right: 12px; bottom: 10px; z-index: 4;
-  display: flex; align-items: center; gap: 7px;
-}
-.tree__tools .btn { margin-left: auto; }
-
-.tree--expanded {
-  position: fixed; inset: 64px 14px 14px; z-index: 40;
-  /* Opaque: at 54 nodes the layout underneath showing through is noise. */
-  background: linear-gradient(180deg, #0c1a31, #05090f);
-  box-shadow: 0 0 0 100vmax rgba(2, 5, 12, 0.72), 0 24px 60px rgba(0, 0, 0, 0.7);
-}
-
-/* ========================================================== selected upgrade */
-
-.upg { padding: 13px 14px 14px; }
-.upg__head { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
-.upg__name { display: block; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
-.upg__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
-.chipx {
-  padding: 2px 8px; border-radius: 999px;
-  border: 1px solid var(--line-2); background: rgba(12, 24, 46, 0.6);
-  font-size: 10px; letter-spacing: 0.04em; color: #9fb6d4;
-}
-.chipx--available { border-color: rgba(77, 166, 255, 0.7); background: rgba(45, 130, 235, 0.3); color: #dceeff; }
-.chipx--owned { border-color: rgba(255, 194, 51, 0.6); background: rgba(255, 194, 51, 0.16); color: #ffe0a0; }
-.chipx--short { border-color: rgba(255, 107, 107, 0.5); color: #ffb3b3; }
-
-.upg__nt { margin: 2px 0 10px; }
-.upg__cost {
-  display: flex; align-items: center; justify-content: space-between;
-  margin: 14px 0 10px; padding-top: 11px;
-  border-top: 1px solid rgba(77, 166, 255, 0.14);
-}
-.upg__costLabel { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #8fb6e2; }
-.coin { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.coin--score { color: var(--score); }
-.coin--score::before { content: '✦ '; font-size: 13px; }
-.coin--meta { color: var(--meta); margin-left: 10px; }
-.coin--meta::before { content: '◈ '; font-size: 12px; }
-.upg__note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
-
-.btn--primary {
-  display: block; width: 100%; padding: 11px; border-radius: 9px;
-  border: 1px solid rgba(120, 200, 255, 0.5);
-  background: linear-gradient(180deg, #3089ec, #1c5fb8);
-  color: #ffffff; font-size: 14.5px; font-weight: 700;
-  box-shadow: 0 0 18px rgba(45, 130, 235, 0.4);
-}
-.btn--primary:hover { filter: brightness(1.12); }
-
-.chain { margin: 0 14px 14px; padding: 11px 12px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: rgba(8, 16, 32, 0.5); }
-.chain__title { margin: 0 0 9px; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #8fb6e2; font-weight: 700; }
-.chain__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
-.chain__btn {
-  display: flex; align-items: center; gap: 9px; width: 100%;
-  padding: 6px 8px; border: 1px solid transparent; border-radius: 8px;
-  background: rgba(14, 28, 52, 0.6); color: var(--text); font-size: 13px; text-align: left;
-}
-button.chain__btn:hover { border-color: var(--accent); }
-.chain__btn--hidden { color: #5d6e87; }
-.chain__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chain__row--owned .chain__name { color: var(--score); }
-.chain__lock { font-size: 11px; opacity: 0.6; }
-.chain__btn .coin { font-size: 13px; }
-
-.nmark__shape {
-  fill: hsl(var(--hue) 62% 52% / 0.28);
-  stroke: hsl(var(--hue) 82% 66%);
-  stroke-width: 2;
-}
-.nmark--dim .nmark__shape { fill: none; stroke: #43536b; }
-
-/* ==================================================================== dice */
-
-.game { border-right: 0; gap: 0; }
-.tray { border-bottom: 0; background: transparent; border-radius: var(--radius); }
-
-/* ------------------------------------------------- centre column, redressed */
-
-.game__score { margin-left: auto; }
-.game__score .currency__value { font-size: 20px; }
-.game__arena { position: relative; flex: 1 1 auto; min-height: 260px; }
-.tray { position: absolute; inset: 0; max-height: none; min-height: 0; }
-.game__controls {
-  /* Pinned to the bottom of the column so the arena keeps everything else. */
-  flex: 0 0 auto; display: flex; flex-direction: column; gap: 9px;
-  padding: 11px 14px 12px;
-  border-top: 1px solid rgba(77, 166, 255, 0.14);
-}
-
-.rollbtn {
-  position: relative; overflow: hidden;
-  display: flex; align-items: center; gap: 12px;
-  padding: 13px 18px; border-radius: 11px;
-  border: 1px solid rgba(120, 200, 255, 0.55);
-  background: linear-gradient(180deg, #2f8bee, #1a5cb6);
-  box-shadow: 0 0 24px rgba(45, 130, 235, 0.42);
-  color: #ffffff;
-}
-.rollbtn:hover:not(:disabled) { filter: brightness(1.12); }
-.rollbtn:disabled { opacity: 1; background: linear-gradient(180deg, #1b3355, #12243d); border-color: var(--line-2); box-shadow: none; }
-.rollbtn__pip { display: inline-flex; }
-.rollbtn__pip rect { fill: rgba(255, 255, 255, 0.16); stroke: #eaf4ff; stroke-width: 1.6; }
-.rollbtn__pip circle { fill: #ffffff; }
-.rollbtn__label { flex: 1; text-align: left; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
-.rollbtn__time { font-size: 15px; font-variant-numeric: tabular-nums; opacity: 0.8; }
-.rollbtn__fill {
-  position: absolute; left: 0; bottom: 0; height: 3px;
-  background: var(--accent-2); box-shadow: 0 0 8px var(--accent-2);
-}
-.rollbtn:not(:disabled) .rollbtn__fill { display: none; }
-
-/* The goal card: gold, because it is the thing being saved for. */
-.goal {
-  border: 1px solid rgba(255, 194, 51, 0.38); border-radius: 11px;
-  background: linear-gradient(180deg, rgba(255, 194, 51, 0.09), rgba(255, 194, 51, 0.03));
-  padding: 10px 13px 12px; gap: 5px;
-}
-.goal > * { max-width: none; margin-inline: 0; }
-.goal--ready { background: linear-gradient(180deg, rgba(255, 194, 51, 0.17), rgba(255, 194, 51, 0.05)); }
-.goal__head { color: var(--score); font-size: 9.5px; }
-.goal__name { font-size: 17px; }
-.goalbar__cur { color: var(--text); font-size: 14px; }
-.goalbar__need, .goalbar__sep { font-size: 14px; }
-.goalbar__track { height: 7px; background: rgba(0, 0, 0, 0.42); }
-.goalbar__fill { background: linear-gradient(90deg, #ffb020, #ffd76a); }
-.goal__open {
-  border-color: rgba(255, 194, 51, 0.6); background: rgba(255, 194, 51, 0.14);
-}
-.feed { font-size: 11.5px; color: var(--muted); }
-
-/* ---------------------------------------------------- brighter web nodes */
-
-.node--locked { opacity: 0.8; }
-.node--locked .node__shape { fill: rgba(16, 28, 48, 0.85);  }
-.node--locked .node__shape { stroke: #3c4d66; }
-.node--unaffordable .node__shape {
-  fill: hsl(var(--hue) 45% 16%); stroke: hsl(var(--hue) 70% 58%);
-}
-.node--available .node__shape {
-  fill: hsl(var(--hue) 55% 22%); stroke: hsl(var(--hue) 85% 66%);
-  filter: drop-shadow(0 0 5px hsl(var(--hue) 85% 60% / 0.55));
-}
-.node--allocated .node__shape {
-  fill: hsl(var(--hue) 60% 38%); stroke: hsl(var(--hue) 90% 72%);
-  filter: drop-shadow(0 0 6px hsl(var(--hue) 85% 62% / 0.6));
-}
-.node--pinned .node__shape { stroke: var(--goal); stroke-dasharray: 3 2.5; }
-.edge { stroke: rgba(90, 130, 180, 0.28); }
-
-/* ------------------------------------------------- purchase acknowledgement */
-
-.spark__ring {
-  fill: none;
-  stroke: hsl(var(--hue) 90% 74%);
-  stroke-width: 2.4;
-  /* The group is already translated to the node, so its own origin is the
-     centre to scale about. fill-box on an SVG group is not dependable. */
-  transform-origin: 0 0;
-  animation: sparkRing 700ms ease-out forwards;
-}
-.spark__rays {
-  transform-origin: 0 0;
-  animation: sparkRay 700ms cubic-bezier(0.16, 0.9, 0.3, 1) forwards;
-}
-.spark__rays line {
-  stroke: hsl(var(--hue) 95% 78%);
-  stroke-width: 2.6; stroke-linecap: round;
-}
-@keyframes sparkRing {
-  from { opacity: 0.9; transform: scale(0.55); }
-  to { opacity: 0; transform: scale(2.3); }
-}
-@keyframes sparkRay {
-  0% { opacity: 0; transform: scale(0.5); }
-  22% { opacity: 1; }
-  100% { opacity: 0; transform: scale(2.1); }
-}
-@media (prefers-reduced-motion: reduce) {
+  .cooldown__fill, .goalbar__fill { transition: none; }
   .spark__ring, .spark__rays { animation: none; opacity: 0; }
-}
-
-
-/* ===================================================== modular desktop UI */
-/*
- * The workspace is now progressive rather than a fixed three-column dashboard:
- * Dice exists first; tree, Stats and Log appear after 20 lifetime Score.
- * Selecting a reachable node creates Inspector + Goal. Windows can be moved
- * and minimized without changing game state.
- */
-.desktop {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  background:
-    linear-gradient(rgba(77, 166, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(77, 166, 255, 0.025) 1px, transparent 1px),
-    #070d17;
-  background-size: 32px 32px;
-}
-
-.desktop-window {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  min-width: 240px;
-  min-height: 42px;
-  border: 1px solid #2b466d;
-  border-radius: 7px;
-  background: #091321;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.46);
-  overflow: hidden;
-}
-
-.desktop-window:focus-within {
-  border-color: #4d7eb8;
-}
-
-.desktop-window__bar {
-  flex: 0 0 31px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 5px 0 10px;
-  border-bottom: 1px solid #263b5a;
-  background: linear-gradient(180deg, #16263d, #0d1929);
-  color: #c7d7eb;
-  cursor: move;
-  user-select: none;
-  touch-action: none;
-}
-
-.desktop-window__title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-size: 11px;
-  font-weight: 750;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.desktop-window__minimize {
-  width: 24px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid #355071;
-  border-radius: 4px;
-  background: #0b1625;
-  color: #9fb4ce;
-  line-height: 18px;
-}
-.desktop-window__minimize:hover { color: #fff; border-color: #5f86b4; }
-
-.desktop-window__body {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.desktop-window--minimized {
-  width: 220px !important;
-  height: 32px !important;
-  min-height: 32px;
-}
-.desktop-window--minimized .desktop-window__bar { border-bottom: 0; }
-
-.desktop-window__body > .panel {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  background: #091321;
-}
-
-.desktop-window--dice .game { border: 0; }
-.desktop-window--dice .game__arena { min-height: 180px; }
-.desktop-window--dice .game__controls { border-top-color: #213753; }
-
-.desktop-window--tree .tree { height: 100%; }
-.tree__embeddedKey {
-  display: flex;
-  align-items: center;
-  margin: 0;
-  padding: 7px 10px;
-  border-bottom: 1px solid #203450;
-  background: #0b1625;
-  min-height: 37px;
-}
-.tree__embeddedKey .tree__key { padding: 0; }
-
-.desktop-window--upgrade .panel--right {
-  overflow: auto;
-}
-
-.desktop-window--goal .desktop-window__body {
-  overflow: auto;
-}
-.desktop-window--goal .goal {
-  min-height: 100%;
-  border: 0;
-  border-radius: 0;
-  border-bottom: 0;
-  background: #11170f;
-}
-
-
-/* On small displays, preserve the progressive order and avoid inaccessible
-   off-screen floating windows. Desktop dragging remains the wide-screen mode. */
-@media (max-width: 900px) {
-  .desktop {
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 10px;
-  }
-  .desktop-window {
-    position: relative !important;
-    left: auto !important;
-    right: auto !important;
-    top: auto !important;
-    bottom: auto !important;
-    width: 100% !important;
-    height: min(62vh, 620px) !important;
-    min-height: 320px;
-  }
-  .desktop-window--goal { height: auto !important; min-height: 150px; }
-  .desktop-window--minimized { height: 32px !important; min-height: 32px; }
-}
-
-
-
-
-.topbar__spacer {
-  min-width: 1px;
-  display: flex;
-  justify-content: center;
-}
-.window-arrange {
-  padding: 6px 13px;
-  border: 1px solid #355071;
-  border-radius: 6px;
-  background: #0b1625;
-  color: #a9bdd5;
-  font-size: 12px;
-  font-weight: 650;
-}
-.window-arrange:hover {
-  color: #fff;
-  border-color: #5f86b4;
-  background: #13233a;
-}
-
-
-
-/* The die is the game itself, not another desktop tool. It owns the fixed
-   centre workspace while the movable utility windows live around it. */
-.game-area {
-  position: absolute;
-  left: 25%;
-  right: 25%;
-  top: 12px;
-  bottom: 12px;
-  display: flex;
-  min-width: 0;
-  z-index: 1;
-}
-.game-area__panel {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-.game-area .game__arena { flex: 1 1 auto; min-height: 0; }
-.game-area .game__controls {
-  margin: 0 auto;
-  width: min(560px, calc(100% - 24px));
-  border-top: 0;
-  background: rgba(7, 13, 23, 0.72);
-  border-radius: 10px;
-}
-
-/* Build is one view of the tech window. Its goal belongs to that view, under
-   the tree, rather than occupying another movable window. */
-.tech-build {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-.tech-build > .tree {
-  flex: 1 1 auto;
-  height: auto;
-  min-height: 0;
-}
-.tech-build__goal {
-  /* Keep the tree viewport physically stable while goal content changes.
-     With an auto-height footer, selecting a more detailed unbought node made
-     the SVG shorter; its viewBox then re-fit and looked like the tree had
-     snapped back toward The Die even though the pan transform never changed. */
-  flex: 0 0 170px;
-  height: 170px;
-  min-height: 170px;
-  max-height: 170px;
-  overflow: auto;
-  border-top: 1px solid #203450;
-}
-.tech-build__goal .goal {
-  min-height: 100%;
-  border: 0;
-  border-radius: 0;
-  border-bottom: 0;
-  padding: 10px 12px 12px;
-  background: rgba(255, 194, 51, 0.055);
-}
-.tech-build__goal .goal__unpin { display: none; }
-
-@media (max-width: 900px) {
-  .game-area {
-    position: relative;
-    left: auto;
-    right: auto;
-    top: auto;
-    bottom: auto;
-    width: 100%;
-    min-height: min(62vh, 620px);
-    flex: 0 0 min(62vh, 620px);
-  }
 }

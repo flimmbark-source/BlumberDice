@@ -31,6 +31,30 @@ The game never explains why.
 
 ---
 
+## The look
+
+A page from a pressed-flower notebook: warm paper, brown ink, a green board
+across the top, and botanical growth at the edges. Everything is drawn — the
+vines, the ruined arch the die is thrown under, the compass circle it lands
+in — and everything is drawn in code, so there is not one image file in the
+project.
+
+The whole skin lives in three places and touches no mechanic:
+
+- `src/styles.css` — the palette, at the top, and every rule that dresses a
+  control with it.
+- `src/ui/Ornaments.tsx` — the vines and the arch. Generated rather than
+  plotted: a stem is a cubic bezier, and each leaf is placed by sampling the
+  curve and turning onto its tangent. `aria-hidden`, unfocusable, inert.
+- `src/ui/dice/render.ts` — the tray's two themes, one per framework.
+
+Colour carries three jobs and no more: **gold** is Score and the thing being
+saved for, **teal** is Meta, **rust** is anything that takes something away.
+Everything else is paper, ink and leaf. A node's region is a hue and its
+class is a silhouette, exactly as before.
+
+---
+
 ## Architecture
 
 Game logic is a pure, deterministic layer that knows nothing about React. The

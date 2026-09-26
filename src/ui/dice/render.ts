@@ -17,28 +17,47 @@ export interface Theme {
   pip: string;
   accent: string;
   glow: string;
+  /** Warm cast-shadow colour: the dice sit on paper, not on black. */
+  shadow: string;
+  /** The halo drawn behind floating text so it reads over the arena. */
+  halo: string;
+  /** Floating text that is not calling out a jackpot. */
+  text: string;
+  /** Paper speck: the tooth of the page, scattered behind the arena. */
+  fleck: string;
 }
 
+/** Every number the tray paints is set in the page's own face. */
+const FACE = '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';
+
 export const THEME_A: Theme = {
-  surface: ['#123056', '#060c18'],
-  grid: 'rgba(77, 166, 255, 0.16)',
-  faceLight: '#fbf6ea',
-  faceShade: '#8e8878',
-  edge: 'rgba(255, 252, 240, 0.55)',
-  pip: '#22252b',
-  accent: '#e8c05a',
-  glow: 'rgba(120, 190, 255, ',
+  surface: ['rgba(252, 246, 228, 0.6)', 'rgba(226, 208, 166, 0.24)'],
+  grid: 'rgba(122, 101, 60, 0.42)',
+  faceLight: '#fdf7e6',
+  faceShade: '#a8906a',
+  edge: 'rgba(40, 33, 21, 0.8)',
+  pip: '#221e17',
+  accent: '#a8761b',
+  glow: 'rgba(196, 160, 86, ',
+  shadow: '#6b5730',
+  halo: 'rgba(250, 243, 224, 0.95)',
+  text: '#3c362a',
+  fleck: '#8d7c56',
 };
 
 export const THEME_B: Theme = {
-  surface: ['#0d3a3c', '#050f12'],
-  grid: 'rgba(111, 211, 199, 0.16)',
-  faceLight: '#eaf7f4',
-  faceShade: '#779a96',
-  edge: 'rgba(240, 255, 252, 0.55)',
-  pip: '#16262a',
-  accent: '#6fd3c7',
-  glow: 'rgba(111, 211, 199, ',
+  surface: ['rgba(238, 246, 240, 0.6)', 'rgba(198, 219, 209, 0.26)'],
+  grid: 'rgba(59, 123, 114, 0.4)',
+  faceLight: '#f4f8f1',
+  faceShade: '#8ba294',
+  edge: 'rgba(24, 40, 34, 0.8)',
+  pip: '#1b2b26',
+  accent: '#2f6d64',
+  glow: 'rgba(104, 168, 156, ',
+  shadow: '#4a6258',
+  halo: 'rgba(246, 250, 242, 0.95)',
+  text: '#2a3a33',
+  fleck: '#7d9489',
 };
 
 /** Direction the light travels. Down, and over the viewer's left shoulder. */
@@ -107,35 +126,48 @@ export function drawSurface(c: CanvasRenderingContext2D, world: World, theme: Th
   const outer = Math.min(w, d) / 2;
 
   const mid = project(v3(cx, cy, 0));
-  const glow = c.createRadialGradient(mid.x, mid.y, 8, mid.x, mid.y, outer * 1.5);
-  glow.addColorStop(0, theme.surface[0]);
-  glow.addColorStop(0.55, 'rgba(10, 20, 40, 0.55)');
-  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  c.fillStyle = glow;
+
+  // The disc the dice are thrown onto: a wash of paler paper, laid down
+  // first so the ink rings sit on top of it.
   c.beginPath();
-  ringPath(c, cx, cy, outer * 1.45);
+  ringPath(c, cx, cy, outer);
+  const wash = c.createRadialGradient(mid.x, mid.y, 4, mid.x, mid.y, outer);
+  wash.addColorStop(0, theme.surface[0]);
+  wash.addColorStop(1, theme.surface[1]);
+  c.fillStyle = wash;
   c.fill();
 
-  // Four rings, brightest at the rim the dice actually bounce off.
+  // Four rings, drawn like a compass figure: heaviest at the rim the dice
+  // actually bounce off, and doubled there the way an inked rule is.
   const rings = [0.34, 0.58, 0.79, 1];
   rings.forEach((k, i) => {
     c.beginPath();
     ringPath(c, cx, cy, outer * k);
     c.strokeStyle = theme.grid;
-    c.lineWidth = i === rings.length - 1 ? 2.4 : 1.1;
-    c.globalAlpha = i === rings.length - 1 ? 1 : 0.5 + i * 0.12;
+    c.lineWidth = i === rings.length - 1 ? 2.2 : 1;
+    c.globalAlpha = i === rings.length - 1 ? 1 : 0.42 + i * 0.12;
     c.stroke();
   });
-  c.globalAlpha = 1;
-
-  // A wash inside the rim so dice read against something.
   c.beginPath();
-  ringPath(c, cx, cy, outer);
-  const inner = c.createRadialGradient(mid.x, mid.y, 4, mid.x, mid.y, outer);
-  inner.addColorStop(0, 'rgba(30, 90, 170, 0.20)');
-  inner.addColorStop(1, 'rgba(10, 30, 70, 0.02)');
-  c.fillStyle = inner;
-  c.fill();
+  ringPath(c, cx, cy, outer * 0.955);
+  c.strokeStyle = theme.grid;
+  c.lineWidth = 0.9;
+  c.globalAlpha = 0.7;
+  c.stroke();
+
+  // Ticks around the rim, so the circle reads as drawn rather than printed.
+  c.globalAlpha = 0.55;
+  c.lineWidth = 1.2;
+  for (let i = 0; i < 48; i++) {
+    const t = (i / 48) * Math.PI * 2;
+    const a = project(v3(cx + Math.cos(t) * outer, cy + Math.sin(t) * outer, 0));
+    const b = project(v3(cx + Math.cos(t) * outer * 1.035, cy + Math.sin(t) * outer * 1.035, 0));
+    c.beginPath();
+    c.moveTo(a.x, a.y);
+    c.lineTo(b.x, b.y);
+    c.stroke();
+  }
+  c.globalAlpha = 1;
 }
 
 /** A circle on the ground plane, projected. */
@@ -150,21 +182,20 @@ function ringPath(c: CanvasRenderingContext2D, cx: number, cy: number, r: number
 }
 
 /**
- * Starfield and the shaft of light above the arena, drawn in canvas space
- * before the world transform so they sit behind everything and do not
- * scale with the zoom.
+ * The tooth of the page: flecks scattered in canvas space before the world
+ * transform, so they sit behind everything and do not scale with the zoom.
  */
-const STARS: { x: number; y: number; r: number; a: number }[] = Array.from(
-  { length: 90 },
+const SPECKS: { x: number; y: number; r: number; a: number }[] = Array.from(
+  { length: 110 },
   (_, i) => {
-    // Deterministic: a fixed sky, not a twinkling one that churns each frame.
+    // Deterministic: a fixed sheet of paper, not one that churns each frame.
     const n = Math.sin(i * 127.1) * 43758.5453;
     const m = Math.sin(i * 311.7) * 24634.6345;
     return {
       x: n - Math.floor(n),
       y: m - Math.floor(m),
-      r: 0.5 + ((i * 7) % 5) * 0.22,
-      a: 0.18 + ((i * 13) % 9) * 0.06,
+      r: 0.6 + ((i * 7) % 5) * 0.3,
+      a: 0.1 + ((i * 13) % 9) * 0.05,
     };
   },
 );
@@ -172,37 +203,23 @@ const STARS: { x: number; y: number; r: number; a: number }[] = Array.from(
 export function drawBackdrop(
   c: CanvasRenderingContext2D, w: number, h: number, theme: Theme,
 ): void {
-  const sky = c.createRadialGradient(w / 2, h * 0.34, 10, w / 2, h * 0.34, Math.max(w, h) * 0.8);
-  sky.addColorStop(0, 'rgba(18, 42, 84, 0.55)');
-  sky.addColorStop(1, 'rgba(4, 8, 18, 0)');
-  c.fillStyle = sky;
+  // A warm bloom where the light falls, and nothing else: the arena is a
+  // patch of lit page, so the illustration behind it stays readable.
+  const bloom = c.createRadialGradient(w / 2, h * 0.42, 10, w / 2, h * 0.42, Math.max(w, h) * 0.62);
+  bloom.addColorStop(0, `${theme.glow}0.16)`);
+  bloom.addColorStop(1, `${theme.glow}0)`);
+  c.fillStyle = bloom;
   c.fillRect(0, 0, w, h);
 
-  for (const st of STARS) {
-    c.globalAlpha = st.a;
-    c.fillStyle = '#cfe4ff';
+  // Flecks in the pulp. Deterministic, so the page does not shimmer.
+  for (const st of SPECKS) {
+    c.globalAlpha = st.a * 0.5;
+    c.fillStyle = theme.fleck;
     c.beginPath();
-    c.arc(st.x * w, st.y * h * 0.82, st.r, 0, Math.PI * 2);
+    c.arc(st.x * w, st.y * h, st.r, 0, Math.PI * 2);
     c.fill();
   }
   c.globalAlpha = 1;
-
-  // The shaft of light the arena sits under. Drawn additively: over a dark
-  // field a plain fill reads as a grey wedge rather than as light.
-  c.globalCompositeOperation = 'lighter';
-  const beam = c.createLinearGradient(w / 2, 0, w / 2, h * 0.52);
-  beam.addColorStop(0, `${theme.glow}0.22)`);
-  beam.addColorStop(0.5, `${theme.glow}0.07)`);
-  beam.addColorStop(1, `${theme.glow}0)`);
-  c.fillStyle = beam;
-  c.beginPath();
-  c.moveTo(w / 2 - 1.5, 0);
-  c.lineTo(w / 2 + 1.5, 0);
-  c.lineTo(w / 2 + 26, h * 0.5);
-  c.lineTo(w / 2 - 26, h * 0.5);
-  c.closePath();
-  c.fill();
-  c.globalCompositeOperation = 'source-over';
 }
 
 // ---------------------------------------------------------------------------
@@ -236,11 +253,11 @@ function cubeVertices(die: DieBody): Vec3[] {
   ].map((lv) => add(die.pos, qRotate(die.q, lv)));
 }
 
-export function drawShadow(c: CanvasRenderingContext2D, die: DieBody): void {
+export function drawShadow(c: CanvasRenderingContext2D, die: DieBody, theme: Theme): void {
   const verts = cubeVertices(die);
   const lift = Math.max(0, die.pos.z - H);
   const fade = Math.max(0, 1 - lift / (DIE * 5));
-  const alpha = (0.62 * fade + 0.08) * die.alpha;
+  const alpha = (0.44 * fade + 0.06) * die.alpha;
   if (alpha <= 0.02) return;
 
   // Project each vertex down the light ray onto z = 0.
@@ -255,7 +272,7 @@ export function drawShadow(c: CanvasRenderingContext2D, die: DieBody): void {
   c.globalAlpha = alpha;
   c.filter = `blur(${Math.min(14, 1.5 + lift * 0.035)}px)`;
   polygon(c, hull);
-  c.fillStyle = '#000';
+  c.fillStyle = theme.shadow;
   c.fill();
   c.restore();
 }
@@ -326,7 +343,7 @@ export function drawDie(c: CanvasRenderingContext2D, die: DieBody, theme: Theme)
     c.fillStyle = shade(theme, AMBIENT + (1 - AMBIENT) * lambert);
     c.fill();
     c.strokeStyle = theme.edge;
-    c.lineWidth = 1.1;
+    c.lineWidth = 1.5;
     c.stroke();
 
     // Pips live in the face's own frame, so the projection places them exactly.
@@ -435,22 +452,21 @@ function drawProcLabelScreen(
   c.textBaseline = 'middle';
   c.globalAlpha = fade;
 
-  c.font = proc.kind === 'jackpot'
-    ? '850 30px ui-sans-serif, system-ui, sans-serif'
-    : '800 18px ui-sans-serif, system-ui, sans-serif';
-  c.lineWidth = 5;
-  c.strokeStyle = 'rgba(5,8,12,0.92)';
+  c.font = proc.kind === 'jackpot' ? `700 30px ${FACE}` : `700 18px ${FACE}`;
+  c.lineJoin = 'round';
+  c.lineWidth = 6;
+  c.strokeStyle = theme.halo;
   c.strokeText(proc.label, 0, 0);
-  c.fillStyle = proc.kind === 'jackpot' ? theme.accent : '#f2f5f8';
+  c.fillStyle = proc.kind === 'jackpot' ? theme.accent : theme.text;
   c.fillText(proc.label, 0, 0);
 
   if (proc.detail) {
-    c.font = '700 13px ui-sans-serif, system-ui, sans-serif';
-    c.lineWidth = 4;
+    c.font = `600 13px ${FACE}`;
+    c.lineWidth = 5;
     c.globalAlpha = fade * 0.95;
-    c.strokeStyle = 'rgba(5,8,12,0.92)';
+    c.strokeStyle = theme.halo;
     c.strokeText(proc.detail, 0, 24);
-    c.fillStyle = proc.kind === 'jackpot' ? theme.accent : '#cbd4df';
+    c.fillStyle = proc.kind === 'jackpot' ? theme.accent : theme.text;
     c.fillText(proc.detail, 0, 24);
   }
   c.restore();
@@ -483,11 +499,12 @@ function drawGhostValue(
   c.textAlign = 'center';
   c.textBaseline = 'middle';
 
-  c.font = '700 50px ui-sans-serif, system-ui, sans-serif';
-  c.fillStyle = 'rgba(0,0,0,0.55)';
-  c.fillText(String(result), 0, 3);
+  c.font = `700 50px ${FACE}`;
+  c.lineJoin = 'round';
+  c.lineWidth = 9;
+  c.strokeStyle = theme.halo;
+  c.strokeText(String(result), 0, 0);
   c.fillStyle = theme.accent;
-  c.globalAlpha = fade * 0.6 * alpha;
   c.fillText(String(result), 0, 0);
   c.restore();
 }
@@ -508,7 +525,7 @@ function drawDetachedGhost(
 export function drawWorld(c: CanvasRenderingContext2D, world: World, theme: Theme): void {
   drawSurface(c, world, theme);
   // Shadows, landing rings and proc pulses all belong to the surface.
-  for (const die of world.dice) drawShadow(c, die);
+  for (const die of world.dice) drawShadow(c, die, theme);
   for (const die of world.dice) drawImpacts(c, die, theme);
   for (const die of world.dice) {
     if (die.state === 'rest') {

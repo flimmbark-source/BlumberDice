@@ -14,6 +14,7 @@ import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
 import { DesktopWindow } from './DesktopWindow.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
+import { ArchBackdrop, VineFrame } from './Ornaments.tsx';
 
 const TREE_UNLOCK_SCORE = 20;
 type Tab = 'web' | 'stats' | 'log';
@@ -111,6 +112,8 @@ export function App(): JSX.Element {
       />
 
       <main className="desktop" aria-label="BlumberDice workspace">
+        <VineFrame />
+
         <section className="game-area" aria-label="Game area">
           <GamePanel s={s} />
         </section>
@@ -121,7 +124,7 @@ export function App(): JSX.Element {
             id="tree"
             title={tab === 'web' ? 'Build tree' : tab === 'stats' ? 'Stats' : 'Log'}
             className="desktop-window--tree"
-            defaultStyle={{ left: 12, top: 12, width: '23%', height: 'calc(100% - 24px)' }}
+            defaultStyle={{ left: 26, top: 24, width: '23%', height: 'calc(100% - 48px)' }}
           >
             {tab === 'web' && (
               <div className="tech-build">
@@ -170,7 +173,7 @@ export function App(): JSX.Element {
             id="upgrade"
             title="Selected upgrade"
             className="desktop-window--upgrade"
-            defaultStyle={{ right: 12, top: 12, width: '23%', height: 'calc(100% - 24px)' }}
+            defaultStyle={{ right: 26, top: 24, width: '23%', height: 'calc(100% - 48px)' }}
           >
             <SelectedUpgrade s={s} nodeId={inspected} onReveal={selectUpgrade} embedded />
           </DesktopWindow>
@@ -345,6 +348,7 @@ function GamePanel({ s }: { s: GameState }): JSX.Element {
   return (
     <section className="game game-area__panel">
       <div className="game__arena">
+        <ArchBackdrop />
         <DiceTray s={s} rollRef={rollRef} />
       </div>
 

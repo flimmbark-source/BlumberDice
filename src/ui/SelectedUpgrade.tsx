@@ -44,7 +44,7 @@ export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false }: {
 
       <div className="upg">
         <div className="upg__head">
-          <NodeMark type={node.nodeType} region={node.region} size={46} />
+          <NodeMark type={node.nodeType} region={node.region} size={54} glyph />
           <div className="upg__id">
             <span className="upg__name">{node.name}</span>
             <span className="upg__chips">
