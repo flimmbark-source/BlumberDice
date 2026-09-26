@@ -1,23 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { makeBuild, runManualRolls, type SimResult } from '../src/engine/sim.ts';
 import { getBuild } from '../src/engine/game.ts';
+import { NODES_BY_ID } from '../src/engine/nodes.ts';
+import { FIXTURES } from '../src/engine/fixtures.ts';
 
-export const FIXTURES = {
-  baseline: [],
-  highRoller: ['hr_edge', 'hr_floor', 'hr_heavy6', 'hr_momentum', 'hr_climb', 'hr_upper', 'hr_nogoback'],
-  volume: ['vl_quick', 'vl_lowgear', 'vl_cycle', 'vl_follow', 'vl_echo', 'vl_splinter', 'vl_secondwind', 'vl_handful'],
-  jackpot: ['jp_longodds', 'jp_hotstreak', 'jp_stake', 'jp_nearmiss', 'jp_pressure', 'jp_ride', 'jp_oneinsix'],
-  control: ['ct_second', 'ct_reserve', 'ct_hold', 'ct_flip', 'ct_seal', 'ct_prepared'],
-  pattern: ['pt_repeat', 'pt_step', 'pt_collector', 'pt_alt', 'pt_doubles', 'pt_run', 'pt_palindrome', 'pt_fullset', 'pt_memory'],
-  // Hybrids
-  sixEngine: ['hr_edge', 'hr_heavy6', 'hr_climb', 'hr_momentum', 'vl_quick', 'vl_cycle', 'vl_echo', 'br_overflow'],
-  comboEngine: ['pt_repeat', 'pt_step', 'pt_run', 'pt_doubles', 'pt_palindrome', 'pt_fullset', 'vl_quick', 'vl_cycle', 'br_chain'],
-  slotMachine: ['vl_quick', 'vl_cycle', 'vl_echo', 'vl_splinter', 'jp_longodds', 'jp_hotstreak', 'jp_pressure', 'br_tickets'],
-  cardCounter: ['jp_longodds', 'jp_hotstreak', 'jp_stake', 'jp_nearmiss', 'ct_hold', 'ct_flip', 'br_hedge'],
-  sequenceSolver: ['ct_second', 'ct_hold', 'ct_flip', 'ct_seal', 'ct_prepared', 'pt_repeat', 'pt_run', 'pt_doubles', 'br_arrange'],
-  climber: ['hr_edge', 'hr_climb', 'hr_momentum', 'pt_step', 'pt_run', 'pt_doubles', 'br_peak'],
-  grinder: ['vl_quick', 'vl_cycle', 'vl_follow', 'vl_secondwind', 'ct_second', 'ct_hold'],
-} satisfies Record<string, string[]>;
 
 const A = (nodes: string[], seed = 4242, manuals = 4000, policies = {}): SimResult =>
   runManualRolls(makeBuild({ seed, nodes, policies }), manuals);
@@ -37,6 +23,39 @@ const B = (nodes: string[], seed = 4242, manuals = 4000, policies = {}): SimResu
     makeBuild({ seed, nodes, policies, framework: 'B', startingScore: 1_000_000 }),
     manuals,
   );
+
+describe('the reference builds are builds a player could actually make', () => {
+  it('satisfies every prerequisite in every fixture', () => {
+    // These fixtures were duplicated between here and scripts/balance.ts and
+    // drifted: seven of them described allocations the graph does not permit,
+    // so their numbers described nothing a player can reach.
+    for (const [name, ids] of Object.entries(FIXTURES)) {
+      const allocated = new Set<string>([...ids, 'start']);
+      for (const id of ids) {
+        const node = NODES_BY_ID.get(id);
+        expect(node, `${name}: no such node ${id}`).toBeDefined();
+        for (const pre of node!.prerequisites) {
+          expect(allocated.has(pre), `${name}: ${id} needs ${pre}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('never allocates a node before something it costs less than', () => {
+    // A prerequisite that costs more than its dependant would be reached in
+    // the wrong order, which makes the fixture's cost meaningless too.
+    for (const [name, ids] of Object.entries(FIXTURES)) {
+      for (const id of ids) {
+        const node = NODES_BY_ID.get(id)!;
+        for (const pre of node.prerequisites) {
+          const p = NODES_BY_ID.get(pre)!;
+          expect(p.costs.score ?? 0, `${name}: ${pre} costs more than ${id}`)
+            .toBeLessThanOrEqual(node.costs.score ?? 0);
+        }
+      }
+    }
+  });
+});
 
 describe('archetypes are mechanically distinct under Framework A', () => {
   it('High Roller raises the average face without adding rolls', () => {

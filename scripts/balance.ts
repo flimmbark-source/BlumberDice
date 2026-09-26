@@ -1,20 +1,9 @@
 import { makeBuild, runManualRolls } from '../src/engine/sim.ts';
 import { CONFIG, displayStats } from '../src/engine/game.ts';
+import { FIXTURES } from '../src/engine/fixtures.ts';
 
-const FIX: Record<string, string[]> = {
-  'baseline': [],
-  'early A (3 smalls)': ['hr_edge', 'vl_quick', 'pt_repeat'],
-  'highRoller': ['hr_edge', 'hr_floor', 'hr_heavy6', 'hr_momentum', 'hr_climb', 'hr_upper', 'hr_nogoback'],
-  'volume': ['vl_quick', 'vl_lowgear', 'vl_cycle', 'vl_follow', 'vl_echo', 'vl_splinter', 'vl_secondwind', 'vl_handful'],
-  'jackpot': ['jp_longodds', 'jp_hotstreak', 'jp_stake', 'jp_nearmiss', 'jp_pressure', 'jp_ride', 'jp_oneinsix'],
-  'control': ['ct_second', 'ct_reserve', 'ct_hold', 'ct_flip', 'ct_seal', 'ct_prepared'],
-  'pattern': ['pt_repeat', 'pt_step', 'pt_collector', 'pt_alt', 'pt_doubles', 'pt_run', 'pt_palindrome', 'pt_fullset', 'pt_memory'],
-  'sixEngine': ['hr_edge', 'hr_heavy6', 'hr_climb', 'hr_momentum', 'vl_quick', 'vl_cycle', 'vl_echo', 'br_overflow'],
-  'comboEngine': ['pt_repeat', 'pt_step', 'pt_run', 'pt_doubles', 'pt_palindrome', 'pt_fullset', 'vl_quick', 'vl_cycle', 'br_chain'],
-  'slotMachine': ['vl_quick', 'vl_cycle', 'vl_echo', 'vl_splinter', 'jp_longodds', 'jp_hotstreak', 'jp_pressure', 'br_tickets'],
-  'grinder': ['vl_quick', 'vl_cycle', 'vl_follow', 'vl_secondwind', 'ct_second', 'ct_hold'],
-  'everything': [],
-};
+// Shared with tests/builds.test.ts, and asserted reachable there.
+const FIX: Record<string, string[]> = { ...FIXTURES, everything: [] };
 
 const pad = (v: string | number, n: number) => String(v).padStart(n);
 

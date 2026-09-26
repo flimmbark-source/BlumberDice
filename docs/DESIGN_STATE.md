@@ -290,6 +290,52 @@ different kinds of information and should not look alike — and it is the one
 place the tooltips now spend visual weight on something other than the
 mechanic itself.
 
+### 14. Pattern and Volume are themed spines, not a mesh
+
+The Pattern region had nine nodes whose prerequisites crossed their own
+themes: Run hung off Collector (a set node), Alternating Current off Step
+*and* Collector. Nine separate rules, and the graph said nothing about how
+they related. Same in Volume, where Second Wind chained off Echo although the
+two are opposites — luck and reliability.
+
+Rethreaded so the path itself states the kinship:
+
+- **Match** — Repeat → Doubles → Palindrome
+- **Sequence** — Repeat → Step → Run
+- **Range** — Repeat → Collector → Alternating Current → Full Set
+- **Chance** — Quick Hands → Low Gear → Follow Through → Splinter
+- **Certainty** — Quick Hands → Rapid Cycle → { Echo | Second Wind }
+
+Each spine needs somewhere to go, or its last notable is a dead end. Match
+and Sequence recombine at Memory; Range's payoff is Chain Reaction, the
+bridge out to Volume. That reassignment is also the better mechanic: Run
+already grants a bonus roll, so hanging the bonus-roll bridge off it was
+redundant, and Full Set did not grant one.
+
+Zero crossings survived this, but not for free. Three spines in the Pattern
+wedge crowded it, and `relieve` resolves crowding by pushing nodes outward —
+it exiled Run to radius 766, an unreadably long link to its own parent. The
+angle each branch receives is now weighted by subtree *size* rather than leaf
+count, so a deep narrow branch is not given the same wedge as a shallow wide
+one.
+
+### 15. The reference builds were not buildable
+
+Found while checking the above. The fixture builds used by `scripts/balance.ts`
+and `tests/builds.test.ts` were duplicated in both files and had drifted:
+seven of the thirteen described allocations the prerequisite graph does not
+permit (slotMachine took Splinter without Follow Through, climber took Climb
+without Heavy Six, and so on). `makeBuild` does not enforce prerequisites, so
+nothing caught it, and the balance table had been reporting throughput for
+builds no player could assemble.
+
+The fixtures now live once, in `src/engine/fixtures.ts`, and two tests assert
+that every one is closed under prerequisites and that no prerequisite costs
+more than what it gates. Correcting them moved the hybrid numbers — the
+slot-machine build reads 53.9 score/sec against the 31.9 previously reported —
+so any balance conclusion drawn from the old hybrid rows should be re-checked.
+The single-archetype rows are unaffected; they were already closed.
+
 ---
 
 ## Unresolved — deliberately not implemented

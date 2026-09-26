@@ -129,6 +129,19 @@ crossing connections and zero node-on-edge overlaps**, enforced by
 node --experimental-strip-types scripts/radial.ts --write   # regenerate
 ```
 
+### The regions are themed spines
+
+Within a region the prerequisite path is the explanation. Pattern runs as
+three spines off Repeat — **Match** (Doubles → Palindrome), **Sequence**
+(Step → Run) and **Range** (Collector → Alternating Current → Full Set) —
+and Volume forks at Quick Hands into a chance spine and a certainty one. A
+player reading the graph should be able to tell what a branch is about before
+opening a single node.
+
+`scripts/radial.ts` regenerates positions after any prerequisite change and
+reports crossings; `tests/layout.test.ts` fails if any remain, or if a link
+grows too long to read as local.
+
 ### Nodes are data
 
 A node declares stat modifiers, capability flags and triggers. The engine

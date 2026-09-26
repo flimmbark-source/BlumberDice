@@ -63,11 +63,14 @@ const treeEdge = new Set<string>();
 for (const [c, p] of parent) treeEdge.add([c, p].sort().join('|'));
 const EXTRA = EDGES.filter(([a, b]) => !treeEdge.has([a, b].sort().join('|')));
 
-// Subtree weight drives how much angle each branch receives.
+// Subtree weight drives how much angle each branch receives. Counting every
+// node rather than only the leaves is what keeps a deep, narrow branch from
+// being crushed into the same wedge as a shallow wide one: three themed
+// spines of three need room that three leaves do not.
 const weight = new Map<string, number>();
 function computeWeight(id: string): number {
   const kids = children.get(id)!;
-  const w = kids.length === 0 ? 1 : kids.reduce((a, k) => a + computeWeight(k), 0);
+  const w = kids.length === 0 ? 1 : 1 + kids.reduce((a, k) => a + computeWeight(k), 0);
   weight.set(id, w);
   return w;
 }
