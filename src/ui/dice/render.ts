@@ -410,9 +410,10 @@ function drawProcPulse(
   c.restore();
 }
 
-function drawProcLabel(
+function drawProcLabelScreen(
   c: CanvasRenderingContext2D,
-  pos: Vec3,
+  screenX: number,
+  screenY: number,
   settledAt: number,
   procs: RollProc[],
   t: number,
@@ -423,33 +424,34 @@ function drawProcLabel(
   if (!active) return;
   const { proc, age } = active;
   const p = Math.min(1, age / PROC_VISIBLE_MS);
-  const enter = Math.min(1, p / 0.14);
+  const enter = Math.min(1, p / 0.12);
   const exit = p < 0.72 ? 1 : Math.max(0, 1 - (p - 0.72) / 0.28);
   const fade = enter * exit * alpha;
-  const anchor = project(v3(pos.x, pos.y, pos.z + H));
-  const rise = 7 + p * 16;
+  const rise = 5 + p * 14;
 
   c.save();
-  c.translate(anchor.x, anchor.y - 94 - rise);
+  c.translate(screenX, screenY - rise);
   c.textAlign = 'center';
   c.textBaseline = 'middle';
   c.globalAlpha = fade;
 
   c.font = proc.kind === 'jackpot'
-    ? '850 22px ui-sans-serif, system-ui, sans-serif'
-    : '750 15px ui-sans-serif, system-ui, sans-serif';
-  c.fillStyle = 'rgba(0,0,0,0.72)';
-  c.fillText(proc.label, 0, 2);
-  c.fillStyle = proc.kind === 'jackpot' ? theme.accent : '#e7edf6';
+    ? '850 30px ui-sans-serif, system-ui, sans-serif'
+    : '800 18px ui-sans-serif, system-ui, sans-serif';
+  c.lineWidth = 5;
+  c.strokeStyle = 'rgba(5,8,12,0.92)';
+  c.strokeText(proc.label, 0, 0);
+  c.fillStyle = proc.kind === 'jackpot' ? theme.accent : '#f2f5f8';
   c.fillText(proc.label, 0, 0);
 
   if (proc.detail) {
-    c.font = '650 11px ui-sans-serif, system-ui, sans-serif';
-    c.globalAlpha = fade * 0.9;
-    c.fillStyle = 'rgba(0,0,0,0.72)';
-    c.fillText(proc.detail, 0, 20);
-    c.fillStyle = proc.kind === 'jackpot' ? theme.accent : theme.edge;
-    c.fillText(proc.detail, 0, 18);
+    c.font = '700 13px ui-sans-serif, system-ui, sans-serif';
+    c.lineWidth = 4;
+    c.globalAlpha = fade * 0.95;
+    c.strokeStyle = 'rgba(5,8,12,0.92)';
+    c.strokeText(proc.detail, 0, 24);
+    c.fillStyle = proc.kind === 'jackpot' ? theme.accent : '#cbd4df';
+    c.fillText(proc.detail, 0, 24);
   }
   c.restore();
 }
@@ -501,7 +503,6 @@ function drawDetachedGhost(
   drawGhostValue(
     c, ghost.result, ghost.pos, ghost.settledAt, ghost.ghostLife, ghost.alpha, theme, t,
   );
-  drawProcLabel(c, ghost.pos, ghost.settledAt, ghost.procs, t, ghost.alpha, theme);
 }
 
 export function drawWorld(c: CanvasRenderingContext2D, world: World, theme: Theme): void {
@@ -523,10 +524,46 @@ export function drawWorld(c: CanvasRenderingContext2D, world: World, theme: Them
   const order = [...world.dice].sort((a, b) => depthOf(a.pos) - depthOf(b.pos));
   for (const die of order) drawDie(c, die, theme);
   for (const ghost of world.ghosts) drawDetachedGhost(c, ghost, theme, world.t);
-  for (const die of order) {
-    drawGhost(c, die, theme, world.t);
-    if (die.state === 'rest') {
-      drawProcLabel(c, die.pos, die.settledAt, die.procs, world.t, die.alpha, theme);
-    }
+  for (const die of order) drawGhost(c, die, theme, world.t);
+}
+
+/**
+ * Screen-space proc labels: anchored to dice, but never shrunk by arena zoom.
+ * Call after the world transform has been restored.
+ */
+export function drawProcOverlay(
+  c: CanvasRenderingContext2D,
+  world: World,
+  theme: Theme,
+  originX: number,
+  originY: number,
+  zoom: number,
+): void {
+  for (const ghost of world.ghosts) {
+    const p = project(v3(ghost.pos.x, ghost.pos.y, ghost.pos.z + H));
+    drawProcLabelScreen(
+      c,
+      originX + p.x * zoom,
+      originY + p.y * zoom - 72,
+      ghost.settledAt,
+      ghost.procs,
+      world.t,
+      ghost.alpha,
+      theme,
+    );
+  }
+  for (const die of world.dice) {
+    if (die.state !== 'rest') continue;
+    const p = project(v3(die.pos.x, die.pos.y, die.pos.z + H));
+    drawProcLabelScreen(
+      c,
+      originX + p.x * zoom,
+      originY + p.y * zoom - 72,
+      die.settledAt,
+      die.procs,
+      world.t,
+      die.alpha,
+      theme,
+    );
   }
 }
