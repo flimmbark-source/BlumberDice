@@ -252,6 +252,15 @@ function TopBar({
                   {refundMeta > 0 ? ` and ${refundMeta.toLocaleString()} Meta` : ''}
                 </span>
               </button>
+              <button
+                type="button"
+                className="gear__item gear__item--danger"
+                disabled={s.score <= 0}
+                onClick={() => { actions.deleteScore(); setMenu(false); }}
+              >
+                Delete score
+                <span className="gear__sub">sets current Score to 0</span>
+              </button>
             </div>
           )}
         </div>
