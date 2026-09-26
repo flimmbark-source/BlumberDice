@@ -306,7 +306,6 @@ export const TreeView = memo(function TreeView({
                   // as user navigation so the auto-fit effect does not recenter
                   // the web in response to that internal layout change.
                   userZoomed.current = true;
-                  userZoomed.current = true;
                   selectNode(n.id, st, pinned, setInspected);
                 }}
                 onClick={() => {
@@ -314,6 +313,7 @@ export const TreeView = memo(function TreeView({
                     suppressNodeClick.current = false;
                     return;
                   }
+                  userZoomed.current = true;
                   selectNode(n.id, st, pinned, setInspected);
                 }}
               >
