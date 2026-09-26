@@ -8,7 +8,7 @@ import { useCountUp } from './useCountUp.ts';
 import { ControlRail } from './ControlRail.tsx';
 import { DecisionBar } from './DecisionBar.tsx';
 import { GoalBar } from './GoalBar.tsx';
-import { currentGoal, openTargets } from '../engine/goal.ts';
+import { canPin, currentGoal, openTargets } from '../engine/goal.ts';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
@@ -38,6 +38,13 @@ export function App(): JSX.Element {
     setInspected(id);
     focusN.current += 1;
     setFocus({ id, n: focusN.current });
+  };
+
+  const selectUpgrade = (id: string): void => {
+    focusNode(id);
+    // Any explicit upgrade selection should also become the player's Next
+    // Goal when it is a valid one-purchase-away target.
+    if (canPin(s, id)) actions.pin(id);
   };
 
   const openGoalInTree = (): void => {
@@ -167,7 +174,7 @@ export function App(): JSX.Element {
             className="desktop-window--upgrade"
             defaultStyle={{ right: 12, top: 12, width: '23%', height: 'calc(100% - 24px)' }}
           >
-            <SelectedUpgrade s={s} nodeId={inspected} onReveal={focusNode} embedded />
+            <SelectedUpgrade s={s} nodeId={inspected} onReveal={selectUpgrade} embedded />
           </DesktopWindow>
         )}
 
