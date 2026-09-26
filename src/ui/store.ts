@@ -133,6 +133,8 @@ export const actions = {
   /** Set or clear the node the player is saving toward. */
   pin: (id: string | null) => store.act((s) => { s.pinned = id; }),
   refund: () => store.act((s) => { refundAll(s); }),
+  /** Permanently discard current spendable Score; lifetime earned Score is unchanged. */
+  deleteScore: () => store.act((s) => { s.score = 0; }),
   decide: (choice: DecisionChoice) => store.act((s) => resolveDecision(s, choice)),
   seal: (face: Face | null) => store.act((s) => setSeal(s, face)),
   stake: (n: number) => store.act((s) => setStake(s, n)),
