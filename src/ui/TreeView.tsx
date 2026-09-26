@@ -43,13 +43,6 @@ const REGION_HUE: Record<Region, number> = {
   core: 45, high: 18, volume: 150, jackpot: 330, control: 205, pattern: 265, adaptive: 90,
 };
 
-/** Hue is what tells the archetypes apart on the web, so it needs a key of
- *  its own; the shape legend only ever explained the three node classes. */
-const REGION_NAMES: [Region, string][] = [
-  ['high', 'high roll'], ['volume', 'volume'], ['jackpot', 'jackpot'],
-  ['pattern', 'pattern'], ['control', 'control'], ['adaptive', 'switching'],
-];
-
 type Status = 'allocated' | 'available' | 'unaffordable' | 'locked' | 'hidden';
 
 interface Props {
@@ -251,19 +244,7 @@ export const TreeView = memo(function TreeView({
 
   return (
     <div className={`tree panel panel--left${expanded ? ' tree--expanded' : ''}`} ref={wrapRef}>
-      <h2 className={embedded ? 'tree__embeddedKey' : 'panel__title'}>
-        {!embedded && 'Build tree'}
-        {/* The regions, not the node states: hue is what the eye is actually
-            sorting the web by, and the states read from the nodes anyway. */}
-        <span className="tree__key">
-          {REGION_NAMES.map(([region, label]) => (
-            <span key={region} className="tree__keyItem"
-              style={{ ['--hue' as string]: REGION_HUE[region] }}>
-              <i className="tree__regionDot" />{label}
-            </span>
-          ))}
-        </span>
-      </h2>
+      {!embedded && <h2 className="panel__title">Build tree</h2>}
       <svg
         ref={svgRef}
         className={`tree__svg${dragging ? ' tree__svg--dragging' : ''}`}
