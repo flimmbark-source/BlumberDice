@@ -270,8 +270,19 @@ button.minidie:hover .die__body { stroke: var(--muted); }
   position: relative; flex: 1; min-height: 0; background: var(--bg-2);
   overflow: hidden;
 }
-.tree__svg { width: 100%; height: 100%; touch-action: none; cursor: grab; display: block; }
-.tree__svg:active { cursor: grabbing; }
+.tree__svg {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+  display: block;
+  user-select: none;
+}
+.tree__svg:active,
+.tree__svg--dragging,
+.tree__svg--dragging .node {
+  cursor: grabbing !important;
+}
 
 .edge { stroke: #2b3644; stroke-width: 2.5; fill: none; }
 .edge--live { stroke: #3d4c5d; }
