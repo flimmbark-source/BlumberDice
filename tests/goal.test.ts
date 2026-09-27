@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { allocate, createGame, refundAll } from '../src/engine/game.ts';
-import { canPin, currentGoal, openTargets, successorOf } from '../src/engine/goal.ts';
+import { canPin, currentGoal, openTargets, setGoal, successorOf } from '../src/engine/goal.ts';
 import { deserialize, serialize } from '../src/engine/save.ts';
 import { NODES, NODES_BY_ID } from '../src/engine/nodes.ts';
 import type { DiscoveryFlag } from '../src/engine/types.ts';
@@ -105,6 +105,23 @@ describe('a pinned goal is the player’s, and only the player’s', () => {
     // Two steps out: nothing to save toward yet.
     expect(canPin(s, 'hr_floor')).toBe(false);
     expect(canPin(s, 'start')).toBe(false);
+  });
+
+  it('rejects setting a locked/deep node as the goal', () => {
+    const s = fresh();
+    expect(setGoal(s, 'hr_floor')).toBe(false);
+    expect(s.pinned).toBeNull();
+    expect(setGoal(s, 'hr_edge')).toBe(true);
+    expect(s.pinned).toBe('hr_edge');
+  });
+
+  it('marks an already-funded goal as reached when selected', () => {
+    const s = fresh();
+    s.score = 100;
+    expect(setGoal(s, 'hr_edge')).toBe(true);
+    expect(s.pinnedReached).toBe(true);
+    setGoal(s, null);
+    expect(s.pinnedReached).toBe(false);
   });
 });
 
