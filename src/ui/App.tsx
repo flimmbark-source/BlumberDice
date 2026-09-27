@@ -363,7 +363,7 @@ function Currency({ label, value, alt = false, entropy, scoreLocked = false, onT
   const interactive = Boolean(onToggleLock);
   return (
     <div
-      className={`currency${alt ? ' currency--alt' : ''}${scoreLocked ? ' currency--goal-shield currency--score-lock' : ''}${interactive ? ' currency--interactive' : ''}`}
+      className={`currency${alt ? ' currency--alt' : ''}${scoreLocked ? ' currency--score-lock currency--score-lock' : ''}${interactive ? ' currency--interactive' : ''}`}
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
       aria-pressed={interactive ? scoreLocked : undefined}
@@ -378,7 +378,7 @@ function Currency({ label, value, alt = false, entropy, scoreLocked = false, onT
       } : undefined}
     >
       {scoreLocked && <span className="currency__forcefield" aria-hidden />}
-      <span className={`currency__value${state}${scoreLocked ? ' currency__value--goal-shield' : ''}`}>
+      <span className={`currency__value${state}${scoreLocked ? ' currency__value--score-lock' : ''}`}>
         {Math.floor(shown).toLocaleString()}
       </span>
       <span className="currency__label">{label}</span>
