@@ -363,7 +363,7 @@ function Currency({ label, value, alt = false, entropy, scoreLocked = false, onT
   const interactive = Boolean(onToggleLock);
   return (
     <div
-      className={`currency${alt ? ' currency--alt' : ''}${scoreLocked ? ' currency--score-lock currency--score-lock' : ''}${interactive ? ' currency--interactive' : ''}`}
+      className={`currency${alt ? ' currency--alt' : ''}${scoreLocked ? ' currency--score-lock' : ''}${interactive ? ' currency--interactive' : ''}`}
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
       aria-pressed={interactive ? scoreLocked : undefined}
