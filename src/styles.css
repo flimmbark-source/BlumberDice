@@ -393,12 +393,15 @@ button:disabled { cursor: default; }
   /* Anchored under the readout rather than across it: the digits fill that
      window, and an amount landing on top of the total it just changed is the
      one place this must not be. */
-  position: absolute; right: 9px; top: 100%;
-  display: block; width: 0;
+  position: absolute; inset: 0;
+  display: block;
   pointer-events: none;
+  overflow: visible;
 }
 .entropy__tick {
-  position: absolute; right: 0; top: 1px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
   font-family: var(--font-led);
   font-size: 30px; font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -408,9 +411,18 @@ button:disabled { cursor: default; }
   animation: entropyFloat 1150ms cubic-bezier(0.22, 0.75, 0.3, 1) forwards;
 }
 @keyframes entropyFloat {
-  0% { opacity: 0; transform: translateY(-8px) scale(0.72); }
-  18% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(30px) scale(1.08); }
+  0% {
+    opacity: 0;
+    transform: translate(var(--entropy-x), calc(var(--entropy-y) - 8px)) scale(0.72);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(var(--entropy-x), var(--entropy-y)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--entropy-x), calc(var(--entropy-y) + 30px)) scale(1.08);
+  }
 }
 
 /* Cooling vent: the last thing on the head, purely cast metal. */
