@@ -58,13 +58,13 @@ useful in one of them except where its own text says so.
 ### 0b. Entropy's rate
 
 **Current confirmed behavior.** Entropy moves Score 1 point toward zero per
-tick, behind `CONFIG.entropyPerTick`, and ticks every second behind
-`CONFIG.entropyIntervalMs`. That is an average pull of 1 Score per second.
+tick, behind `CONFIG.entropyPerTick`, and ticks every 0.5 seconds behind
+`CONFIG.entropyIntervalMs`. That is an average pull of 2 Score per second.
 
 **Consequence.** A base build earns about 5 Score per second: one die, a 700ms
 cooldown, and an average face of 3.5. Entropy therefore slows early growth
 without outrunning it. In Framework B the same force restores negative Score
-toward zero at the same 1-per-second average rate.
+toward zero at the same 2-per-second average rate.
 
 ### 1. Pacing model
 
@@ -948,4 +948,4 @@ not a fix. Making it more visible would start explaining.
 
 ### Score force field
 
-**Current confirmed behavior.** Score protection is independent of Goals. Clicking the Score display toggles a force field. While engaged, Score is frozen at its current value: it cannot increase, decrease, be spent, be refunded, or be changed by Entropy. Entropy continues to attack visually once per second and ricochets from the field. Clicking Score again disengages the field and restores normal Score movement.
+**Current confirmed behavior.** Score protection is independent of Goals. Clicking the Score display toggles a force field. While engaged, Score is frozen at its current value: it cannot increase, decrease, be spent, be refunded, or be changed by Entropy. Entropy continues to attack visually every 0.5 seconds and ricochets from the field in one swift reversal. Clicking Score again disengages the field and restores normal Score movement.
