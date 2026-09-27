@@ -350,7 +350,7 @@ what lets the die say *tap* and the switch stop offering a Space bar.
 ### Entropy
 
 A constant pull toward zero Score: `CONFIG.entropyPerTick` (1) applied once
-every second, in `tick`. It is one rule rather than two — Score moves *toward*
+every 0.5 seconds, in `tick`. It is one rule rather than two — Score moves *toward*
 zero, so it drains a positive balance and restores a negative one at the same
 rate, and the last step in either direction is short rather than overshooting,
 so zero is a resting point.
