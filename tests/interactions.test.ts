@@ -16,10 +16,10 @@ function rollToPrompt(s: GameState): void {
 }
 
 describe('Entropy timing', () => {
-  it('ticks every second', () => {
+  it('ticks every 0.5 seconds', () => {
     const s = makeBuild({ seed: 1, startingScore: 100 });
     const before = s.score;
-    tick(s, 999);
+    tick(s, 499);
     expect(s.score).toBe(before);
     tick(s, 1);
     expect(s.score).toBe(before - CONFIG.entropyPerTick);
