@@ -9,6 +9,7 @@ import { ControlRail } from './ControlRail.tsx';
 import { DecisionBar } from './DecisionBar.tsx';
 import { GoalBar } from './GoalBar.tsx';
 import { currentGoal, openTargets } from '../engine/goal.ts';
+import { NODES_BY_ID } from '../engine/nodes.ts';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
@@ -224,7 +225,12 @@ function TopBar({
           </div>
         )}
         <div className="currencies">
-          <Currency label="Score" value={s.score} entropy={s.entropyLog} />
+          <Currency
+            label="Score"
+            value={s.score}
+            entropy={s.entropyLog}
+            goalShield={goalShieldActive(s)}
+          />
           {knowsB && <Currency label="Meta" value={s.meta} alt />}
         </div>
         <div className="gear">
@@ -332,26 +338,27 @@ function GearMark(): JSX.Element {
   );
 }
 
-function Currency({ label, value, alt = false, entropy }: {
+function goalShieldActive(s: GameState): boolean {
+  if (!s.pinned || !s.pinnedReached) return false;
+  const goal = NODES_BY_ID.get(s.pinned);
+  const floor = goal?.costs.score ?? 0;
+  return floor > 0 && s.score >= floor;
+}
+
+function Currency({ label, value, alt = false, entropy, goalShield = false }: {
   label: string;
   value: number;
   alt?: boolean;
   /** Entropy steps to float off this readout. Score only. */
   entropy?: EntropyTick[];
+  /** True while a reached Goal is actively protecting this Score floor. */
+  goalShield?: boolean;
 }): JSX.Element {
   const { value: shown, moving } = useCountUp(
     value,
     alt ? () => store.heldBack.meta : () => store.heldBack.score,
   );
   const rising = moving && value > shown;
-  const [goalShield, setGoalShield] = useState(false);
-  const newestEntropy = entropy && entropy.length > 0 ? entropy[entropy.length - 1] : null;
-  useEffect(() => {
-    if (!newestEntropy?.blocked) return;
-    setGoalShield(true);
-    const timer = setTimeout(() => setGoalShield(false), 760);
-    return () => clearTimeout(timer);
-  }, [newestEntropy?.id, newestEntropy?.blocked]);
   // Read off what is on the display rather than off the true total: while the
   // counter is still easing down through zero, the digits are what is red.
   const negative = Math.floor(shown) < 0;
@@ -359,7 +366,7 @@ function Currency({ label, value, alt = false, entropy }: {
     : moving ? (rising ? ' currency__value--up' : ' currency__value--down')
     : '';
   return (
-    <div className={`currency${alt ? ' currency--alt' : ''}`}>
+    <div className={`currency${alt ? ' currency--alt' : ''}${goalShield ? ' currency--goal-shield' : ''}`}>
       <span className={`currency__value${state}${goalShield ? ' currency__value--goal-shield' : ''}`}>
         {Math.floor(shown).toLocaleString()}
       </span>
