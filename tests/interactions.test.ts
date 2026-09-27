@@ -3,7 +3,7 @@ import {
   displayStats,
   drain, getBuild, manualRoll, resolveDecision, setSeal, setStoreNext, setStake,
   setUseHeld, switchFramework, syncAllowed, CONFIG, effectiveDice, tick, type GameState,
-  refundAll,
+  refundAll, allocate,
 } from '../src/engine/game.ts';
 import { makeBuild, runManualRolls } from '../src/engine/sim.ts';
 import type { Face } from '../src/engine/types.ts';
@@ -31,6 +31,15 @@ describe('Entropy timing', () => {
     tick(s, CONFIG.entropyIntervalMs);
     expect(s.score).toBe(47);
     expect(s.entropyLog.at(-1)).toMatchObject({ amount: 0, blocked: true });
+  });
+
+  it('still allows deliberate Score spending while the force field is engaged', () => {
+    const s = makeBuild({ seed: 1, startingScore: 100 });
+    s.scoreLocked = true;
+    const before = s.score;
+    const result = allocate(s, 'hr_edge');
+    expect(result.ok).toBe(true);
+    expect(s.score).toBe(before - 45);
   });
 
   it('goals no longer protect Score from Entropy', () => {
