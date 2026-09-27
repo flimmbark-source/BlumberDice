@@ -495,6 +495,7 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
             ['--entropy-far-x' as string]: `${p.farX}px`,
             ['--entropy-far-y' as string]: `${p.farY}px`,
             ['--entropy-angle' as string]: `${p.angle}rad`,
+            ['--entropy-reverse-angle' as string]: `${p.angle + Math.PI}rad`,
           }}
         >
           <span className="entropy__dot" />
