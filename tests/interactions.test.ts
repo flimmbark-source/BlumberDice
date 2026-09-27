@@ -24,6 +24,26 @@ describe('Entropy timing', () => {
     tick(s, 1);
     expect(s.score).toBe(before - CONFIG.entropyPerTick);
   });
+
+  it('cannot drain through a reached goal cost', () => {
+    const s = makeBuild({ seed: 1, startingScore: 47 });
+    s.pinned = 'hr_edge';
+    s.pinnedReached = true;
+    tick(s, CONFIG.entropyIntervalMs);
+    expect(s.score).toBe(45);
+    expect(s.entropyLog.at(-1)).toMatchObject({ amount: -2, blocked: true });
+    tick(s, CONFIG.entropyIntervalMs);
+    expect(s.score).toBe(45);
+    expect(s.entropyLog.at(-1)).toMatchObject({ amount: 0, blocked: true });
+  });
+
+  it('does not protect a goal before its Score threshold has been reached', () => {
+    const s = makeBuild({ seed: 1, startingScore: 44 });
+    s.pinned = 'hr_edge';
+    s.pinnedReached = false;
+    tick(s, CONFIG.entropyIntervalMs);
+    expect(s.score).toBe(38);
+  });
 });
 
 describe('Loaded Choice and Prepared Roll compose', () => {
