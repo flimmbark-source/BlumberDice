@@ -158,9 +158,9 @@ export interface RollRecord {
  */
 export interface EntropyTick {
   id: number;
-  /** Signed: negative while draining, positive while restoring. Zero when a goal blocks the tick. */
+  /** Signed: negative while draining, positive while restoring. Zero when the Score lock blocks the tick. */
   amount: number;
-  /** True when an active reached goal prevented some or all of the drain. */
+  /** True when the engaged Score force field blocked the Entropy attack. */
   blocked?: boolean;
 }
 
@@ -204,8 +204,8 @@ export interface GameState {
    * recommendation: nothing sets this but an explicit choice in the web.
    */
   pinned: string | null;
-  /** Once true, Entropy may not drain Score through the pinned node's Score cost. */
-  pinnedReached: boolean;
+  /** When true, Score is frozen: gains, losses, spending and Entropy cannot move it. */
+  scoreLocked: boolean;
   sawStats: boolean;
 
   totalRolls: number;
@@ -283,7 +283,7 @@ export function createGame(seed = 0x5eed1e): GameState {
     allocated: ['start'],
     discovered: [],
     pinned: null,
-    pinnedReached: false,
+    scoreLocked: false,
     sawStats: false,
     totalRolls: 0,
     lastFace: null,
@@ -522,12 +522,9 @@ function queueBonusRolls(s: GameState, count: number, depth: number): number {
 }
 
 function grantScore(s: GameState, amount: number): void {
-  if (amount <= 0) return;
+  if (amount <= 0 || s.scoreLocked) return;
   s.score += amount;
   s.stats.scoreEarned += amount;
-  const goal = s.pinned ? NODES_BY_ID.get(s.pinned) : null;
-  const need = goal?.costs.score ?? 0;
-  if (need > 0 && s.score >= need) s.pinnedReached = true;
 }
 
 function grantMeta(s: GameState, amount: number): void {
@@ -1010,8 +1007,10 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
     const loss = face * stats.lossMult;
     // No floor here. B is allowed to spend Score it does not have, and
     // Entropy is what climbs back out of the hole afterwards.
-    s.score -= loss;
-    s.stats.scoreLost += loss;
+    if (!s.scoreLocked) {
+      s.score -= loss;
+      s.stats.scoreLost += loss;
+    }
   }
 
   completeRoll(s, build, intent, ctx, hits, rewardMult, stats);
@@ -1137,7 +1136,7 @@ export function manualRoll(s: GameState): void {
   const stats = displayStats(s, build);
 
   let staked = 0;
-  if (build.flags.has('stake') && s.stakeAmount > 0 && s.framework === 'A') {
+  if (!s.scoreLocked && build.flags.has('stake') && s.stakeAmount > 0 && s.framework === 'A') {
     staked = Math.min(s.stakeAmount, Math.floor(stats.stakeMax), Math.floor(s.score));
     if (staked > 0) s.score -= staked;
   }
@@ -1185,18 +1184,12 @@ function applyEntropy(s: GameState): void {
     : 0;
   let blocked = false;
 
-  // A reached goal becomes a one-way floor for Entropy only. Other mechanics
-  // may still spend or lose Score below it; the goal does not manufacture
-  // currency, it only stops Entropy from undoing the saving milestone.
-  const goal = s.pinned ? NODES_BY_ID.get(s.pinned) : null;
-  const floor = goal?.costs.score ?? 0;
-  if (floor > 0 && s.score >= floor) s.pinnedReached = true;
-  if (step < 0 && s.pinnedReached && floor > 0 && s.score >= floor) {
-    const next = s.score + step;
-    if (next <= floor) {
-      step = floor - s.score;
-      blocked = true;
-    }
+  // The Score display is now its own control. While its force field is
+  // engaged, Score is frozen at exactly its current value and Entropy becomes
+  // a purely visual attack that ricochets from the shield.
+  if (s.scoreLocked) {
+    step = 0;
+    blocked = true;
   }
 
   const dir: -1 | 0 | 1 = step < 0 ? -1 : step > 0 ? 1 : 0;
@@ -1216,8 +1209,8 @@ function applyEntropy(s: GameState): void {
     else s.stats.entropyRestored += step;
   }
 
-  // A fully blocked tick is still a presentation event: the HUD flashes the
-  // protected Score blue, but deliberately draws no entropy amount.
+  // A blocked tick is still a presentation event so the HUD can fire the
+  // Entropy projectile into the engaged force field and bounce it away.
   if (step !== 0 || blocked) {
     s.entropyLog.push({ id: s.nextEntropyId++, amount: step, blocked });
     if (s.entropyLog.length > 12) s.entropyLog.splice(0, s.entropyLog.length - 12);
@@ -1435,6 +1428,11 @@ export function switchFramework(s: GameState): void {
 // Allocation / discovery / misc actions
 // ---------------------------------------------------------------------------
 
+export function toggleScoreLock(s: GameState): void {
+  s.scoreLocked = !s.scoreLocked;
+  log(s, 'system', s.scoreLocked ? `Score locked at ${Math.round(s.score)}.` : 'Score unlocked.');
+}
+
 export function allocate(s: GameState, nodeId: string): { ok: boolean; reason?: AllocationError } {
   const check = checkAllocation(nodeId, {
     allocated: new Set(s.allocated),
@@ -1444,6 +1442,9 @@ export function allocate(s: GameState, nodeId: string): { ok: boolean; reason?: 
   });
   if (!check.ok) return check;
   const node = NODES_BY_ID.get(nodeId)!;
+  if (s.scoreLocked && (node.costs.score ?? 0) > 0) {
+    return { ok: false, reason: 'insufficient-score' };
+  }
   s.score -= node.costs.score ?? 0;
   s.meta -= node.costs.meta ?? 0;
   s.allocated.push(nodeId);
@@ -1451,7 +1452,6 @@ export function allocate(s: GameState, nodeId: string): { ok: boolean; reason?: 
   // next one. Nothing advances it automatically.
   if (s.pinned === nodeId) {
     s.pinned = null;
-    s.pinnedReached = false;
   }
   log(s, 'system', `Allocated ${node.name}`);
   // Keep persistent control state legal after a capacity change.
@@ -1475,7 +1475,10 @@ export function allocatedCost(s: GameState): { score: number; meta: number } {
 }
 
 export function canRefund(s: GameState): boolean {
-  return s.allocated.some((id) => id !== 'start') && s.decision === null && s.pending.length === 0;
+  return !s.scoreLocked
+    && s.allocated.some((id) => id !== 'start')
+    && s.decision === null
+    && s.pending.length === 0;
 }
 
 /**
@@ -1491,7 +1494,6 @@ export function refundAll(s: GameState): { score: number; meta: number } | null 
   s.allocated = ['start'];
   // Whatever was pinned is almost certainly out of reach now.
   s.pinned = null;
-  s.pinnedReached = false;
 
   // Control state that only existed because of a node that is now gone.
   s.held = [];
