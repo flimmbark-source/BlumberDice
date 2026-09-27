@@ -9,7 +9,6 @@ import { ControlRail } from './ControlRail.tsx';
 import { DecisionBar } from './DecisionBar.tsx';
 import { GoalBar } from './GoalBar.tsx';
 import { currentGoal, openTargets } from '../engine/goal.ts';
-import { NODES_BY_ID } from '../engine/nodes.ts';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
@@ -118,6 +117,7 @@ export function App(): JSX.Element {
                     discoveredKey={s.discovered.join(',')}
                     score={s.score}
                     meta={s.meta}
+                    scoreLocked={s.scoreLocked}
                     framework={s.framework}
                     pinned={s.pinned}
                     inspected={inspected}
@@ -229,7 +229,8 @@ function TopBar({
             label="Score"
             value={s.score}
             entropy={s.entropyLog}
-            goalShield={goalShieldActive(s)}
+            scoreLocked={s.scoreLocked}
+            onToggleLock={actions.toggleScoreLock}
           />
           {knowsB && <Currency label="Meta" value={s.meta} alt />}
         </div>
@@ -241,7 +242,7 @@ function TopBar({
           {menu && (
             <div className="gear__menu">
               <button
-                type="button" className="gear__item" disabled={!mayRefund}
+                type="button" className="gear__item" disabled={!mayRefund || s.scoreLocked}
                 onClick={() => { actions.refund(); setMenu(false); }}
               >
                 Refund every point
@@ -253,7 +254,7 @@ function TopBar({
               <button
                 type="button"
                 className="gear__item gear__item--danger"
-                disabled={s.score <= 0}
+                disabled={s.score <= 0 || s.scoreLocked}
                 onClick={() => { actions.deleteScore(); setMenu(false); }}
               >
                 Delete score
@@ -338,21 +339,15 @@ function GearMark(): JSX.Element {
   );
 }
 
-function goalShieldActive(s: GameState): boolean {
-  if (!s.pinned || !s.pinnedReached) return false;
-  const goal = NODES_BY_ID.get(s.pinned);
-  const floor = goal?.costs.score ?? 0;
-  return floor > 0 && s.score >= floor;
-}
-
-function Currency({ label, value, alt = false, entropy, goalShield = false }: {
+function Currency({ label, value, alt = false, entropy, scoreLocked = false, onToggleLock }: {
   label: string;
   value: number;
   alt?: boolean;
-  /** Entropy steps to float off this readout. Score only. */
+  /** Entropy steps to animate around this readout. Score only. */
   entropy?: EntropyTick[];
-  /** True while a reached Goal is actively protecting this Score floor. */
-  goalShield?: boolean;
+  /** True while the player has frozen Score at its current value. */
+  scoreLocked?: boolean;
+  onToggleLock?: () => void;
 }): JSX.Element {
   const { value: shown, moving } = useCountUp(
     value,
@@ -365,10 +360,25 @@ function Currency({ label, value, alt = false, entropy, goalShield = false }: {
   const state = negative ? ' currency__value--neg'
     : moving ? (rising ? ' currency__value--up' : ' currency__value--down')
     : '';
+  const interactive = Boolean(onToggleLock);
   return (
-    <div className={`currency${alt ? ' currency--alt' : ''}${goalShield ? ' currency--goal-shield' : ''}`}>
-      {goalShield && <span className="currency__forcefield" aria-hidden />}
-      <span className={`currency__value${state}${goalShield ? ' currency__value--goal-shield' : ''}`}>
+    <div
+      className={`currency${alt ? ' currency--alt' : ''}${scoreLocked ? ' currency--goal-shield currency--score-lock' : ''}${interactive ? ' currency--interactive' : ''}`}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      aria-pressed={interactive ? scoreLocked : undefined}
+      aria-label={interactive ? `${scoreLocked ? 'Unlock' : 'Lock'} Score at ${Math.floor(value)}` : undefined}
+      title={interactive ? (scoreLocked ? 'Score locked — click to unlock' : 'Click to lock Score at its current value') : undefined}
+      onClick={onToggleLock}
+      onKeyDown={interactive ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onToggleLock?.();
+        }
+      } : undefined}
+    >
+      {scoreLocked && <span className="currency__forcefield" aria-hidden />}
+      <span className={`currency__value${state}${scoreLocked ? ' currency__value--goal-shield' : ''}`}>
         {Math.floor(shown).toLocaleString()}
       </span>
       <span className="currency__label">{label}</span>
@@ -572,13 +582,15 @@ function DebugPanel({ s }: { s: GameState }): JSX.Element {
       </div>
       <div className="debug__row">
         <button type="button" className="chip" onClick={() => store.act((g) => {
-          g.score += 5000;
-          g.stats.scoreEarned += 5000;
+          if (!g.scoreLocked) {
+            g.score += 5000;
+            g.stats.scoreEarned += 5000;
+          }
         })}>+5000 Score</button>
         <button type="button" className="chip" onClick={() => store.act((g) => { g.meta += 500; })}>+500 Meta</button>
         <button
           type="button" className="chip"
-          onClick={() => store.act((g) => { g.score -= 500; })}
+          onClick={() => store.act((g) => { if (!g.scoreLocked) g.score -= 500; })}
         >
           −500 Score
         </button>
