@@ -468,3 +468,8 @@ the specification left open, and states the four design conflicts that were
 preserved rather than papered over — including the one where the node count
 knowingly overshoots the stated prototype scope, and the one where Control
 measures as the weakest archetype.
+
+
+### Entropy pressure bar
+
+The Score pill itself carries the Entropy meter. It has no numeric label: a red underlay fills left-to-right behind the black Score glass from 0 to 100. Every unshielded Entropy hit adds 1. Attack cadence scales linearly from one attack every 1s at 0 Entropy to one every 0.05s at 100. While the Score force field is active, hits ricochet instead of adding Entropy and the meter drains at 10 points per second.
