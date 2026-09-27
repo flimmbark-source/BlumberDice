@@ -948,4 +948,4 @@ not a fix. Making it more visible would start explaining.
 
 ### Score force field
 
-**Current confirmed behavior.** Score protection is independent of Goals. Clicking the Score display toggles a force field. While engaged, Score is frozen at its current value: it cannot increase, decrease, be spent, be refunded, or be changed by Entropy. Entropy continues to attack visually every 0.5 seconds and ricochets from the field in one swift reversal. Clicking Score again disengages the field and restores normal Score movement.
+**Current confirmed behavior.** Score protection is independent of Goals. Clicking the Score display toggles a force field. While engaged, passive gains/losses and Entropy cannot move Score, but the player may still deliberately spend Score (for example on upgrades or stakes). Refunds remain blocked because they would increase Score. Entropy continues to attack visually every 0.5 seconds and ricochets from the field in one swift reversal. Clicking Score again disengages the field and restores normal Score movement.
