@@ -374,13 +374,26 @@ function Currency({ label, value, alt = false, entropy }: {
  * The engine keeps a short list of steps it has taken; this holds each one on
  * screen for as long as the animation runs and then forgets it.
  */
-const ENTROPY_GHOST_POSITIONS = [
-  [-54, -28], [50, -24], [-68, 12], [64, 16],
-  [-36, 34], [34, 38], [-8, -38], [8, 44],
-] as const;
+type EntropyGhost = {
+  tick: EntropyTick;
+  x: number;
+  y: number;
+};
+
+function randomEntropyGhost(tick: EntropyTick): EntropyGhost {
+  // Pick a point in a loose elliptical ring around the readout, keeping the
+  // ghost off the digits themselves while making consecutive ticks feel alive.
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 46 + Math.random() * 34;
+  return {
+    tick,
+    x: Math.cos(angle) * radius,
+    y: Math.sin(angle) * radius * 0.58,
+  };
+}
 
 function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
-  const [shown, setShown] = useState<EntropyTick[]>([]);
+  const [shown, setShown] = useState<EntropyGhost[]>([]);
   const seen = useRef(0);
   // The engine mutates its list in place, so the array's identity never
   // changes; the id of the newest step is what marks one apart from the next.
@@ -390,10 +403,10 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
     if (newest <= seen.current) return;
     const fresh = ticks.filter((t) => t.id > seen.current);
     seen.current = newest;
-    setShown((cur) => [...cur, ...fresh]);
+    setShown((cur) => [...cur, ...fresh.map(randomEntropyGhost)]);
     const ids = new Set(fresh.map((t) => t.id));
     const timer = setTimeout(
-      () => setShown((cur) => cur.filter((t) => !ids.has(t.id))),
+      () => setShown((cur) => cur.filter((g) => !ids.has(g.tick.id))),
       ENTROPY_GHOST_MS,
     );
     return () => clearTimeout(timer);
@@ -404,16 +417,16 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
   if (shown.length === 0) return <></>;
   return (
     <span className="entropy" aria-hidden>
-      {shown.map((t) => (
+      {shown.map((g) => (
         <span
-          key={t.id}
+          key={g.tick.id}
           className="entropy__tick"
           style={{
-            ['--entropy-x' as string]: `${ENTROPY_GHOST_POSITIONS[t.id % ENTROPY_GHOST_POSITIONS.length][0]}px`,
-            ['--entropy-y' as string]: `${ENTROPY_GHOST_POSITIONS[t.id % ENTROPY_GHOST_POSITIONS.length][1]}px`,
+            ['--entropy-x' as string]: `${g.x}px`,
+            ['--entropy-y' as string]: `${g.y}px`,
           }}
         >
-          {t.amount < 0 ? t.amount : `+${t.amount}`}
+          {g.tick.amount < 0 ? g.tick.amount : `+${g.tick.amount}`}
         </span>
       ))}
     </span>
