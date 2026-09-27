@@ -48,9 +48,9 @@ export const CONFIG = {
    * knob to turn.
    */
   /** Score moved toward zero each time Entropy ticks. */
-  entropyPerTick: 6,
-  /** Entropy ticks every 2.5 seconds. */
-  entropyIntervalMs: 2500,
+  entropyPerTick: 1,
+  /** Entropy attacks once per second. */
+  entropyIntervalMs: 1000,
   /**
    * Ceiling on those dice. Each one rolls, each roll can grant another bonus
    * roll, so without a cap the loop feeds itself; this also keeps a click
