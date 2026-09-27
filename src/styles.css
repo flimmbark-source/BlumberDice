@@ -377,7 +377,7 @@ button:disabled { cursor: default; }
   transition: color 0.18s, text-shadow 0.18s;
 }
 .currency__value--up { text-shadow: 0 0 20px currentColor; }
-.currency__value--goal-shield {
+.currency__value--score-lock {
   color: #83cfff !important;
   text-shadow:
     0 0 8px rgba(83, 183, 255, 0.95),
@@ -385,10 +385,10 @@ button:disabled { cursor: default; }
     0 0 38px rgba(63, 157, 255, 0.28) !important;
 }
 
-/* A reached Goal creates a persistent Entropy shield around the Score window.
+/* An engaged Score lock creates a persistent Entropy shield around the Score window.
    The field stays quiet enough to read through, but never disappears while
    the floor is active. */
-.currency--goal-shield {
+.currency--score-lock {
   z-index: 4;
   overflow: visible;
   border-color: rgba(92, 185, 255, 0.95);
@@ -398,7 +398,7 @@ button:disabled { cursor: default; }
     0 0 12px rgba(76, 177, 255, 0.42),
     0 1px 0 rgba(255, 255, 255, 0.7);
 }
-/* Goal shield: keep the field attached to the Score glass instead of
+/* Score lock shield: keep the field attached to the Score glass instead of
    rotating a rectangle around it. The effect is a tight electric rim with
    a faint contained shimmer across the surface. */
 .currency__forcefield {
@@ -2301,7 +2301,7 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   .currency__forcefield,
   .currency__forcefield::before,
   .currency__forcefield::after,
-  .currency--goal-shield::after {
+  .currency--score-lock::after {
     animation: none !important;
   }
   .currency__forcefield { opacity: 0.9; }
