@@ -389,17 +389,46 @@ type EntropyProjectile = {
   tick: EntropyTick;
   x: number;
   y: number;
+  hitX: number;
+  hitY: number;
+  bounceX: number;
+  bounceY: number;
+  farX: number;
+  farY: number;
   angle: number;
 };
 
 function randomEntropyProjectile(tick: EntropyTick): EntropyProjectile {
-  // Launch from a nearby point around the Score window. The destination is
-  // always the readout's centre; only the approach angle and distance vary.
+  // The Score glass is much wider than it is tall, so a radial spawn around
+  // its centre can accidentally begin *inside* the field. Instead, choose an
+  // approach direction, intersect it with the field's rectangular perimeter,
+  // then spawn farther out on that same ray.
   const angle = Math.random() * Math.PI * 2;
-  const radius = 54 + Math.random() * 34;
-  const x = Math.cos(angle) * radius;
-  const y = Math.sin(angle) * radius * 0.62;
-  return { tick, x, y, angle: Math.atan2(y, x) };
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  const halfW = 83;
+  const halfH = 31;
+  const tx = Math.abs(dx) > 0.001 ? halfW / Math.abs(dx) : Number.POSITIVE_INFINITY;
+  const ty = Math.abs(dy) > 0.001 ? halfH / Math.abs(dy) : Number.POSITIVE_INFINITY;
+  const hitScale = Math.min(tx, ty);
+  const hitX = dx * hitScale;
+  const hitY = dy * hitScale;
+
+  const launchGap = 34 + Math.random() * 28;
+  const x = hitX + dx * launchGap;
+  const y = hitY + dy * launchGap;
+
+  // Shielded attacks reverse away from the exact collision point instead of
+  // travelling through the field to the middle before changing direction.
+  const bounceX = hitX + dx * 20;
+  const bounceY = hitY + dy * 20;
+  const farX = hitX + dx * 54;
+  const farY = hitY + dy * 54;
+
+  return {
+    tick, x, y, hitX, hitY, bounceX, bounceY, farX, farY,
+    angle: Math.atan2(dy, dx),
+  };
 }
 
 function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
@@ -432,10 +461,12 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
           style={{
             ['--entropy-x' as string]: `${p.x}px`,
             ['--entropy-y' as string]: `${p.y}px`,
-            ['--entropy-bounce-x' as string]: `${p.x * 0.18}px`,
-            ['--entropy-bounce-y' as string]: `${p.y * 0.18}px`,
-            ['--entropy-far-x' as string]: `${p.x * 0.48}px`,
-            ['--entropy-far-y' as string]: `${p.y * 0.48}px`,
+            ['--entropy-hit-x' as string]: `${p.hitX}px`,
+            ['--entropy-hit-y' as string]: `${p.hitY}px`,
+            ['--entropy-bounce-x' as string]: `${p.bounceX}px`,
+            ['--entropy-bounce-y' as string]: `${p.bounceY}px`,
+            ['--entropy-far-x' as string]: `${p.farX}px`,
+            ['--entropy-far-y' as string]: `${p.farY}px`,
             ['--entropy-angle' as string]: `${p.angle}rad`,
           }}
         >
