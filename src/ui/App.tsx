@@ -374,6 +374,11 @@ function Currency({ label, value, alt = false, entropy }: {
  * The engine keeps a short list of steps it has taken; this holds each one on
  * screen for as long as the animation runs and then forgets it.
  */
+const ENTROPY_GHOST_POSITIONS = [
+  [-54, -28], [50, -24], [-68, 12], [64, 16],
+  [-36, 34], [34, 38], [-8, -38], [8, 44],
+] as const;
+
 function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
   const [shown, setShown] = useState<EntropyTick[]>([]);
   const seen = useRef(0);
@@ -400,7 +405,14 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
   return (
     <span className="entropy" aria-hidden>
       {shown.map((t) => (
-        <span key={t.id} className="entropy__tick">
+        <span
+          key={t.id}
+          className="entropy__tick"
+          style={{
+            ['--entropy-x' as string]: `${ENTROPY_GHOST_POSITIONS[t.id % ENTROPY_GHOST_POSITIONS.length][0]}px`,
+            ['--entropy-y' as string]: `${ENTROPY_GHOST_POSITIONS[t.id % ENTROPY_GHOST_POSITIONS.length][1]}px`,
+          }}
+        >
           {t.amount < 0 ? t.amount : `+${t.amount}`}
         </span>
       ))}

@@ -37,7 +37,7 @@ export const CONFIG = {
    */
   maxRollsPerAction: 250,
   /** How long a die left behind by a bonus roll keeps rolling with you. */
-  bonusDieMs: 5000,
+  bonusDieMs: 2000,
   /**
    * Entropy: the machine's pull toward zero Score.
    *
@@ -505,7 +505,10 @@ function queueBonusRolls(s: GameState, count: number, depth: number): number {
     queued += 1;
     s.stats.bonusRolls += 1;
     // The roll resolves now, and also leaves a die behind for a while.
-    if (s.bonusDice.length < CONFIG.maxBonusDice) s.bonusDice.push(CONFIG.bonusDieMs);
+    if (s.bonusDice.length < CONFIG.maxBonusDice) {
+      const duration = CONFIG.bonusDieMs + displayStats(s).bonusDieDurationMs;
+      s.bonusDice.push(duration);
+    }
   }
   if (queued > 0) s.transient.rollsSinceBonus = 0;
   return queued;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  displayStats,
   drain, getBuild, manualRoll, resolveDecision, setSeal, setStoreNext, setStake,
   setUseHeld, switchFramework, syncAllowed, CONFIG, effectiveDice, tick, type GameState,
   refundAll,
@@ -467,6 +468,21 @@ describe('a bonus roll leaves a die behind', () => {
     const before = effectiveDice(s);
     s.bonusDice.push(CONFIG.bonusDieMs);
     expect(effectiveDice(s)).toBe(before + 1);
+  });
+
+  it('uses a 2 second base duration', () => {
+    expect(CONFIG.bonusDieMs).toBe(2000);
+  });
+
+  it('adds one second for each duration upgrade', () => {
+    const one = makeBuild({ seed: 9, nodes: ['vl_quick', 'vl_lowgear', 'vl_follow', 'vl_longfuse'] });
+    const two = makeBuild({ seed: 9, nodes: ['vl_quick', 'vl_lowgear', 'vl_follow', 'vl_longfuse', 'vl_slowburn'] });
+    one.actionBudget = CONFIG.maxRollsPerAction;
+    two.actionBudget = CONFIG.maxRollsPerAction;
+
+    // Follow Through's duration nodes are build stats: 2s base, then 3s and 4s.
+    expect(displayStats(one).bonusDieDurationMs).toBe(1000);
+    expect(displayStats(two).bonusDieDurationMs).toBe(2000);
   });
 
   it('lets each die run down on its own clock', () => {

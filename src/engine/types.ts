@@ -51,6 +51,7 @@ export type StatKey =
   // volume
   | 'bonusRollChance'
   | 'bonusFromBonusChance'
+  | 'bonusDieDurationMs'
   | 'splinterChance'
   | 'cooldownMult'
   | 'handfulDice'
@@ -82,6 +83,7 @@ export const BASE_STATS: StatBlock = {
   lossMult: 1,
   bonusRollChance: 0,
   bonusFromBonusChance: 0,
+  bonusDieDurationMs: 0,
   splinterChance: 0,
   cooldownMult: 1,
   handfulDice: 1,
