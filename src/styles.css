@@ -368,16 +368,60 @@ button:disabled { cursor: default; }
 .currency__value--up { text-shadow: 0 0 20px currentColor; }
 .currency__value--goal-shield {
   color: #83cfff !important;
-  animation: goalShieldPulse 760ms ease-out;
   text-shadow:
     0 0 8px rgba(83, 183, 255, 0.95),
-    0 0 22px rgba(63, 157, 255, 0.8),
-    0 0 38px rgba(63, 157, 255, 0.35) !important;
+    0 0 22px rgba(63, 157, 255, 0.72),
+    0 0 38px rgba(63, 157, 255, 0.28) !important;
 }
-@keyframes goalShieldPulse {
-  0% { filter: brightness(1); }
-  28% { filter: brightness(1.8); }
-  100% { filter: brightness(1); }
+
+/* A reached Goal creates a persistent Entropy shield around the Score window.
+   The field stays quiet enough to read through, but never disappears while
+   the floor is active. */
+.currency--goal-shield {
+  border-color: rgba(92, 185, 255, 0.72);
+  box-shadow:
+    inset 0 3px 9px rgba(0, 0, 0, 0.85),
+    inset 0 0 12px rgba(66, 166, 255, 0.14),
+    0 0 8px rgba(76, 177, 255, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.currency--goal-shield::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  z-index: 3;
+  pointer-events: none;
+  border: 1px solid rgba(111, 205, 255, 0.42);
+  border-radius: 10px;
+  background:
+    linear-gradient(115deg,
+      transparent 0 28%,
+      rgba(113, 207, 255, 0.13) 38%,
+      transparent 48% 70%,
+      rgba(113, 207, 255, 0.08) 80%,
+      transparent 90%);
+  background-size: 220% 100%;
+  box-shadow:
+    0 0 8px rgba(83, 183, 255, 0.22),
+    inset 0 0 7px rgba(113, 207, 255, 0.09);
+  opacity: 0.72;
+  animation: goalForceField 3.2s ease-in-out infinite;
+}
+@keyframes goalForceField {
+  0%, 100% {
+    opacity: 0.5;
+    background-position: 0% 50%;
+    box-shadow:
+      0 0 7px rgba(83, 183, 255, 0.18),
+      inset 0 0 6px rgba(113, 207, 255, 0.08);
+  }
+  50% {
+    opacity: 0.86;
+    background-position: 100% 50%;
+    box-shadow:
+      0 0 12px rgba(83, 183, 255, 0.3),
+      inset 0 0 10px rgba(113, 207, 255, 0.12);
+  }
 }
 /* Falling only dims the lamp. Red is reserved for a Score that is actually
    under zero -- with Entropy pulling every second, a red-while-falling
