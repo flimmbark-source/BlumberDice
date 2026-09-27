@@ -131,3 +131,19 @@ export function canPin(s: GameState, id: string): boolean {
   if (!node || !isVisible(node, c.discovered)) return false;
   return node.prerequisites.length === 0 || node.prerequisites.some((p) => c.allocated.has(p));
 }
+
+
+/** Explicitly set or clear the player's goal. Invalid/deep nodes are ignored. */
+export function setGoal(s: GameState, id: string | null): boolean {
+  if (id === null) {
+    s.pinned = null;
+    s.pinnedReached = false;
+    return true;
+  }
+  if (!canPin(s, id)) return false;
+  const node = NODES_BY_ID.get(id)!;
+  const need = node.costs.score ?? 0;
+  s.pinned = id;
+  s.pinnedReached = need > 0 && s.score >= need;
+  return true;
+}
