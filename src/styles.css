@@ -413,15 +413,24 @@ button:disabled { cursor: default; }
 @keyframes entropyFloat {
   0% {
     opacity: 0;
-    transform: translate(var(--entropy-x), calc(var(--entropy-y) - 8px)) scale(0.72);
+    transform:
+      translate(-50%, -50%)
+      translate(var(--entropy-x), calc(var(--entropy-y) + 5px))
+      scale(0.82);
   }
   18% {
     opacity: 1;
-    transform: translate(var(--entropy-x), var(--entropy-y)) scale(1);
+    transform:
+      translate(-50%, -50%)
+      translate(var(--entropy-x), var(--entropy-y))
+      scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate(var(--entropy-x), calc(var(--entropy-y) + 30px)) scale(1.08);
+    transform:
+      translate(-50%, -50%)
+      translate(var(--entropy-x), calc(var(--entropy-y) - 18px))
+      scale(1);
   }
 }
 

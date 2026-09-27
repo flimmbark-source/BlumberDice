@@ -47,8 +47,10 @@ export const CONFIG = {
    * back. Both numbers are here rather than inline so the whole force is one
    * knob to turn.
    */
-  entropyPerSecond: 6,
-  entropyIntervalMs: 1000,
+  /** Score moved toward zero each time Entropy ticks. */
+  entropyPerTick: 6,
+  /** Entropy ticks every 2.5 seconds. */
+  entropyIntervalMs: 2500,
   /**
    * Ceiling on those dice. Each one rolls, each roll can grant another bonus
    * roll, so without a cap the loop feeds itself; this also keeps a click
@@ -1169,13 +1171,13 @@ export function manualRoll(s: GameState): void {
  * overshooting, so Entropy settles exactly on zero and stays there.
  */
 function applyEntropy(s: GameState): void {
-  const rate = CONFIG.entropyPerSecond;
+  const rate = CONFIG.entropyPerTick;
   const step = s.score > 0 ? -Math.min(rate, s.score)
     : s.score < 0 ? Math.min(rate, -s.score)
     : 0;
   const dir: -1 | 0 | 1 = step < 0 ? -1 : step > 0 ? 1 : 0;
 
-  // Announced on the turn, not on the tick: a line a second would bury every
+  // Announced on the turn, not on every tick: repeated lines would bury every
   // other thing the log is for.
   if (dir !== s.entropyDir) {
     if (dir === -1) log(s, 'loss', 'Entropy is draining Score.');

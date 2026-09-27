@@ -349,8 +349,8 @@ what lets the die say *tap* and the switch stop offering a Space bar.
 
 ### Entropy
 
-A constant pull toward zero Score: `CONFIG.entropyPerSecond` (6) applied once
-a second, in `tick`. It is one rule rather than two — Score moves *toward*
+A constant pull toward zero Score: `CONFIG.entropyPerTick` (6) applied once
+every 2.5 seconds, in `tick`. It is one rule rather than two — Score moves *toward*
 zero, so it drains a positive balance and restores a negative one at the same
 rate, and the last step in either direction is short rather than overshooting,
 so zero is a resting point.
@@ -362,11 +362,10 @@ pure tax — it is the only force in the game that pushes in both directions.
 
 Each step is recorded in `entropyLog` and floated off the Score readout by the
 HUD, the way a result floats off a die. A Score under zero turns the readout
-red; falling merely dims it, because with Entropy pulling every second a
-red-while-falling readout would be red almost always and stop meaning
-anything.
+red; falling merely dims it, because the colour is reserved for actual debt
+rather than every Entropy step.
 
-Entropy steps are **not** logged one a second — that would bury everything
+Entropy steps are **not** logged individually — that would bury everything
 else the log is for. A change of direction is logged once, when it turns.
 
 ### The log mirrors the dice
