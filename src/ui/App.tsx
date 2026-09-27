@@ -14,12 +14,16 @@ import { TreeView } from './TreeView.tsx';
 import { hasLeadsTo, LeadsTo, SelectedUpgrade } from './SelectedUpgrade.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
 import { touchPrimary } from './pointer.ts';
+import { STAGE_H, STAGE_W, useSkin, useStageScale } from './skin.ts';
+import chassisUrl from './chassis.webp';
 
 const TREE_UNLOCK_SCORE = 20;
 type Tab = 'web' | 'stats' | 'log';
 
 export function App(): JSX.Element {
   const s = useGame();
+  const skin = useSkin();
+  const stageScale = useStageScale(skin === 'photo');
   const [inspected, setInspected] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('web');
   const [expanded, setExpanded] = useState(false);
@@ -87,8 +91,17 @@ export function App(): JSX.Element {
     };
   }, []);
 
+  const photo = skin === 'photo';
   return (
-    <div className="app">
+    <div
+      className={`app${photo ? ' app--photo' : ''}`}
+      style={photo ? {
+        ['--chassis' as string]: `url(${chassisUrl})`,
+        ['--stage-k' as string]: String(stageScale),
+        width: STAGE_W,
+        height: STAGE_H,
+      } : undefined}
+    >
       <TopBar
         s={s}
         knowsB={knowsB}

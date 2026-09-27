@@ -2767,3 +2767,262 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   .fixed-panel--upgrade .fixed-panel__body,
   .fixed-panel--chain .fixed-panel__body { height: auto; }
 }
+
+
+/* ==================================================================== */
+/* ================= PHOTO SKIN: the chassis as an image ============== */
+/* ==================================================================== */
+/*
+ * Opt-in with `?skin=photo`. The supplied photograph supplies every piece of
+ * material -- enamel, grime, bevels, the moulded CRT surround, the painted
+ * hardware -- and this file only drops the live content into the holes cut
+ * in it. Nothing below changes a rule, a number or a label.
+ *
+ * Two consequences worth knowing before reading further:
+ *
+ *   1. The photograph is one fixed 1672x941 object, so this is a fixed stage
+ *      scaled to fit and letterboxed. It cannot reflow. Every plate that was
+ *      sized by its content on the drawn chassis is sized by its hole here,
+ *      and content that does not fit scrolls.
+ *   2. Every slot below is measured off the image, not designed. The numbers
+ *      are the dark cut-outs' own bounding boxes as a percentage of the
+ *      frame, so re-exporting the art means re-measuring, not re-taping.
+ */
+
+.app--photo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 0;
+  overflow: visible;
+  transform: translate(-50%, -50%) scale(var(--stage-k, 1));
+  transform-origin: center center;
+  background: var(--chassis) center / 100% 100% no-repeat;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
+}
+/* The drawn chassis' own grime, rim and speckle are all in the photograph. */
+.app--photo::before,
+.app--photo::after { display: none; }
+body:has(.app--photo) {
+  padding: 0;
+  background: #16110b;
+  overflow: hidden;
+}
+body:has(.app--photo)::before { display: none; }
+
+/* --- the two containers become transparent coordinate spaces ----------- */
+
+.app--photo .topbar,
+.app--photo .desktop {
+  position: absolute;
+  inset: 0;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+/* The head spans the whole stage here so its children can be placed against
+   it, which at z-index 100000 means it would otherwise eat every click
+   aimed at the panels underneath. It stops taking the pointer; the controls
+   inside it take it back. */
+.app--photo .topbar { pointer-events: none; }
+.app--photo .topbar > *,
+.app--photo .tabsx,
+.app--photo .currencies,
+.app--photo .gear,
+.app--photo .fwtoggle { pointer-events: auto; }
+.app--photo .panel-rail { display: contents; }
+
+/* --- the slots, measured off the image --------------------------------- */
+
+.app--photo .tabsx,
+.app--photo .currencies,
+.app--photo .fixed-panel,
+.app--photo .game-area,
+.app--photo .game__controls {
+  position: absolute;
+  margin: 0;
+}
+
+.app--photo .tabsx      { left: 32.42%; top:  2.13%; width: 35.05%; height: 10.20%; }
+.app--photo .currencies { left: 71.53%; top:  5.95%; width: 17.58%; height:  6.16%; }
+.app--photo .fixed-panel--tree     { left:  2.63%; top: 18.28%; width: 30.74%; height: 49.95%; }
+.app--photo .fixed-panel--goal     { left:  3.23%; top: 82.47%; width: 28.11%; height: 10.84%; }
+.app--photo .game-area             { left: 35.41%; top: 16.37%; width: 36.60%; height: 55.90%; }
+.app--photo .fixed-panel--upgrade  { left: 74.04%; top: 21.25%; width: 24.64%; height: 40.38%; }
+.app--photo .fixed-panel--chain    { left: 74.76%; top: 65.67%; width: 23.21%; height: 17.00%; }
+/* The switch sits on the cap the photograph already paints, so ours lands
+   exactly on top of it rather than beside it. The deck is nested inside the
+   chamber's box, so these are the stage percentages re-expressed against
+   that box -- the first real tax of mapping to fixed holes. */
+.app--photo .game__controls {
+  left: 21.56%;   /* (43.30 - 35.41) / 36.60 */
+  top: 108.35%;   /* (76.94 - 16.37) / 55.90 */
+  width: 58.17%;  /* 21.29 / 36.60 */
+  height: 32.33%; /* 18.07 / 55.90 */
+}
+.app--photo .game-area { overflow: visible; }
+
+/* --- everything the photograph already provides, we stop drawing ------- */
+
+.app--photo .brand,
+.app--photo .fixed-panel__foot,
+.app--photo .face-vent,
+.app--photo .currencies__stamp,
+.app--photo .fixed-panel__bar::after,
+.app--photo .game__arena::before,
+.app--photo .game__arena::after,
+.app--photo .tray::before { display: none; }
+.app--photo .currencies::after { display: none; }
+
+.app--photo .fixed-panel,
+.app--photo .game__arena,
+.app--photo .game__controls,
+.app--photo .tabsx,
+.app--photo .currencies {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  background-image: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* --- the screens ------------------------------------------------------- */
+/*
+ * The holes are already dark, so a body here is a transparent box with a
+ * legend printed on the glass. On the drawn chassis the legend is etched on
+ * the bezel; the photograph's bezels are too narrow to take one, which is
+ * where a photographed faceplate stops being free.
+ */
+.app--photo .fixed-panel { display: flex; flex-direction: column; }
+.app--photo .fixed-panel__bar {
+  flex: 0 0 auto;
+  padding: 7px 11px 4px;
+  color: var(--muted);
+  background: linear-gradient(180deg, rgba(8, 16, 11, 0.92), rgba(8, 16, 11, 0));
+}
+.app--photo .fixed-panel__bar::before {
+  width: 6px; height: 6px;
+  box-shadow: 0 0 5px rgba(208, 83, 29, 0.8);
+}
+.app--photo .fixed-panel__title { font-size: 9.5px; color: #93a98c; text-shadow: none; }
+.app--photo .fixed-panel__glyph { width: 12px; height: 12px; }
+.app--photo .fixed-panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: auto;
+}
+.app--photo .fixed-panel__body::after { display: none; }
+
+.app--photo .fixed-panel--goal .fixed-panel__bar { padding: 5px 11px 0; }
+.app--photo .fixed-panel--goal .goal { padding: 3px 11px 6px; gap: 3px; }
+.app--photo .fixed-panel--goal .goal__lead { font-size: 12px; }
+.app--photo .fixed-panel--goal .goal__open { padding: 3px 10px; font-size: 11px; }
+.app--photo .fixed-panel--goal .goal__nt,
+.app--photo .fixed-panel--goal .goal__after { display: none; }
+
+/* The tube's own curvature, bloom and scanlines are painted, so the tray
+   only has to be the picture inside it. */
+.app--photo .game__arena {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+}
+.app--photo .tray {
+  inset: 0;
+  border-radius: 10px;
+  background: none;
+  box-shadow: none;
+}
+.app--photo .tray::after {
+  background: radial-gradient(120% 110% at 50% 40%, transparent 62%, rgba(0, 0, 0, 0.35));
+}
+.app--photo .tray__readout { inset: 15px 26px auto 26px; }
+.app--photo .tray__hint { bottom: 26px; }
+
+/* --- the switch -------------------------------------------------------- */
+
+.app--photo .game__controls::before,
+.app--photo .game__controls::after { display: none; }
+.app--photo .rollbtn {
+  position: absolute;
+  left: 4%; top: 12%; width: 92%; height: 76%;
+  margin: 0;
+  border: 0;
+  border-radius: 13px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 213, 185, 0.55),
+    inset 0 -5px 10px rgba(120, 40, 10, 0.5);
+}
+.app--photo .rollbtn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: inset 0 3px 9px rgba(120, 40, 10, 0.6);
+}
+.app--photo .rollbtn__label { font-size: 30px; }
+
+/* Prompts and the persistent controls have no hole of their own, so they
+   sit on the main screen, which is where a machine would put them. */
+.app--photo .decision,
+.app--photo .rail {
+  position: absolute;
+  left: 35.41%;
+  width: 36.60%;
+  z-index: 40;
+  margin: 0;
+  max-height: 22%;
+  overflow: auto;
+  background: rgba(10, 18, 13, 0.92);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.app--photo .decision { bottom: 28.5%; }
+.app--photo .rail { bottom: 28.5%; border-top: 0; }
+.app--photo .decision ~ .rail { display: none; }
+
+/* --- the settings knob has no hole; it goes on the enamel -------------- */
+.app--photo .gear {
+  position: absolute;
+  right: 1.1%;
+  top: 12.5%;
+}
+
+/* --- the two readouts -------------------------------------------------- */
+.app--photo .currency {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  justify-content: flex-end;
+}
+.app--photo .currency--alt { position: static; padding: 0 0 0 12px; }
+.app--photo .currency__label { display: none; }
+.app--photo .currency__screen,
+.app--photo .currency__entropy-meter { border-radius: 0; }
+
+.app--photo .tabsx {
+  display: grid;
+  /* the painted dividers, measured: x = 675, 815, 940 across 542..1128 */
+  grid-template-columns: 22.18% 23.89% 21.33% 32.60%;
+  gap: 0;
+}
+.app--photo .tab { min-width: 0; border-radius: 0; }
+.app--photo .tab + .tab::before { display: none; }
+.app--photo .fwtoggle {
+  position: absolute;
+  left: 35.41%; top: 74%;
+  z-index: 40;
+}

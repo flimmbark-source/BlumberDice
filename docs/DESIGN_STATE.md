@@ -997,6 +997,55 @@ mark as a plain colour ring, where this build draws small, notable, keystone
 and bridge as different shapes. The shape carries the node's class, so
 flattening them to rings would trade information for a resemblance.
 
+### 33. The photographed chassis, as an opt-in skin
+
+A second faceplate, behind `?skin=photo` (`?skin=css` returns, and the choice
+is remembered). The supplied photograph is laid down as one image and the
+live content drops into the holes cut in it. No rule, number or label
+changes; only which surface the machine is made of.
+
+It is a skin rather than a replacement because the two are not
+interchangeable, and the trade is worth stating plainly.
+
+**What the photograph wins.** Everything material: enamel, grime, moulded
+bevels, the curved CRT surround, painted hardware. None of that is reachable
+with gradients, and the drawn chassis will never close the gap.
+
+**What it costs.**
+
+- **It cannot reflow.** The image is one fixed 1672×941 object, so this is a
+  fixed stage scaled whole and letterboxed on the dark ground. Everything is
+  in px, so the stage is laid out at true size and *transformed*, not fitted
+  by percentage — fitting by percentage moves the boxes and leaves the type
+  behind. Below 1000×560 the drawn chassis takes over, because scaled to a
+  phone the photograph is a picture of a machine rather than a machine.
+- **Plates are sized by their hole, not their content.** Entries 30 and 32
+  went the other way on purpose. Here the inspector's hole is taller than a
+  short node needs and the chain's hole is shorter than three rows, so one
+  has dead glass and the other scrolls.
+- **Slots are measured, not designed.** Every position in the photo-skin
+  block is a cut-out's own bounding box as a percentage of the frame, so
+  re-exporting the art means re-measuring. The deck is nested inside the
+  chamber's box, so its four numbers are re-expressed against that box — the
+  first place the mapping stops being a straight transcription.
+- **Legends move onto the glass.** The drawn chassis etches them into the
+  bezel; the photograph's bezels are too narrow to take one.
+- **The chassis stops being live.** Breathing lamps, the chamber's working
+  lamp and pressed-key travel on the plate are all painted still.
+
+**Three things in the art do not match the build**, and none can be fixed
+from this side:
+
+1. The nameplate reads *BlumberDice*; the game is *Roll Reactor*.
+2. The key bank has four cells and there are three views, so the fourth is
+   dark. The tabs are laid on the painted dividers rather than spread evenly
+   across them, which at least keeps the misfit honest.
+3. Two toggle levers and an indicator lamp are painted onto the deck. There
+   is no auto-roll and no fast mode, so all three are dead hardware —
+   exactly what entry 32 declined to draw.
+
+Fixing any of those means re-exporting the art, not editing the CSS.
+
 ---
 
 ## Unresolved — deliberately not implemented
