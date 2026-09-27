@@ -196,7 +196,7 @@ function TopBar({
 
       {treeUnlocked ? (
         /* One bank of recessed keys for the three fixed information views. */
-        <nav className="tabsx" role="tablist" aria-label="Tech window view">
+        <nav className="tabsx" role="tablist" aria-label="Game view">
           <TabBtn id="web" tab={tab} set={setTab} label="Build" icon={<BuildIcon />} />
           <TabBtn id="stats" tab={tab} set={setTab} label="Stats" icon={<StatsIcon />} />
           <TabBtn id="log" tab={tab} set={setTab} label="Log" icon={<LogIcon />} />
