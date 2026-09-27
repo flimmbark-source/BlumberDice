@@ -25,27 +25,20 @@ describe('Entropy timing', () => {
     expect(s.score).toBe(before - CONFIG.entropyPerTick);
   });
 
-  it('cannot drain through a reached goal cost', () => {
+  it('does not move Score while the Score force field is engaged', () => {
     const s = makeBuild({ seed: 1, startingScore: 47 });
-    s.pinned = 'hr_edge';
-    s.pinnedReached = true;
+    s.scoreLocked = true;
     tick(s, CONFIG.entropyIntervalMs);
-    expect(s.score).toBe(46);
-    expect(s.entropyLog.at(-1)).toMatchObject({ amount: -1 });
-    tick(s, CONFIG.entropyIntervalMs);
-    expect(s.score).toBe(45);
-    expect(s.entropyLog.at(-1)).toMatchObject({ amount: -1, blocked: true });
-    tick(s, CONFIG.entropyIntervalMs);
-    expect(s.score).toBe(45);
+    expect(s.score).toBe(47);
     expect(s.entropyLog.at(-1)).toMatchObject({ amount: 0, blocked: true });
   });
 
-  it('does not protect a goal before its Score threshold has been reached', () => {
-    const s = makeBuild({ seed: 1, startingScore: 44 });
+  it('goals no longer protect Score from Entropy', () => {
+    const s = makeBuild({ seed: 1, startingScore: 47 });
     s.pinned = 'hr_edge';
-    s.pinnedReached = false;
     tick(s, CONFIG.entropyIntervalMs);
-    expect(s.score).toBe(43);
+    expect(s.score).toBe(46);
+    expect(s.entropyLog.at(-1)).toMatchObject({ amount: -1 });
   });
 });
 
