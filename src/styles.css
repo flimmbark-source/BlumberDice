@@ -598,13 +598,17 @@ button:disabled { cursor: default; }
     opacity: 1;
     transform: translate(var(--entropy-x), var(--entropy-y)) scale(0.92);
   }
-  70% {
+  58% {
     opacity: 1;
     transform: translate(var(--entropy-hit-x), var(--entropy-hit-y)) scale(1);
   }
+  70% {
+    opacity: 1;
+    transform: translate(var(--entropy-impact-x), var(--entropy-impact-y)) scale(1);
+  }
   100% {
     opacity: 1;
-    transform: translate(var(--entropy-hit-x), var(--entropy-hit-y)) scale(1);
+    transform: translate(var(--entropy-impact-x), var(--entropy-impact-y)) scale(1);
   }
 }
 @keyframes entropyDotImpact {
