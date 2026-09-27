@@ -49,6 +49,7 @@ interface Props {
   discoveredKey: string;
   score: number;
   meta: number;
+  scoreLocked: boolean;
   framework: FrameworkId;
   pinned: string | null;
   /** Owned by the app: the upgrade panel in the next column reads it too. */
@@ -66,17 +67,18 @@ interface Props {
 
 function statusOf(
   node: PassiveNode, allocated: Set<string>, discovered: Set<DiscoveryFlag>,
-  score: number, meta: number,
+  score: number, meta: number, scoreLocked: boolean,
 ): Status {
   if (!isVisible(node, discovered)) return 'hidden';
   if (allocated.has(node.id)) return 'allocated';
   if (!isReachable(node.id, allocated)) return 'locked';
+  if (scoreLocked && (node.costs.score ?? 0) > 0) return 'unaffordable';
   return checkAllocation(node.id, { allocated, discovered, score, meta }).ok
     ? 'available' : 'unaffordable';
 }
 
 export const TreeView = memo(function TreeView({
-  allocatedKey, discoveredKey, score, meta, framework, pinned, inspected, setInspected,
+  allocatedKey, discoveredKey, score, meta, scoreLocked, framework, pinned, inspected, setInspected,
   expanded, setExpanded, focus, onFocusConsumed, embedded = false,
 }: Props): JSX.Element {
   const allocated = useMemo(() => new Set(allocatedKey.split(',').filter(Boolean)), [allocatedKey]);
@@ -144,9 +146,9 @@ export const TreeView = memo(function TreeView({
 
   const statuses = useMemo(() => {
     const m = new Map<string, Status>();
-    for (const n of NODES) m.set(n.id, statusOf(n, allocated, discovered, score, meta));
+    for (const n of NODES) m.set(n.id, statusOf(n, allocated, discovered, score, meta, scoreLocked));
     return m;
-  }, [allocated, discovered, score, meta]);
+  }, [allocated, discovered, score, meta, scoreLocked]);
 
   /**
    * Pan a requested node to the middle of the panel.
