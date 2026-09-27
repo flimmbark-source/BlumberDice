@@ -39,7 +39,6 @@ interface Ctx {
   discovered: Set<DiscoveryFlag>;
   score: number;
   meta: number;
-  scoreLocked?: boolean;
 }
 
 const ctxOf = (s: GameState): Ctx => ({
@@ -47,7 +46,6 @@ const ctxOf = (s: GameState): Ctx => ({
   discovered: new Set(s.discovered),
   score: s.score,
   meta: s.meta,
-  scoreLocked: s.scoreLocked,
 });
 
 /** Reachable means one prerequisite is already held — one purchase away. */
@@ -59,7 +57,7 @@ function candidates(c: Ctx): PassiveNode[] {
 }
 
 const affordable = (n: PassiveNode, c: Ctx): boolean =>
-  !((n.costs.score ?? 0) > 0 && c.scoreLocked) && checkAllocation(n.id, c).ok;
+  checkAllocation(n.id, c).ok;
 
 /**
  * The single node that buying `id` would newly put in reach.
