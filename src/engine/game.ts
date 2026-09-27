@@ -47,10 +47,16 @@ export const CONFIG = {
    * back. Both numbers are here rather than inline so the whole force is one
    * knob to turn.
    */
-  /** Score moved toward zero each time Entropy ticks. */
+  /** Score moved toward zero each time Entropy hits. */
   entropyPerTick: 1,
-  /** Entropy attacks twice per second. */
-  entropyIntervalMs: 500,
+  /** Entropy pressure is a hidden 0..100 meter around the Score display. */
+  entropyMax: 100,
+  /** At zero Entropy, one attack is fired per second. */
+  entropyIntervalMaxMs: 1000,
+  /** At full Entropy, one attack is fired every 0.05 seconds. */
+  entropyIntervalMinMs: 50,
+  /** While the Score force field is engaged, Entropy drains this many points per second. */
+  entropyDecayPerSecond: 10,
   /**
    * Ceiling on those dice. Each one rolls, each roll can grant another bonus
    * roll, so without a cap the loop feeds itself; this also keeps a click
@@ -257,7 +263,9 @@ export interface GameState {
   pendulumPayout: number;
 
   // Entropy
-  /** Milliseconds until the next Entropy step. */
+  /** Pressure meter driving attack cadence, clamped to 0..CONFIG.entropyMax. */
+  entropyLevel: number;
+  /** Milliseconds until the next Entropy attack. */
   entropyTimer: number;
   /** Which way Entropy last pulled, so a reversal is announced once. */
   entropyDir: -1 | 0 | 1;
@@ -309,7 +317,8 @@ export function createGame(seed = 0x5eed1e): GameState {
     awaitingReflection: false,
     pendulumRollsLeft: 0,
     pendulumPayout: 0,
-    entropyTimer: CONFIG.entropyIntervalMs,
+    entropyLevel: 0,
+    entropyTimer: CONFIG.entropyIntervalMaxMs,
     entropyDir: 0,
     entropyLog: [],
     nextEntropyId: 1,
@@ -1177,6 +1186,13 @@ export function manualRoll(s: GameState): void {
  * the same amount. The last step in either direction is short rather than
  * overshooting, so Entropy settles exactly on zero and stays there.
  */
+export function entropyAttackIntervalMs(level: number): number {
+  const clamped = Math.max(0, Math.min(CONFIG.entropyMax, level));
+  const t = clamped / CONFIG.entropyMax;
+  return CONFIG.entropyIntervalMaxMs
+    + (CONFIG.entropyIntervalMinMs - CONFIG.entropyIntervalMaxMs) * t;
+}
+
 function applyEntropy(s: GameState): void {
   const rate = CONFIG.entropyPerTick;
   let step = s.score > 0 ? -Math.min(rate, s.score)
@@ -1190,6 +1206,9 @@ function applyEntropy(s: GameState): void {
   if (s.scoreLocked) {
     step = 0;
     blocked = true;
+  } else {
+    // A dot that actually reaches the Score display adds one point of Entropy.
+    s.entropyLevel = Math.min(CONFIG.entropyMax, s.entropyLevel + 1);
   }
 
   const dir: -1 | 0 | 1 = step < 0 ? -1 : step > 0 ? 1 : 0;
@@ -1236,18 +1255,26 @@ export function tick(s: GameState, dt: number): void {
     }
   }
 
-  // Entropy keeps its own clock and runs through everything: a pending
-  // cascade, an open decision, an idle machine. It is the one thing in here
-  // that is not waiting for the player.
+  // The force field bleeds Entropy away continuously. Attacks still fire while
+  // it is active, but they ricochet and do not refill the meter.
+  if (s.scoreLocked && s.entropyLevel > 0) {
+    s.entropyLevel = Math.max(
+      0,
+      s.entropyLevel - CONFIG.entropyDecayPerSecond * (dt / 1000),
+    );
+  }
+
+  // Entropy keeps its own clock and runs through everything. Its cadence is
+  // derived from the current 0..100 pressure: 1s at empty, 0.05s at full.
   s.entropyTimer -= dt;
   let entropyGuard = 0;
   while (s.entropyTimer <= 0 && entropyGuard++ < 8) {
-    s.entropyTimer += CONFIG.entropyIntervalMs;
     applyEntropy(s);
+    s.entropyTimer += entropyAttackIntervalMs(s.entropyLevel);
   }
-  // A tab left in the background can come back owing more steps than the
-  // guard allows; drop the arrears rather than paying them all at once.
-  if (s.entropyTimer <= 0) s.entropyTimer = CONFIG.entropyIntervalMs;
+  // A backgrounded tab can come back owing many high-pressure attacks; drop
+  // excess arrears rather than dumping an unreadable burst all at once.
+  if (s.entropyTimer <= 0) s.entropyTimer = entropyAttackIntervalMs(s.entropyLevel);
 
   if (s.decision !== null) return;
 
