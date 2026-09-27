@@ -204,7 +204,7 @@ export interface GameState {
    * recommendation: nothing sets this but an explicit choice in the web.
    */
   pinned: string | null;
-  /** When true, Score is frozen: gains, losses, spending and Entropy cannot move it. */
+  /** When true, involuntary Score gains/losses and Entropy are blocked; deliberate spending is still allowed. */
   scoreLocked: boolean;
   sawStats: boolean;
 
@@ -1136,7 +1136,7 @@ export function manualRoll(s: GameState): void {
   const stats = displayStats(s, build);
 
   let staked = 0;
-  if (!s.scoreLocked && build.flags.has('stake') && s.stakeAmount > 0 && s.framework === 'A') {
+  if (build.flags.has('stake') && s.stakeAmount > 0 && s.framework === 'A') {
     staked = Math.min(s.stakeAmount, Math.floor(stats.stakeMax), Math.floor(s.score));
     if (staked > 0) s.score -= staked;
   }
@@ -1442,9 +1442,6 @@ export function allocate(s: GameState, nodeId: string): { ok: boolean; reason?: 
   });
   if (!check.ok) return check;
   const node = NODES_BY_ID.get(nodeId)!;
-  if (s.scoreLocked && (node.costs.score ?? 0) > 0) {
-    return { ok: false, reason: 'insufficient-score' };
-  }
   s.score -= node.costs.score ?? 0;
   s.meta -= node.costs.meta ?? 0;
   s.allocated.push(nodeId);
