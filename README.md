@@ -316,6 +316,36 @@ The telemetry printed on the chamber glass — status, dice per throw, rolls so
 far, generator state — restates what the roll button and the debug panel
 already say. It reports; it decides nothing, and no figure on it is new.
 
+### The shell on a small screen
+
+A phone is not a small desktop, so three things change below 900px and the
+rest is the same machine.
+
+The **page scrolls, not a pane inside it**. Nested scrolling on touch eats
+the gesture that should be moving the page and breaks the browser's own
+address-bar behaviour, so the workspace stops being its own scroller.
+
+The **head becomes a strip that stays put**. At the desktop's sizes it took
+38% of a phone screen and pushed the Roll switch below the fold, which is the
+one control the game is played with. It keeps Score and the view keys in
+reach however far down the web the player has scrolled. The right-hand group
+gets `display: contents` so its three controls join the head's own flex flow —
+otherwise the framework switch, which wants a full row, drags the readouts
+onto a second one and leaves the nameplate alone on a third. Below 480px the
+nameplate goes down to its mark, because that row is worth more to the
+chamber.
+
+**Panels stack, play first.** There is nowhere to drag a window to, so the
+chamber and the switch own the first screen and the web, stats and log follow
+underneath, in the order the desktop reads left to right. Held sideways,
+where there is width to spare and no height at all, the deck stands beside
+the chamber instead of under it.
+
+Two things follow the pointer rather than the width, since a tablet is wide
+and still touched: controls grow to finger size under `(pointer: coarse)`,
+and the prompts stop naming keys that are not there — `ui/pointer.ts` is
+what lets the die say *tap* and the switch stop offering a Space bar.
+
 ### The roll pipeline
 
 `generate → loadedChoice → hold → flip → finalize → ride`

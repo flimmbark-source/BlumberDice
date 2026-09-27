@@ -3,6 +3,7 @@ import {
   canRoll, effectiveDice, type GameState, type RollRecord,
 } from '../../engine/game.ts';
 import { prefersReducedMotion } from '../motion.ts';
+import { touchPrimary } from '../pointer.ts';
 import { actions, store } from '../store.ts';
 import { ISO_X, ISO_Y, project, v3 } from './math3d.ts';
 import {
@@ -333,6 +334,7 @@ export function DiceTray({ s, rollRef }: {
   const dice = effectiveDice(s);
   const ready = canRoll(s);
   const resolving = s.pending.length > 0;
+  const touch = touchPrimary();
 
   return (
     <div className="tray" ref={wrapRef}>
@@ -355,8 +357,10 @@ export function DiceTray({ s, rollRef }: {
       </div>
 
       <div className={`tray__hint${ready && s.totalRolls < 6 ? ' tray__hint--show' : ''}`}>
-        {dice > 1 ? `click to throw ${dice} dice` : 'click the die to roll'}
-        <span className="tray__hintKey"> · or press Space</span>
+        {touch
+          ? (dice > 1 ? `tap to throw ${dice} dice` : 'tap the die to roll')
+          : (dice > 1 ? `click to throw ${dice} dice` : 'click the die to roll')}
+        {!touch && <span className="tray__hintKey"> · or press Space</span>}
       </div>
       {resolving && s.pending.length > 3 && (
         <div className="tray__queue">{s.pending.length} rolls resolving</div>

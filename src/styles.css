@@ -1591,28 +1591,79 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   .currency__value { font-size: 25px; }
 }
 
-/* On small displays, preserve the progressive order and avoid inaccessible
-   off-screen floating windows. Desktop dragging remains the wide-screen mode. */
-@media (max-width: 900px) {
-  .topbar {
-    grid-template-columns: 1fr;
-    justify-items: stretch;
-    gap: 10px;
-  }
-  .brand, .topbar__right { justify-self: stretch; }
-  /* The readout head spans the column rather than hugging one corner of it. */
-  .topbar__right { flex-wrap: wrap; }
-  .currencies { flex: 1 1 auto; }
-  .currency { flex: 1 1 auto; }
-  .tabsx { flex-wrap: wrap; justify-content: center; }
+/* =============================================================== small screens */
+/*
+ * Everything below a desktop shares three changes, and the rest is the same
+ * machine:
+ *
+ *   1. The page scrolls, rather than a pane inside it. Nested scrolling on
+ *      touch is a trap -- it eats the gesture that should be moving the page
+ *      and it breaks the browser's own address-bar behaviour.
+ *   2. The head becomes a strip that stays put. At the desktop's sizes it
+ *      took 38% of a phone screen and pushed the Roll switch below the fold,
+ *      which is the one control the game is played with.
+ *   3. Panels stack instead of floating. There is nowhere to drag a window
+ *      to, so play comes first and building follows, in the order the
+ *      desktop reads left to right.
+ */
 
-  .desktop {
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 0 10px 10px;
+@media (max-width: 900px) {
+  /* Let the document scroll instead of the workspace pane. */
+  html, body, #root { height: auto; min-height: 100%; }
+  .app { height: auto; min-height: 100%; }
+  .desktop { overflow: visible; display: flex; flex-direction: column; gap: 12px; padding: 0 12px 12px; }
+
+  /* --- the head ---------------------------------------------------------- */
+
+  /* One strip that stays put, so Score and the view keys are always to hand
+     however far down the web the player has scrolled. */
+  .topbar {
+    position: sticky; top: 0;
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 8px; padding: 8px 12px 10px;
+    background: linear-gradient(180deg, var(--plate) 72%, rgba(230, 221, 203, 0));
   }
+  .brand { order: 1; flex: 0 1 auto; min-width: 0; gap: 9px; padding: 6px 12px 6px 6px; border-radius: 10px; }
+  .brand__mark { width: 28px; height: 28px; margin-left: 2px; }
+  .brand__word { font-size: 17px; }
+  /* The strapline is the first thing to go: it is print, not information. */
+  .brand__word::after { display: none; }
+
+  /* The right-hand group stops being a box and lets its three controls join
+     the head's own flow. Otherwise the framework switch, which wants a full
+     row, drags the readouts onto a second one with it and the nameplate is
+     left sitting alone on a row of its own. */
+  .topbar__right { display: contents; }
+  .currencies { order: 2; flex: 1 1 auto; min-width: 0; padding: 5px 7px; gap: 7px; border-radius: 10px; }
+  .currency { min-width: 0; padding: 14px 10px 6px; }
+  .currency__value { font-size: 22px; }
+  .currency--alt { min-width: 0; }
+  .currency--alt .currency__value { font-size: 19px; }
+  .gear { order: 3; flex: 0 0 auto; padding: 0 6px; }
+  /* Cast metalwork is the first thing to lose when the room runs out: the
+     readouts want that width for their digits. */
+  .currencies::after { display: none; }
+
+  /* Both switch banks take a full row of their own, each key a real target. */
+  .tabsx { order: 4; flex: 1 0 100%; gap: 0; padding: 3px; }
+  .tab { flex: 1 1 0; min-width: 0; padding: 8px 6px 7px; gap: 4px; font-size: 10px; letter-spacing: 0.1em; }
+  /* Nothing to align: below a desktop the panels are a stack, not a desktop. */
+  .window-arrange { display: none; }
+
+  .fwtoggle { order: 5; flex: 1 0 100%; }
+  .fwtoggle__btn { flex: 1 1 0; justify-content: center; padding: 8px 6px; }
+
+  /* --- the stack ---------------------------------------------------------- */
+
+  .game-area {
+    position: relative;
+    left: auto; right: auto; top: auto; bottom: auto;
+    width: 100%; min-height: 0;
+    flex: 0 0 auto;
+  }
+  /* The chamber stops being an absolutely-placed panel here, so it needs a
+     height of its own -- without one it collapses to its own bezel. */
+  .game__arena { flex: 0 0 auto; height: min(52vh, 460px); min-height: 220px; }
   .desktop-window {
     position: relative !important;
     left: auto !important;
@@ -1620,19 +1671,150 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
     top: auto !important;
     bottom: auto !important;
     width: 100% !important;
-    height: min(62vh, 620px) !important;
-    min-height: 320px;
+    height: auto !important;
+    min-height: 0;
   }
-  .desktop-window--minimized { height: 44px !important; min-height: 44px; }
-  .game-area {
-    position: relative;
-    left: auto;
-    right: auto;
-    top: auto;
-    bottom: auto;
-    width: 100%;
-    min-height: min(62vh, 620px);
-    flex: 0 0 min(62vh, 620px);
+  .desktop-window--minimized { height: auto !important; min-height: 0; padding-bottom: 0; }
+  .desktop-window--minimized .desktop-window__body { display: none; }
+  .desktop-window__bar {
+    /* A panel cannot be dragged anywhere here, so the bar must not swallow
+       the swipe that is trying to scroll the page past it. */
+    cursor: default;
+    touch-action: auto;
+  }
+  /* The web needs a viewport of its own to be panned inside, so the Build
+     window keeps a fixed screen -- and Stats and Log are views of that same
+     window, so they inherit it. The inspector is prose and a list, so it
+     grows to its content and lets the page do the scrolling instead of
+     trapping a second scroller inside the first. */
+  .desktop-window__body { height: min(64vh, 560px); }
+  .desktop-window--upgrade .desktop-window__body { height: auto; }
+  .desktop-window--upgrade .panel--right { overflow: visible; }
+}
+
+/* ==================================================================== phone */
+
+@media (max-width: 720px) {
+  .desktop { gap: 10px; padding: 0 10px 10px; }
+  .topbar { padding: 8px 10px 10px; }
+
+  .game-area__panel { gap: 10px; }
+  /* Sized so the chamber, the deck and a little of the web below all land on
+     the first screen: the player can see the die, throw it, and tell there
+     is more underneath. */
+  .game__arena {
+    flex: 0 0 auto;
+    height: min(46vh, 380px); min-height: 220px;
+    padding: 30px 7px 7px; border-radius: 11px;
+  }
+  .game__arena::before { left: 26px; top: 8px; font-size: 10px; }
+  .game__arena::after { right: 14px; top: 9px; font-size: 8.5px; }
+  .tray { inset: 30px 7px 7px; }
+  .tray__readout { inset: 8px 9px auto 9px; font-size: 9px; letter-spacing: 0.1em; }
+  .tray__hint { bottom: 10px; padding: 4px 10px; font-size: 9px; white-space: nowrap; }
+
+  .game__controls { padding: 10px 10px 12px; border-radius: 11px; }
+  /* The vents are the deck's spare width, and a phone has none to spare. */
+  .game__controls::before, .game__controls::after { display: none; }
+  .rollbtn { width: 100%; padding: 15px 16px 13px; }
+  .rollbtn__label { font-size: 24px; }
+
+  .desktop-window { padding: 0 7px 7px; border-radius: 11px; }
+  .desktop-window__bar { flex-basis: 40px; padding-left: 14px; }
+  .desktop-window__bar::after { width: 30px; }
+
+  .tech-build__goal { flex-basis: 158px; height: 158px; min-height: 158px; max-height: 158px; }
+  .tree__tools { left: 8px; right: 8px; bottom: 8px; gap: 5px; }
+  .tree__tools .btn { font-size: 9.5px; padding: 5px 8px; }
+  .tree__regions { font-size: 9px; gap: 2px 8px; max-width: 72%; }
+  .tree--expanded { inset: 10px; }
+
+  .upg { padding: 12px 12px 13px; }
+  .upg__name { font-size: 19px; }
+  .chain { margin: 0 12px 12px; }
+  .stats { padding: 12px 13px 32px; }
+
+  .debug { right: 8px; bottom: 8px; left: 8px; }
+}
+
+/* Narrower still, the nameplate goes down to its mark, so the head stays one
+   row rather than two. The game's name is in the tab or the home-screen icon
+   by then, and the row it costs is worth more to the chamber. */
+@media (max-width: 480px) {
+  .brand { padding: 6px; }
+  .brand__word { display: none; }
+  .currency { padding: 12px 7px 5px; }
+  .currency__value { font-size: 19px; }
+  .currency--alt .currency__value { font-size: 17px; }
+  .tab { font-size: 9.5px; letter-spacing: 0.08em; padding: 7px 4px 6px; }
+  .tab__icon { width: 15px; height: 15px; }
+  .fwtoggle { padding: 4px; }
+  .fwtoggle__btn { padding: 7px 4px; font-size: 9px; letter-spacing: 0.06em; }
+  .fwtoggle__glyph { width: 10px; font-size: 12px; }
+}
+
+/* A phone held sideways has the height of a letterbox. The head gives back
+   everything it can -- the key glyphs, most of its padding -- because what
+   is left has to hold the chamber and the switch. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .topbar { gap: 6px; padding: 6px 12px 7px; }
+  .tab__icon { display: none; }
+  .tab { padding: 7px 6px; }
+  .fwtoggle__btn { padding: 6px; }
+  .currency { padding: 12px 8px 4px; }
+  .currency__value { font-size: 18px; }
+  /* Sideways there is width to spare and no height at all, so the two switch
+     banks share one row instead of taking one each. */
+  .tabsx { flex: 1 1 auto; }
+  .fwtoggle { flex: 0 1 auto; }
+
+  /* And the deck stands beside the chamber rather than under it, which is
+     the only way both the die and the switch fit on a letterbox. */
+  .game-area { height: min(66vh, 300px); }
+  .game-area__panel { flex-direction: row; align-items: stretch; gap: 10px; }
+  .game__arena { flex: 1 1 auto; height: auto; min-height: 0; }
+  .game__controls {
+    flex: 0 0 clamp(210px, 32%, 300px);
+    justify-content: center;
+    overflow-y: auto;
+  }
+  /* The vents belong either side of the switch, and in a column there is no
+     side to put them on. */
+  .game__controls::before, .game__controls::after { display: none; }
+  .rollbtn { padding: 12px 14px 10px; }
+  .rollbtn__label { font-size: 21px; }
+
+  .desktop-window__body { height: min(78vh, 420px); }
+}
+
+/* A finger is a blunter instrument than a cursor: give every control the
+   room to be hit. Keyed to the pointer, not the width, because a tablet is
+   wide and still touched. */
+@media (pointer: coarse) {
+  .iconbtn { width: 38px; height: 38px; }
+  .desktop-window__minimize { width: 34px; height: 34px; font-size: 13px; line-height: 30px; }
+  .chip { padding: 8px 12px; }
+  .btn { padding: 9px 14px; }
+  .btn--sm { padding: 8px 12px; }
+  .gear__item { padding: 11px 12px; }
+  .chain__btn { padding: 9px 9px; }
+  .statrow--button { padding: 7px 6px; }
+  .goal__unpin { padding: 5px 10px; }
+  .minidie { padding: 3px; }
+  /* The web is panned and pinched rather than hovered, so the gesture
+     belongs to it rather than to the page. */
+  .tree__svg { touch-action: none; }
+}
+
+/* Phones with a notch or a home bar, once the viewport is told to cover
+   them: keep the deck and the last panel clear of both. */
+@supports (padding: max(0px)) {
+  @media (max-width: 900px) {
+    .desktop { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+    .topbar {
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+    }
   }
 }
 

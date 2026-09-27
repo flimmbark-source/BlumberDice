@@ -14,6 +14,7 @@ import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
 import { DesktopWindow } from './DesktopWindow.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
+import { touchPrimary } from './pointer.ts';
 
 const TREE_UNLOCK_SCORE = 20;
 type Tab = 'web' | 'stats' | 'log';
@@ -409,7 +410,7 @@ function GamePanel({ s }: { s: GameState }): JSX.Element {
           </span>
           <span className="rollbtn__label">{dice > 1 ? `Roll ${dice} dice` : 'Roll'}</span>
           <span className="rollbtn__time">
-            {ready ? 'Space' : `${(s.cooldownRemaining / 1000).toFixed(2)}s`}
+            {ready ? (touchPrimary() ? 'Tap' : 'Space') : `${(s.cooldownRemaining / 1000).toFixed(2)}s`}
           </span>
           <span className="rollbtn__fill"
             style={{ width: `${cd > 0 ? (1 - Math.min(1, s.cooldownRemaining / cd)) * 100 : 100}%` }} />
