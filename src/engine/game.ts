@@ -158,8 +158,10 @@ export interface RollRecord {
  */
 export interface EntropyTick {
   id: number;
-  /** Signed: negative while draining, positive while restoring. */
+  /** Signed: negative while draining, positive while restoring. Zero when a goal blocks the tick. */
   amount: number;
+  /** True when an active reached goal prevented some or all of the drain. */
+  blocked?: boolean;
 }
 
 export interface LogEntry {
@@ -202,6 +204,8 @@ export interface GameState {
    * recommendation: nothing sets this but an explicit choice in the web.
    */
   pinned: string | null;
+  /** Once true, Entropy may not drain Score through the pinned node's Score cost. */
+  pinnedReached: boolean;
   sawStats: boolean;
 
   totalRolls: number;
@@ -279,6 +283,7 @@ export function createGame(seed = 0x5eed1e): GameState {
     allocated: ['start'],
     discovered: [],
     pinned: null,
+    pinnedReached: false,
     sawStats: false,
     totalRolls: 0,
     lastFace: null,
@@ -520,6 +525,9 @@ function grantScore(s: GameState, amount: number): void {
   if (amount <= 0) return;
   s.score += amount;
   s.stats.scoreEarned += amount;
+  const goal = s.pinned ? NODES_BY_ID.get(s.pinned) : null;
+  const need = goal?.costs.score ?? 0;
+  if (need > 0 && s.score >= need) s.pinnedReached = true;
 }
 
 function grantMeta(s: GameState, amount: number): void {
@@ -1172,27 +1180,48 @@ export function manualRoll(s: GameState): void {
  */
 function applyEntropy(s: GameState): void {
   const rate = CONFIG.entropyPerTick;
-  const step = s.score > 0 ? -Math.min(rate, s.score)
+  let step = s.score > 0 ? -Math.min(rate, s.score)
     : s.score < 0 ? Math.min(rate, -s.score)
     : 0;
+  let blocked = false;
+
+  // A reached goal becomes a one-way floor for Entropy only. Other mechanics
+  // may still spend or lose Score below it; the goal does not manufacture
+  // currency, it only stops Entropy from undoing the saving milestone.
+  const goal = s.pinned ? NODES_BY_ID.get(s.pinned) : null;
+  const floor = goal?.costs.score ?? 0;
+  if (floor > 0 && s.score >= floor) s.pinnedReached = true;
+  if (step < 0 && s.pinnedReached && floor > 0 && s.score >= floor) {
+    const next = s.score + step;
+    if (next <= floor) {
+      step = floor - s.score;
+      blocked = true;
+    }
+  }
+
   const dir: -1 | 0 | 1 = step < 0 ? -1 : step > 0 ? 1 : 0;
 
   // Announced on the turn, not on every tick: repeated lines would bury every
   // other thing the log is for.
-  if (dir !== s.entropyDir) {
+  if (dir !== s.entropyDir && !blocked) {
     if (dir === -1) log(s, 'loss', 'Entropy is draining Score.');
     else if (dir === 1) log(s, 'system', 'Entropy reverses — Score climbing back to 0.');
     else log(s, 'system', 'Entropy settles at 0.');
     s.entropyDir = dir;
   }
-  if (step === 0) return;
 
-  s.score += step;
-  if (step < 0) s.stats.entropyDrained += -step;
-  else s.stats.entropyRestored += step;
+  if (step !== 0) {
+    s.score += step;
+    if (step < 0) s.stats.entropyDrained += -step;
+    else s.stats.entropyRestored += step;
+  }
 
-  s.entropyLog.push({ id: s.nextEntropyId++, amount: step });
-  if (s.entropyLog.length > 12) s.entropyLog.splice(0, s.entropyLog.length - 12);
+  // A fully blocked tick is still a presentation event: the HUD flashes the
+  // protected Score blue, but deliberately draws no entropy amount.
+  if (step !== 0 || blocked) {
+    s.entropyLog.push({ id: s.nextEntropyId++, amount: step, blocked });
+    if (s.entropyLog.length > 12) s.entropyLog.splice(0, s.entropyLog.length - 12);
+  }
 }
 
 export function tick(s: GameState, dt: number): void {
@@ -1420,7 +1449,10 @@ export function allocate(s: GameState, nodeId: string): { ok: boolean; reason?: 
   s.allocated.push(nodeId);
   // Buying what you were saving for retires the goal; the player picks the
   // next one. Nothing advances it automatically.
-  if (s.pinned === nodeId) s.pinned = null;
+  if (s.pinned === nodeId) {
+    s.pinned = null;
+    s.pinnedReached = false;
+  }
   log(s, 'system', `Allocated ${node.name}`);
   // Keep persistent control state legal after a capacity change.
   const cap = Math.floor(displayStats(s).holdCapacity);
@@ -1459,6 +1491,7 @@ export function refundAll(s: GameState): { score: number; meta: number } | null 
   s.allocated = ['start'];
   // Whatever was pinned is almost certainly out of reach now.
   s.pinned = null;
+  s.pinnedReached = false;
 
   // Control state that only existed because of a node that is now gone.
   s.held = [];
