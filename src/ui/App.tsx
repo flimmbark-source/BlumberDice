@@ -101,6 +101,10 @@ export function App(): JSX.Element {
       />
 
       <main className="desktop" aria-label="Roll Reactor workspace">
+        {/* Casing, not a control: it fills the face below the inspector and
+            says nothing. */}
+        {treeUnlocked && <div className="face-vent" aria-hidden />}
+
         <section className="game-area" aria-label="Game area">
           <GamePanel s={s} />
         </section>
@@ -580,6 +584,9 @@ function GamePanel({ s }: { s: GameState }): JSX.Element {
   return (
     <section className="game game-area__panel">
       <div className="game__arena">
+        {/* The status lamp every other plate carries. It repeats what the
+            telemetry line on the glass already says in words. */}
+        <span className={`chamber__lamp${ready ? '' : ' chamber__lamp--busy'}`} aria-hidden />
         <DiceTray s={s} rollRef={rollRef} />
       </div>
 

@@ -904,6 +904,48 @@ it changed which surface a thing is printed on and how tall a plate is.
   tree's line is scoped to the Build view — under Stats it read as a caption
   for the table.
 
+### 31. The machine looks used
+
+Detail work on the same faceplate. It adds no element that could be mistaken
+for a control and states nothing; it is about making the object read as cast,
+painted and handled rather than as rectangles with gradients.
+
+- **Legends are cut, not printed.** Every label on the enamel carries a
+  highlight of the paint's own colour under the stroke, so it reads as
+  engraved. The highlight sits *below* because the face is lit from above —
+  flip it and the same two shadows read as embossed. Screen type is excluded:
+  over glass the trick is a smear.
+
+- **Lamps breathe.** A panel lamp on a running machine is never still. The
+  chamber — the part actually doing work — gained the status lamp every other
+  plate already had, and it runs hot while a roll is resolving. That repeats
+  what the telemetry line on the glass says in words; it reports nothing new.
+
+- **The switch is seated.** A cap that size is not glued to a panel, so it now
+  sits in a machined collar. Recharge reads as a lit strip in a dark channel
+  rather than as a progress bar.
+
+- **The glass behaves like glass.** A weak diagonal band of room light, a
+  highlight along the top edge where the tube meets the bezel, and viewfinder
+  corners etched into the chamber. The brackets are eight background stubs
+  rather than four elements that would exist only to be looked at.
+
+- **The face has an edge.** A dark rim and a wide inner shadow say the panel
+  carries on past the browser window. It sits below the head's z-index so the
+  settings menu still clears it.
+
+- **The hazard flashes are chipped**, because a flash that has never been
+  knocked is a flash on a prop.
+
+- **A louvered vent fills the bare face** below the inspector. That column
+  ends where its content ends, which left a wide blank of enamel. A vent is
+  the honest way to fill it: plainly part of the casing, impossible to mistake
+  for a control. It sits behind the panels, so a tall inspector covers it
+  instead of colliding with it.
+
+Everything that animates is covered by the existing global
+`prefers-reduced-motion` rule.
+
 ---
 
 ## Unresolved — deliberately not implemented
