@@ -1,0 +1,83 @@
+/*
+ * Styles for `ui/Ornaments.tsx` — the inked-parchment skin's decoration:
+ * the botanical corner sprigs, the divider flourish, and the ruined arch the
+ * die was thrown under.
+ *
+ * NOT IMPORTED. The workspace now wears the instrument faceplate in
+ * `src/styles.css`, which has no place for vines or stonework, so the
+ * ornaments are mounted nowhere. Both halves are kept together and intact so
+ * the parchment direction is two edits away rather than a rewrite: import
+ * this file from `main.tsx`, and put `<VineFrame />` back in the desktop and
+ * `<ArchBackdrop />` back in the arena.
+ *
+ * It defines its own tokens, because the palette it was written against
+ * (`--paper`, `--rule`, `--leaf`, …) went with the parchment stylesheet.
+ */
+
+.orn {
+  --orn-rule: #c6b083;
+  --orn-rule-strong: #a08a5c;
+  --orn-leaf: #7c9a62;
+  --orn-leaf-deep: #55703f;
+  --orn-bloom: #fbf4e2;
+  --orn-pollen: #d9a636;
+
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+}
+.orn__corner { position: absolute; opacity: 0.9; }
+.orn--tl { left: -14px; top: -10px; }
+.orn--tr { right: -14px; top: -10px; transform: scaleX(-1); }
+.orn--bl { left: -14px; bottom: -10px; transform: scaleY(-1); }
+.orn--br { right: -14px; bottom: -10px; transform: scale(-1); }
+
+.orn__stem {
+  fill: none; stroke: var(--orn-leaf-deep); stroke-width: 2.1;
+  stroke-linecap: round; opacity: 0.78;
+}
+.orn__tendril {
+  fill: none; stroke: var(--orn-leaf-deep); stroke-width: 1.5;
+  stroke-linecap: round; opacity: 0.6;
+}
+.orn__leaf { fill: var(--orn-leaf); stroke: var(--orn-leaf-deep); stroke-width: 1.1; opacity: 0.8; }
+.orn__vein { fill: none; stroke: var(--orn-leaf-deep); stroke-width: 0.8; opacity: 0.5; }
+.orn__petal { fill: var(--orn-bloom); stroke: var(--orn-rule-strong); stroke-width: 0.9; opacity: 0.92; }
+.orn__pollen { fill: var(--orn-pollen); opacity: 0.9; }
+.orn__rule { fill: none; stroke: var(--orn-rule); stroke-width: 1.1; stroke-linecap: round; }
+
+.flourish { display: block; margin: 7px auto; opacity: 0.85; }
+
+/* The arch the die is thrown under. It stands behind the arena floor, so the
+   ground plane the dice bounce on crosses its feet — which is what puts the
+   throw in front of the illustration instead of on top of it. */
+.arch {
+  /* Its feet land on the middle of the circle the tray paints — the same
+     ground line the die comes to rest on, so the two stand together. The
+     tray measures the circle and publishes it; the percentage is only what
+     is used before the first measurement. */
+  --arena-base: calc(var(--arena-back, 50%) + var(--arena-depth, 0px) * 0.5);
+  position: absolute; left: 50%; transform: translateX(-50%);
+  z-index: 2;
+  /* An <svg> is a replaced element: given `top`, `bottom` and an auto
+     height it takes its height from its own aspect ratio and drops the
+     `bottom` on the floor, which is how the arch came adrift from the
+     surface at every window size but the one it was drawn at. So it is
+     placed from the bottom, with a height of its own. */
+  top: auto;
+  bottom: calc(100% - var(--arena-base));
+  height: min(88%, max(0px, var(--arena-base) - 8px));
+  width: min(46%, 360px);
+  pointer-events: none;
+  --arch-sky-top: #bacfc9;
+  --arch-sky-bottom: #e9e2c6;
+  /* Where the far country meets the floor the arch stands on. */
+  --arch-ground: #e7dab7;
+}
+.arch__stone { fill: #d4cbaf; stroke: #86795b; stroke-width: 2.4; stroke-linejoin: round; }
+.arch__joint line { stroke: #86795b; stroke-width: 1.3; opacity: 0.7; }
+.arch__hill { fill: #93a894; opacity: 0.9; }
+.arch__hill--near { fill: #869a7e; opacity: 0.9; }
+.arch__keep { fill: #55684f; opacity: 0.95; }
+
+@media (max-width: 900px) {
+  .orn__corner { width: 130px; height: 130px; }
+}

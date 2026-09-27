@@ -27,37 +27,44 @@ export interface Theme {
   fleck: string;
 }
 
-/** Every number the tray paints is set in the page's own face. */
-const FACE = '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';
+/** Every number the tray paints is set in the machine's own lettering. */
+const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
+const DISPLAY = '"Archivo Black", "Arial Black", ui-sans-serif, system-ui, sans-serif';
 
+/**
+ * The chamber is a phosphor screen behind glass, so both themes are dark and
+ * the figure on the floor is drawn in the machine's own signal colour. The
+ * dice stay bone: they are the one real object in there, and the halo behind
+ * a floating number is dark for the same reason the screen is.
+ */
 export const THEME_A: Theme = {
-  surface: ['rgba(252, 246, 228, 0.6)', 'rgba(226, 208, 166, 0.24)'],
-  grid: 'rgba(122, 101, 60, 0.42)',
-  faceLight: '#fdf7e6',
-  faceShade: '#a8906a',
-  edge: 'rgba(40, 33, 21, 0.8)',
-  pip: '#221e17',
-  accent: '#a8761b',
-  glow: 'rgba(196, 160, 86, ',
-  shadow: '#6b5730',
-  halo: 'rgba(250, 243, 224, 0.95)',
-  text: '#3c362a',
-  fleck: '#8d7c56',
+  surface: ['rgba(38, 74, 53, 0.88)', 'rgba(10, 24, 16, 0.45)'],
+  grid: 'rgba(224, 122, 55, 0.42)',
+  faceLight: '#fbf6ea',
+  faceShade: '#8e8878',
+  edge: 'rgba(255, 252, 240, 0.5)',
+  pip: '#22252b',
+  accent: '#f2a72c',
+  glow: 'rgba(240, 170, 90, ',
+  shadow: '#030a06',
+  halo: 'rgba(5, 14, 9, 0.92)',
+  text: '#eef3e6',
+  fleck: '#a6c2a4',
 };
 
 export const THEME_B: Theme = {
-  surface: ['rgba(238, 246, 240, 0.6)', 'rgba(198, 219, 209, 0.26)'],
-  grid: 'rgba(59, 123, 114, 0.4)',
-  faceLight: '#f4f8f1',
-  faceShade: '#8ba294',
-  edge: 'rgba(24, 40, 34, 0.8)',
-  pip: '#1b2b26',
-  accent: '#2f6d64',
-  glow: 'rgba(104, 168, 156, ',
-  shadow: '#4a6258',
-  halo: 'rgba(246, 250, 242, 0.95)',
-  text: '#2a3a33',
-  fleck: '#7d9489',
+  surface: ['rgba(26, 76, 74, 0.88)', 'rgba(5, 22, 21, 0.45)'],
+  grid: 'rgba(78, 201, 189, 0.38)',
+  faceLight: '#eaf7f4',
+  faceShade: '#779a96',
+  edge: 'rgba(240, 255, 252, 0.5)',
+  pip: '#16262a',
+  accent: '#4ec9bd',
+  glow: 'rgba(110, 215, 205, ',
+  shadow: '#02100f',
+  halo: 'rgba(4, 17, 16, 0.92)',
+  text: '#e2f2ee',
+  fleck: '#8fc5bd',
 };
 
 /** Direction the light travels. Down, and over the viewer's left shoulder. */
@@ -137,8 +144,8 @@ export function drawSurface(c: CanvasRenderingContext2D, world: World, theme: Th
   c.fillStyle = wash;
   c.fill();
 
-  // Four rings, drawn like a compass figure: heaviest at the rim the dice
-  // actually bounce off, and doubled there the way an inked rule is.
+  // Four rings, drawn like a gauge face: heaviest at the rim the dice
+  // actually bounce off, and doubled there the way a scale's limit is.
   const rings = [0.34, 0.58, 0.79, 1];
   rings.forEach((k, i) => {
     c.beginPath();
@@ -155,7 +162,7 @@ export function drawSurface(c: CanvasRenderingContext2D, world: World, theme: Th
   c.globalAlpha = 0.7;
   c.stroke();
 
-  // Ticks around the rim, so the circle reads as drawn rather than printed.
+  // Ticks around the rim, so the circle reads as a graduated dial.
   c.globalAlpha = 0.55;
   c.lineWidth = 1.2;
   for (let i = 0; i < 48; i++) {
@@ -168,6 +175,45 @@ export function drawSurface(c: CanvasRenderingContext2D, world: World, theme: Th
     c.stroke();
   }
   c.globalAlpha = 1;
+
+  drawReticle(c, cx, cy, outer, theme);
+}
+
+/**
+ * The sighting cross on the chamber floor.
+ *
+ * Drawn along the two ground diagonals rather than in screen space: under
+ * this projection (1,-1,0) lands horizontal and (1,1,0) lands vertical, so
+ * axes that genuinely belong to the floor are also the ones that read as a
+ * crosshair through the glass. A sighting mark sits at the end of each arm.
+ */
+function drawReticle(
+  c: CanvasRenderingContext2D, cx: number, cy: number, r: number, theme: Theme,
+): void {
+  const arms: [number, number][] = [[1, -1], [-1, 1], [1, 1], [-1, -1]];
+  const k = Math.SQRT1_2;
+  const centre = project(v3(cx, cy, 0));
+  const tips = arms.map(([ux, uy]) => project(v3(cx + ux * k * r, cy + uy * k * r, 0)));
+
+  c.save();
+  c.strokeStyle = theme.grid;
+  c.lineWidth = 1.1;
+  c.globalAlpha = 0.7;
+  for (const tip of tips) {
+    c.beginPath();
+    c.moveTo(centre.x, centre.y);
+    c.lineTo(tip.x, tip.y);
+    c.stroke();
+  }
+
+  c.globalAlpha = 1;
+  c.fillStyle = theme.grid;
+  for (const tip of tips) {
+    c.beginPath();
+    c.arc(tip.x, tip.y, 2.2, 0, Math.PI * 2);
+    c.fill();
+  }
+  c.restore();
 }
 
 /** A circle on the ground plane, projected. */
@@ -203,15 +249,15 @@ const SPECKS: { x: number; y: number; r: number; a: number }[] = Array.from(
 export function drawBackdrop(
   c: CanvasRenderingContext2D, w: number, h: number, theme: Theme,
 ): void {
-  // A warm bloom where the light falls, and nothing else: the arena is a
-  // patch of lit page, so the illustration behind it stays readable.
+  // The glow of the tube where the chamber is lit, and nothing else: the
+  // arena is the one bright patch on an otherwise dark screen.
   const bloom = c.createRadialGradient(w / 2, h * 0.42, 10, w / 2, h * 0.42, Math.max(w, h) * 0.62);
   bloom.addColorStop(0, `${theme.glow}0.16)`);
   bloom.addColorStop(1, `${theme.glow}0)`);
   c.fillStyle = bloom;
   c.fillRect(0, 0, w, h);
 
-  // Flecks in the pulp. Deterministic, so the page does not shimmer.
+  // Grain on the phosphor. Deterministic, so the screen does not shimmer.
   for (const st of SPECKS) {
     c.globalAlpha = st.a * 0.5;
     c.fillStyle = theme.fleck;
@@ -452,7 +498,7 @@ function drawProcLabelScreen(
   c.textBaseline = 'middle';
   c.globalAlpha = fade;
 
-  c.font = proc.kind === 'jackpot' ? `700 30px ${FACE}` : `700 18px ${FACE}`;
+  c.font = proc.kind === 'jackpot' ? `900 29px ${DISPLAY}` : `700 17px ${MONO}`;
   c.lineJoin = 'round';
   c.lineWidth = 6;
   c.strokeStyle = theme.halo;
@@ -461,7 +507,7 @@ function drawProcLabelScreen(
   c.fillText(proc.label, 0, 0);
 
   if (proc.detail) {
-    c.font = `600 13px ${FACE}`;
+    c.font = `500 12px ${MONO}`;
     c.lineWidth = 5;
     c.globalAlpha = fade * 0.95;
     c.strokeStyle = theme.halo;
@@ -499,7 +545,7 @@ function drawGhostValue(
   c.textAlign = 'center';
   c.textBaseline = 'middle';
 
-  c.font = `700 50px ${FACE}`;
+  c.font = `700 48px ${DISPLAY}`;
   c.lineJoin = 'round';
   c.lineWidth = 9;
   c.strokeStyle = theme.halo;
@@ -525,9 +571,10 @@ function drawDetachedGhost(
 /**
  * Everything that stands on the ground, but not the ground itself.
  *
- * The surface is painted on its own layer so the arch behind the tray can
- * come between the two: the stonework hides the circle it stands on, and
- * the dice still land in front of the stonework.
+ * The surface keeps its own layer. It is redrawn far less often than the
+ * dice are, and holding the two apart leaves room for anything that has to
+ * stand *on* the floor and *behind* the throw — which is what the arch
+ * ornament in `ui/Ornaments.tsx` was built against.
  */
 export function drawWorld(c: CanvasRenderingContext2D, world: World, theme: Theme): void {
   // Shadows, landing rings and proc pulses belong with the dice that cast

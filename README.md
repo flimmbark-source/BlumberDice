@@ -33,25 +33,40 @@ The game never explains why.
 
 ## The look
 
-A page from a pressed-flower notebook: warm paper, brown ink, a green board
-across the top, and botanical growth at the edges. Everything is drawn — the
-vines, the ruined arch the die is thrown under, the compass circle it lands
-in — and everything is drawn in code, so there is not one image file in the
-project.
+An instrument faceplate: enamelled bone-white panels, riveted at the corners,
+with recessed phosphor screens cut into them. Everything is drawn in code, so
+there is not one image file in the project.
 
-The whole skin lives in three places and touches no mechanic:
+Two rules keep it coherent.
+
+**Panel or screen, never half of each.** A panel is opaque, warm, and lit from
+above; a screen is dark, green, and lit from inside. Everything the player
+*reads* — the web, the inspector, stats, the log, the chamber — is on a
+screen. Everything the player *grabs* — the view keys, the rockers of the
+control rail, the two big switches — is hardware sitting on the plate around
+it. `DesktopWindow` needed no markup for this: its title bar is the plate and
+its body is the screen.
+
+**Orange is spent, not sprinkled.** It marks the action being offered and
+nothing else, which is why exactly two controls wear it — Roll, and
+Allocate — and why the amber of the score head is a different colour from it.
+Beyond that, colour carries three jobs: **amber** is Score and the thing
+being saved for, **teal** is Meta, **rust** is anything that takes something
+away. A node's region is a hue and its class is a silhouette, exactly as
+before — those predate the machine and are untouched by it.
+
+The whole skin lives in two places and touches no mechanic:
 
 - `src/styles.css` — the palette, at the top, and every rule that dresses a
   control with it.
-- `src/ui/Ornaments.tsx` — the vines and the arch. Generated rather than
-  plotted: a stem is a cubic bezier, and each leaf is placed by sampling the
-  curve and turning onto its tangent. `aria-hidden`, unfocusable, inert.
 - `src/ui/dice/render.ts` — the tray's two themes, one per framework.
 
-Colour carries three jobs and no more: **gold** is Score and the thing being
-saved for, **teal** is Meta, **rust** is anything that takes something away.
-Everything else is paper, ink and leaf. A node's region is a hue and its
-class is a silhouette, exactly as before.
+`src/ui/Ornaments.tsx` and `src/ui/ornaments.css` are the previous skin's
+decoration: generated botanical sprigs and the ruined arch the die used to be
+thrown under. They are mounted nowhere and imported nowhere, and are kept
+whole so that direction is two edits away rather than a rewrite — import the
+stylesheet from `main.tsx`, and put `<VineFrame />` back in the desktop and
+`<ArchBackdrop />` back in the arena.
 
 ---
 
@@ -274,6 +289,25 @@ a node the player did not choose.
 `GoalBar` renders that beside the die, using the tree's own notation as the
 reward preview. Costs in two currencies get two bars, never one blended
 percentage, so the blocking requirement stays visible.
+
+### The shell in detail
+
+The chamber is drawn by the same renderer as always. `THEME_A` and `THEME_B`
+moved to a dark floor with a signal-coloured dial, and the sighting cross on
+it is drawn along the two ground diagonals — under this projection `(1,-1,0)`
+lands horizontal and `(1,1,0)` lands vertical, so axes that genuinely belong
+to the floor are also the ones that read as a crosshair through the glass.
+The dice stay bone white: they are the one real object in there.
+
+The surface keeps the separate canvas layer it was given for the arch. It is
+redrawn far less often than the dice are, and the tray still publishes
+`--arena-back` and `--arena-depth` — the projected circle's far rim and its
+depth — so anything that must stand *on* the floor and *behind* the throw has
+real measurements to stand on rather than a percentage guessing at them.
+
+The telemetry printed on the chamber glass — status, dice per throw, rolls so
+far, generator state — restates what the roll button and the debug panel
+already say. It reports; it decides nothing, and no figure on it is new.
 
 ### The roll pipeline
 

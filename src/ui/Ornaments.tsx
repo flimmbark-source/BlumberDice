@@ -8,6 +8,13 @@
  * bezier, and leaves are placed along it by sampling the curve and turning
  * each leaf onto the tangent. That keeps a sprig a dozen numbers instead of a
  * wall of path data, and lets the same sprig be reused at every corner.
+ *
+ * NOT MOUNTED. These belong to the inked-parchment skin; the workspace now
+ * wears the instrument faceplate, which has no place for vines or stonework.
+ * The file and its stylesheet (`ui/ornaments.css`, also unimported) are kept
+ * together and intact so that direction is two edits away rather than a
+ * rewrite: import the stylesheet from `main.tsx`, and put `<VineFrame />`
+ * back in the desktop and `<ArchBackdrop />` back in the arena.
  */
 
 type Pt = { x: number; y: number };

@@ -34,6 +34,7 @@ Three labels are used:
 | Selecting a reachable unowned tree node inspects it and sets/clears it as the current goal; no separate goal button | `ui/TreeView.tsx`, `ui/SelectedUpgrade.tsx` |
 | A pinned goal appears at the bottom of the Build view inside the tech window | `ui/App.tsx`, `ui/GoalBar.tsx` |
 | Tech and Selected Upgrade are movable/minimizable windows; the Dice is a fixed central game area; Align Windows restores the authored side-window layout | `ui/DesktopWindow.tsx`, `ui/App.tsx` |
+| The shell is presentation only: the instrument-faceplate skin changes no rule, no number and no label the game produces | `src/styles.css`, `ui/dice/render.ts` |
 
 There is no "correct" framework. Framework A remains fully functional after the
 second framework is found, and the passive web contains no node that is only

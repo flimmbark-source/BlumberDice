@@ -50,7 +50,7 @@ export function DiceTray({ s, rollRef }: {
   rollRef: MutableRefObject<(() => void) | null>;
 }): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  /** The ground, on its own layer beneath the arch. */
+  /** The chamber floor, on its own layer beneath the dice. */
   const groundRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<World>(createWorld());
@@ -130,9 +130,10 @@ export function DiceTray({ s, rollRef }: {
       // The arena publishes its own ground plane: `--arena-back` is the far
       // corner of the projected diamond, which is the back rim of the circle
       // the surface is drawn as, and `--arena-depth` is how deep that circle
-      // runs to its near rim. The arch behind the tray is a DOM element, and
-      // this is what lets it stand on the ground the canvas actually drew
-      // rather than on a percentage guessing at it.
+      // runs to its near rim. Nothing in the faceplate skin reads them, but
+      // they are what lets a DOM element stand on the ground the canvas
+      // actually drew rather than on a percentage guessing at it -- which is
+      // what the arch in `ui/Ornaments.tsx` was built against.
       const arena = wrap.parentElement;
       if (arena) {
         arena.style.setProperty('--arena-back', `${originY}px`);
@@ -337,6 +338,22 @@ export function DiceTray({ s, rollRef }: {
     <div className="tray" ref={wrapRef}>
       <canvas className="tray__canvas tray__canvas--ground" ref={groundRef} aria-hidden />
       <canvas className="tray__canvas tray__canvas--dice" ref={canvasRef} aria-hidden />
+
+      {/* Instrument telemetry printed on the glass. Every figure here is
+          state the game already shows elsewhere -- what the button throws,
+          how many rolls have happened, and the generator the run is
+          reproducible from. It reports; it decides nothing. */}
+      <div className="tray__readout" aria-hidden>
+        <span className={`tray__status${ready ? '' : ' tray__status--wait'}`}>
+          {resolving ? 'Resolving…' : ready ? 'Ready to roll…' : 'Cycling…'}
+        </span>
+        <span className="tray__gauges">
+          <span className="tray__gauge">dice: <b>{dice}</b></span>
+          <span className="tray__gauge">rolls: <b>{s.totalRolls}</b></span>
+          <span className="tray__gauge">seed: <b>{seedTag(s)}</b></span>
+        </span>
+      </div>
+
       <div className={`tray__hint${ready && s.totalRolls < 6 ? ' tray__hint--show' : ''}`}>
         {dice > 1 ? `click to throw ${dice} dice` : 'click the die to roll'}
         <span className="tray__hintKey"> · or press Space</span>
@@ -346,6 +363,11 @@ export function DiceTray({ s, rollRef }: {
       )}
     </div>
   );
+}
+
+/** The generator's live state, in the five hex digits a nameplate would show. */
+function seedTag(s: GameState): string {
+  return (s.rng.seed >>> 0).toString(16).toUpperCase().slice(-5).padStart(5, '0');
 }
 
 export { project, v3 };

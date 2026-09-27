@@ -14,7 +14,6 @@ import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
 import { DesktopWindow } from './DesktopWindow.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
-import { ArchBackdrop, VineFrame } from './Ornaments.tsx';
 
 const TREE_UNLOCK_SCORE = 20;
 type Tab = 'web' | 'stats' | 'log';
@@ -112,8 +111,6 @@ export function App(): JSX.Element {
       />
 
       <main className="desktop" aria-label="BlumberDice workspace">
-        <VineFrame />
-
         <section className="game-area" aria-label="Game area">
           <GamePanel s={s} />
         </section>
@@ -124,7 +121,7 @@ export function App(): JSX.Element {
             id="tree"
             title={tab === 'web' ? 'Build tree' : tab === 'stats' ? 'Stats' : 'Log'}
             className="desktop-window--tree"
-            defaultStyle={{ left: 26, top: 24, width: '23%', height: 'calc(100% - 48px)' }}
+            defaultStyle={{ left: 12, top: 12, width: '25.5%', height: 'calc(100% - 24px)' }}
           >
             {tab === 'web' && (
               <div className="tech-build">
@@ -173,7 +170,7 @@ export function App(): JSX.Element {
             id="upgrade"
             title="Selected upgrade"
             className="desktop-window--upgrade"
-            defaultStyle={{ right: 26, top: 24, width: '23%', height: 'calc(100% - 48px)' }}
+            defaultStyle={{ right: 12, top: 12, width: '25.5%', height: 'calc(100% - 24px)' }}
           >
             <SelectedUpgrade s={s} nodeId={inspected} onReveal={selectUpgrade} embedded />
           </DesktopWindow>
@@ -209,21 +206,22 @@ function TopBar({
       </div>
 
       {treeUnlocked ? (
+        /* One bank of recessed keys: the three views plus the one command
+           that acts on the windows those views live in. */
         <nav className="tabsx" role="tablist" aria-label="Tech window view">
-          <TabBtn id="web" tab={tab} set={setTab} label="Build" />
-          <TabBtn id="stats" tab={tab} set={setTab} label="Stats" />
-          <TabBtn id="log" tab={tab} set={setTab} label="Log" />
+          <TabBtn id="web" tab={tab} set={setTab} label="Build" icon={<BuildIcon />} />
+          <TabBtn id="stats" tab={tab} set={setTab} label="Stats" icon={<StatsIcon />} />
+          <TabBtn id="log" tab={tab} set={setTab} label="Log" icon={<LogIcon />} />
+          <button type="button" className="window-arrange" onClick={onAlignWindows}>
+            <AlignIcon />
+            <span>Align windows</span>
+          </button>
         </nav>
       ) : (
         <div />
       )}
 
       <div className="topbar__right">
-        {treeUnlocked && (
-          <button type="button" className="window-arrange" onClick={onAlignWindows}>
-            Align windows
-          </button>
-        )}
         {knowsB && (
           <div className="fwtoggle" role="group" aria-label="Active framework">
             <button
@@ -284,11 +282,12 @@ function TopBar({
   );
 }
 
-function TabBtn({ id, tab, set, label }: {
+function TabBtn({ id, tab, set, label, icon }: {
   id: Tab;
   tab: Tab;
   set: (tab: Tab) => void;
   label: string;
+  icon: JSX.Element;
 }): JSX.Element {
   return (
     <button
@@ -296,8 +295,51 @@ function TabBtn({ id, tab, set, label }: {
       className={`tab${tab === id ? ' tab--on' : ''}`}
       onClick={() => set(id)}
     >
-      {label}
+      {icon}
+      <span>{label}</span>
     </button>
+  );
+}
+
+/* Key-cap glyphs. Each one draws the panel its key opens. */
+
+function BuildIcon(): JSX.Element {
+  return (
+    <svg className="tab__icon" width={17} height={17} viewBox="0 0 18 18" aria-hidden
+      fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round">
+      <path d="M9 4.5v4M9 8.5 4.5 13M9 8.5 13.5 13" />
+      <circle cx={9} cy={3.4} r={1.9} /><circle cx={3.6} cy={13.8} r={1.9} />
+      <circle cx={14.4} cy={13.8} r={1.9} />
+    </svg>
+  );
+}
+
+function StatsIcon(): JSX.Element {
+  return (
+    <svg className="tab__icon" width={17} height={17} viewBox="0 0 18 18" aria-hidden
+      fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+      <path d="M4 14V9M9 14V4M14 14v-7" />
+    </svg>
+  );
+}
+
+function LogIcon(): JSX.Element {
+  return (
+    <svg className="tab__icon" width={17} height={17} viewBox="0 0 18 18" aria-hidden
+      fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round">
+      <rect x={3} y={3} width={12} height={12} rx={1.6} />
+      <path d="M5.8 6.6h6.4M5.8 9h6.4M5.8 11.4h4" />
+    </svg>
+  );
+}
+
+function AlignIcon(): JSX.Element {
+  return (
+    <svg className="tab__icon" width={17} height={17} viewBox="0 0 18 18" aria-hidden
+      fill="none" stroke="currentColor" strokeWidth={1.3}>
+      <rect x={2.5} y={4} width={5.6} height={10} rx={1.2} />
+      <rect x={9.9} y={4} width={5.6} height={10} rx={1.2} />
+    </svg>
   );
 }
 
@@ -348,7 +390,6 @@ function GamePanel({ s }: { s: GameState }): JSX.Element {
   return (
     <section className="game game-area__panel">
       <div className="game__arena">
-        <ArchBackdrop />
         <DiceTray s={s} rollRef={rollRef} />
       </div>
 
