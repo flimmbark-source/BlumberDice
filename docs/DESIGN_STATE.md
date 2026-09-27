@@ -944,3 +944,8 @@ not a fix. Making it more visible would start explaining.
 | 8. A stays meaningful after using B | Asserted: returning to A after a B sequence earns at the same rate. |
 | 9. The web rewards experimentation | 5 archetype entry points from the root before discovery (8 after), 20 nodes with multiple prerequisites, no forced order. |
 | 10. The lesson is never stated | No node description, label or UI string refers to it. |
+
+
+### Score force field
+
+**Current confirmed behavior.** Score protection is independent of Goals. Clicking the Score display toggles a force field. While engaged, Score is frozen at its current value: it cannot increase, decrease, be spent, be refunded, or be changed by Entropy. Entropy continues to attack visually once per second and ricochets from the field. Clicking Score again disengages the field and restores normal Score movement.
