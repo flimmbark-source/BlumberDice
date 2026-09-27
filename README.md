@@ -349,11 +349,11 @@ what lets the die say *tap* and the switch stop offering a Space bar.
 
 ### Entropy
 
-A constant pull toward zero Score: `CONFIG.entropyPerTick` (1) applied once
-every 0.5 seconds, in `tick`. It is one rule rather than two — Score moves *toward*
-zero, so it drains a positive balance and restores a negative one at the same
-rate, and the last step in either direction is short rather than overshooting,
-so zero is a resting point.
+A pull toward zero Score: `CONFIG.entropyPerTick` (1) is applied on each
+Entropy hit. The cadence is driven by the 0–100 Entropy pressure meter:
+`entropyAttackIntervalMs` interpolates from 1000ms at 0 to 50ms at 100.
+Score moves *toward* zero, so it drains a positive balance and restores a
+negative one, with the last step shortened rather than overshooting.
 
 Framework B is what lets Score go under. It no longer floors at zero: a roll
 in B costs its face whether or not the Score is there, and Entropy is what
