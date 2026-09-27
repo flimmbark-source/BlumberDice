@@ -3177,3 +3177,40 @@ body:has(.app--photo)::before { display: none; }
    it, the mechanic below. */
 .upg__head { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
 .upg__nt { margin-top: 12px; }
+
+
+/* ------------------------------------------------ a hole with nothing in it */
+/*
+ * Only the photo skin needs these: its holes are cut into the art and exist
+ * whether or not a panel is mounted behind them. The slot rectangles are the
+ * same measured ones the panels use.
+ */
+.standby {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.standby__text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(139, 157, 132, 0.42);
+  animation: standbyBreath 4.4s ease-in-out infinite;
+}
+@keyframes standbyBreath {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .standby__text { animation: none; }
+}
+
+.standby--tree    { left:  2.63%; top: 18.28%; width: 30.74%; height: 49.95%; }
+.standby--goal    { left:  3.23%; top: 82.47%; width: 28.11%; height: 10.84%; }
+.standby--upgrade { left: 74.04%; top: 21.25%; width: 24.64%; height: 40.38%; }
+.standby--chain   { left: 74.76%; top: 65.67%; width: 23.21%; height: 17.00%; }

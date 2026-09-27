@@ -354,6 +354,21 @@ export function Prose({ text }: { text: string }): JSX.Element {
 /** Width of the definition, also used to keep it inside the window. */
 const KWPOP_W = 244;
 const KWPOP_GAP = 8;
+/**
+ * The element a `position: fixed` child actually resolves against.
+ *
+ * A transform, filter or perspective on an ancestor makes that ancestor the
+ * containing block for fixed descendants. Walking for it is what keeps this
+ * correct in both skins rather than hard-coding which one is mounted.
+ */
+function fixedHost(from: Element | null): HTMLElement | null {
+  for (let el = from?.parentElement ?? null; el; el = el.parentElement) {
+    const cs = getComputedStyle(el);
+    if (cs.transform !== 'none' || cs.filter !== 'none' || cs.perspective !== 'none') return el;
+  }
+  return null;
+}
+
 const KWPOP_EDGE = 10;
 
 function Keyword({ word }: { word: string }): JSX.Element {
@@ -379,12 +394,30 @@ function Keyword({ word }: { word: string }): JSX.Element {
     const w = wordRef.current?.getBoundingClientRect();
     if (!w) return;
     const h = popRef.current?.offsetHeight ?? 96;
+
+    // `position: fixed` is only viewport-relative while nothing above it is
+    // transformed. The photo skin scales the whole face, which makes that
+    // element the containing block instead -- so viewport coordinates have to
+    // be brought into its own, unscaled space, and the popup clamped to its
+    // width rather than the window's.
+    const host = fixedHost(wordRef.current);
+    const hr = host?.getBoundingClientRect();
+    const k = host && hr && host.offsetWidth > 0 ? hr.width / host.offsetWidth : 1;
+    const originX = hr?.left ?? 0;
+    const originY = hr?.top ?? 0;
+    const bound = host?.offsetWidth ?? window.innerWidth;
+
+    const wLeft = (w.left - originX) / k;
+    const wWidth = w.width / k;
+    const wTop = (w.top - originY) / k;
+    const wBottom = (w.bottom - originY) / k;
+
     const left = Math.max(
       KWPOP_EDGE,
-      Math.min(w.left + w.width / 2 - KWPOP_W / 2, window.innerWidth - KWPOP_W - KWPOP_EDGE),
+      Math.min(wLeft + wWidth / 2 - KWPOP_W / 2, bound - KWPOP_W - KWPOP_EDGE),
     );
-    const above = w.top - h - KWPOP_GAP;
-    setAt({ left, top: above >= KWPOP_EDGE ? above : w.bottom + KWPOP_GAP });
+    const above = wTop - h - KWPOP_GAP;
+    setAt({ left, top: above >= KWPOP_EDGE ? above : wBottom + KWPOP_GAP });
   }, [open, word]);
 
   if (!entry) return <em className="kw">{word}</em>;

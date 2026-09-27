@@ -133,8 +133,13 @@ export const TreeView = memo(function TreeView({
     const el = wrapRef.current;
     if (!el) return;
     const measure = (): void => {
-      const r = el.getBoundingClientRect();
-      setSize((s) => (s.w === r.width && s.h === r.height ? s : { w: r.width, h: r.height }));
+      // Layout size, not the measured rect. The photo skin scales the whole
+      // face as one object, so a rect here is the *scaled* size; fitting the
+      // viewBox to it draws the tree ~6% too large for its own viewport and
+      // lets it bleed past the screen's edge.
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      setSize((s) => (s.w === w && s.h === h ? s : { w, h }));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -228,11 +233,17 @@ export const TreeView = memo(function TreeView({
     // view.x/y are SVG user units, not CSS pixels. Convert the pointer delta
     // through the fitted viewBox scale first; otherwise panning in this narrow
     // tech window feels several times slower than the mouse.
+    //
+    // The delta arrives in visual pixels while `fit` is in layout ones, so on
+    // a scaled stage the stage's own scale has to come out first or the tree
+    // pans faster than the pointer.
     const fit = size.w > 0 && size.h > 0 ? Math.min(size.w / VB.w, size.h / VB.h) : 1;
+    const el = e.currentTarget;
+    const k = el.clientWidth > 0 ? el.getBoundingClientRect().width / el.clientWidth : 1;
     setView((v) => ({
       ...v,
-      x: d.vx + dx / (fit * v.zoom),
-      y: d.vy + dy / (fit * v.zoom),
+      x: d.vx + dx / (k * fit * v.zoom),
+      y: d.vy + dy / (k * fit * v.zoom),
     }));
   };
 

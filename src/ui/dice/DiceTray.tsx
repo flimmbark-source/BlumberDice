@@ -91,16 +91,28 @@ export function DiceTray({ s, rollRef }: {
     );
 
     const resize = (): void => {
-      const rect = wrap.getBoundingClientRect();
+      // Layout size, not the measured rect.
+      //
+      // The photo skin lays the whole face out at its true pixel size and
+      // then scales it as one object, so `getBoundingClientRect()` here
+      // returns the *scaled* size. Writing that back as a CSS px size applies
+      // the stage's scale a second time: the canvas ends up at k squared of
+      // the tray, anchored top-left, which is why the arena sat small and up
+      // in the corner. `clientWidth` is the layout box and is not affected by
+      // an ancestor transform, so it is the one that survives being scaled.
+      //
+      // The canvases carry no inline CSS size at all now — the stylesheet
+      // already stretches them over the tray — so only the backing store is
+      // set here, and it stays correct under any transform.
+      const w = wrap.clientWidth;
+      const h = wrap.clientHeight;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       for (const el of [canvas, ground]) {
-        el.width = Math.max(1, Math.round(rect.width * dpr));
-        el.height = Math.max(1, Math.round(rect.height * dpr));
-        el.style.width = `${rect.width}px`;
-        el.style.height = `${rect.height}px`;
+        el.width = Math.max(1, Math.round(w * dpr));
+        el.height = Math.max(1, Math.round(h * dpr));
       }
-      viewW = rect.width;
-      viewH = rect.height;
+      viewW = w;
+      viewH = h;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
@@ -119,15 +131,15 @@ export function DiceTray({ s, rollRef }: {
       // would otherwise make the zoom negative and leave the tray blank until
       // the next resize, which may never come.
       zoom = Math.max(0.15, Math.min(
-        (rect.width - 40) / diamondW,
-        ((rect.height - 12) * (1 - HEADROOM)) / diamondH,
+        (w - 40) / diamondW,
+        ((h - 12) * (1 - HEADROOM)) / diamondH,
       ));
-      originX = rect.width / 2;
+      originX = w / 2;
       // Centre the arena in what is left, rather than dropping it to the
       // floor of the panel with all the slack piled above it.
       originY = Math.max(
         diamondH * zoom * 0.12,
-        rect.height - diamondH * zoom - (rect.height - diamondH * zoom) * 0.42,
+        h - diamondH * zoom - (h - diamondH * zoom) * 0.42,
       );
 
       // The arena publishes its own ground plane: `--arena-back` is the far
@@ -156,9 +168,14 @@ export function DiceTray({ s, rollRef }: {
 
     const toWorldScreen = (clientX: number, clientY: number): { x: number; y: number } => {
       const rect = canvas.getBoundingClientRect();
+      // Pointer events arrive in visual coordinates while the projection is
+      // in layout ones, so under a scaled stage the two disagree by exactly
+      // that scale. Deriving it from the element itself needs no knowledge of
+      // which skin is mounted.
+      const k = canvas.clientWidth > 0 ? rect.width / canvas.clientWidth : 1;
       return {
-        x: (clientX - rect.left - originX) / zoom,
-        y: (clientY - rect.top - originY) / zoom,
+        x: ((clientX - rect.left) / k - originX) / zoom,
+        y: ((clientY - rect.top) / k - originY) / zoom,
       };
     };
 

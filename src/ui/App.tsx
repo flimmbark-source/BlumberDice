@@ -49,6 +49,8 @@ export function App(): JSX.Element {
   // The goal gets its own plate under the tree, so it exists only while the
   // Build view is the one on screen.
   const showGoalPanel = hasGoalDisplay && tab === 'web';
+  const photo = skin === 'photo';
+  const showChain = treeUnlocked && Boolean(inspected) && hasLeadsTo(inspected);
 
   const focusNode = (id: string): void => {
     setInspected(id);
@@ -101,7 +103,6 @@ export function App(): JSX.Element {
     };
   }, []);
 
-  const photo = skin === 'photo';
   return (
     <div
       className={`app${photo ? ' app--photo' : ''}`}
@@ -191,6 +192,15 @@ export function App(): JSX.Element {
           </div>
         )}
 
+        {/* The photograph cuts its holes once and for all, so a slot with no
+            panel in it is a dead black rectangle rather than an absence. Each
+            one says so instead. The drawn chassis has no hole until there is
+            something to put in it, and needs none of this. */}
+        {photo && !treeUnlocked && <Standby slot="tree" />}
+        {photo && !showGoalPanel && <Standby slot="goal" />}
+        {photo && !(treeUnlocked && inspected) && <Standby slot="upgrade" />}
+        {photo && !showChain && <Standby slot="chain" />}
+
         {treeUnlocked && inspected && (
           <div className="panel-rail panel-rail--right">
             <section className="fixed-panel fixed-panel--upgrade">
@@ -210,7 +220,7 @@ export function App(): JSX.Element {
 
             {/* Its own plate, as the reference machine gives it -- but only
                 when the node actually leads somewhere. */}
-            {hasLeadsTo(inspected) && (
+            {showChain && (
               <section className="fixed-panel fixed-panel--chain">
                 <div className="fixed-panel__bar">
                   <span className="fixed-panel__title">Leads to</span>
@@ -236,6 +246,21 @@ export function App(): JSX.Element {
  * Decoration only, and `aria-hidden` for it: it states no rule, carries no
  * number, and nothing in the machine depends on reading it.
  */
+/**
+ * A hole in the photographed faceplate with nothing mounted behind it.
+ *
+ * It states no rule and carries no number: it reports that this screen is
+ * not showing anything, which is true, and is the difference between a
+ * machine with a channel off and a machine that looks broken.
+ */
+function Standby({ slot }: { slot: 'tree' | 'goal' | 'upgrade' | 'chain' }): JSX.Element {
+  return (
+    <div className={`standby standby--${slot}`} aria-hidden>
+      <span className="standby__text">No signal</span>
+    </div>
+  );
+}
+
 function PanelFoot({ text, mark = false }: { text?: string; mark?: boolean }): JSX.Element {
   return (
     <div className="fixed-panel__foot" aria-hidden>

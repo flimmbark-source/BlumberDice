@@ -1134,6 +1134,45 @@ cannot see at all is worse than one set a size down. Every hole also gained a
 fade at its bottom edge: a cut-off line reads as a fault, a fade reads as
 "there is more", which is the truth.
 
+### 36. What a scaled stage broke
+
+Making the photographed chassis the default exposed a class of bug the drawn
+one never could: the photo skin lays the whole face out at its true pixel
+size and then scales it as one object, and three places were measuring with
+`getBoundingClientRect()`, which returns the *scaled* size.
+
+- **The arena sat small and up in the corner.** `DiceTray`'s resize read a
+  rect and wrote it back as a CSS px size, so the stage's scale was applied
+  twice: the canvas came out at k² of the tray, anchored top-left. It now
+  takes `clientWidth`/`clientHeight`, which is the layout box and is not
+  affected by an ancestor transform, and carries no inline CSS size at all —
+  the stylesheet already stretches it over the tray.
+
+- **The die's hit region was nowhere near the die.** Pointer events arrive in
+  visual coordinates while the projection is in layout ones. Measured: with
+  one die drawn centred, its hover band ran 68–75% across the tube instead of
+  43–57%. Hovering the die did nothing and hovering empty glass lit it. Both
+  the tray and the tree now divide the stage's scale out first, deriving it
+  from the element rather than from which skin is mounted.
+
+- **The tree was drawn ~6% too large for its own viewport** and bled past the
+  screen's edge, because the viewBox was fitted to the scaled rect.
+
+- **Keyword definitions landed 86px off.** `position: fixed` is only
+  viewport-relative while nothing above it is transformed; the scaled face
+  becomes the containing block instead. The popup now converts into that
+  element's own space and clamps to its width, and walks up to find it rather
+  than hard-coding which skin is mounted — so the drawn chassis, where there
+  is no such ancestor, is unaffected.
+
+Separately: **a hole with nothing mounted behind it**. The photograph cuts
+its holes once and for all, so a slot with no panel in it is a dead black
+rectangle rather than an absence — four of them on a first run, before the
+tree unlocks. Each now reads `No signal`, which states no rule and carries no
+number, and is the difference between a machine with a channel off and a
+machine that looks broken. The drawn chassis has no hole until there is
+something to put in it and needs none of this.
+
 ---
 
 ## Unresolved — deliberately not implemented
