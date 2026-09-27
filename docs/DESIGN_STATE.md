@@ -57,22 +57,14 @@ useful in one of them except where its own text says so.
 
 ### 0b. Entropy's rate
 
-**Why it exists.** The rate was given as 6 Score per second and is implemented
-as stated, behind `CONFIG.entropyPerSecond`.
+**Current confirmed behavior.** Entropy moves Score 6 points toward zero per
+tick, behind `CONFIG.entropyPerTick`, and ticks every 2.5 seconds behind
+`CONFIG.entropyIntervalMs`. That is an average pull of 2.4 Score per second.
 
-**What it currently means.** A base build earns about 5 Score per second: one
-die, a 700ms cooldown, an average face of 3.5. Entropy takes 6. A run that
-starts from nothing therefore loses ground faster than it gains it and cannot
-reach the 20 lifetime Score that reveals the tree, so nothing can be bought
-to counter it. The tuning knob is one constant, and the upgrade tree this
-mechanic is waiting on is the intended answer; until then a fresh run is not
-winnable.
-
-**A second consequence.** In Framework B the same rate outruns the loss: B
-costs its face per roll, about 5 per second at base, against Entropy's 6 of
-restoration. Score settles near zero rather than going meaningfully negative,
-so the reversal and the red readout are only reachable with a raised
-`lossMult` or a faster cooldown.
+**Consequence.** A base build earns about 5 Score per second: one die, a 700ms
+cooldown, and an average face of 3.5. Entropy therefore slows early growth
+without outrunning it. In Framework B the same force restores negative Score
+toward zero at the same 2.4-per-second average rate.
 
 ### 1. Pacing model
 
