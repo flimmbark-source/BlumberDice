@@ -115,13 +115,15 @@ describe('a pinned goal is the player’s, and only the player’s', () => {
     expect(s.pinned).toBe('hr_edge');
   });
 
-  it('marks an already-funded goal as reached when selected', () => {
+  it('does not alter Score protection when a goal is selected', () => {
     const s = fresh();
     s.score = 100;
+    s.scoreLocked = true;
     expect(setGoal(s, 'hr_edge')).toBe(true);
-    expect(s.pinnedReached).toBe(true);
+    expect(s.pinned).toBe('hr_edge');
+    expect(s.scoreLocked).toBe(true);
     setGoal(s, null);
-    expect(s.pinnedReached).toBe(false);
+    expect(s.scoreLocked).toBe(true);
   });
 });
 
