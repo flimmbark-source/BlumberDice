@@ -5,6 +5,7 @@ import type { DiscoveryFlag, PassiveNode } from '../engine/types.ts';
 import { NotationView, Prose } from './Notation.tsx';
 import { NodeMark } from './NodeMark.tsx';
 import { actions } from './store.ts';
+import { canPin } from '../engine/goal.ts';
 
 /**
  * The docked panel for whichever node the player last pointed at.
@@ -38,6 +39,8 @@ export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false }: {
   const state: 'owned' | 'available' | 'short' | 'locked' = owned ? 'owned'
     : check.ok ? 'available'
     : reachable ? 'short' : 'locked';
+  const isGoal = s.pinned === node.id;
+  const pinnable = canPin(s, node.id);
   return (
     <aside className="panel panel--right">
       {!embedded && <h2 className="panel__title">Selected upgrade</h2>}
@@ -46,7 +49,21 @@ export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false }: {
         <div className="upg__head">
           <NodeMark type={node.nodeType} region={node.region} size={54} glyph />
           <div className="upg__id">
-            <span className="upg__name">{node.name}</span>
+            <div className="upg__nameRow">
+              <span className="upg__name">{node.name}</span>
+              {!owned && (
+                <button
+                  type="button"
+                  className={`upg__goalStar${isGoal ? ' upg__goalStar--on' : ''}`}
+                  aria-label={isGoal ? 'Clear goal' : pinnable ? `Set ${node.name} as goal` : 'Connect this upgrade before setting it as a goal'}
+                  title={isGoal ? 'Current Goal — click to clear' : pinnable ? 'Set as Goal' : 'Connect this upgrade first'}
+                  disabled={!pinnable && !isGoal}
+                  onClick={() => actions.pin(isGoal ? null : node.id)}
+                >
+                  {isGoal ? '★' : '☆'}
+                </button>
+              )}
+            </div>
             <span className="upg__chips">
               <span className="chipx">{CLASS_LABEL[node.nodeType]}</span>
               <span className={`chipx chipx--${state}`}>{STATE_LABEL[state]}</span>
