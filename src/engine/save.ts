@@ -67,7 +67,6 @@ export function deserialize(raw: string): GameState | null {
     || !canPin(merged, merged.pinned)
   )) {
     merged.pinned = null;
-    merged.pinnedReached = false;
   }
   // The window must match the restored build before the first roll.
   syncAllowed(merged);
