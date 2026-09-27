@@ -65,6 +65,15 @@
      flat CSS. One texture for the whole machine. */
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
 
+  /* Uneven ageing in the enamel. The grain above is uniform; this is the
+     blotching that stops a plate reading as a clean CSS gradient. */
+  --plate-wear:
+    radial-gradient(54% 42% at 15% 9%, rgba(128, 106, 70, 0.11), transparent 62%),
+    radial-gradient(40% 48% at 87% 24%, rgba(128, 106, 70, 0.1), transparent 64%),
+    radial-gradient(62% 44% at 43% 99%, rgba(103, 88, 62, 0.12), transparent 60%),
+    radial-gradient(28% 34% at 71% 72%, rgba(128, 106, 70, 0.08), transparent 66%),
+    radial-gradient(34% 30% at 5% 62%, rgba(103, 88, 62, 0.09), transparent 68%);
+
   /* Four rivets, one per corner of a plate. */
   --rivets:
     radial-gradient(circle at 9px 9px, #7d7159 0 1.6px, rgba(255, 255, 255, 0.75) 1.8px 3.1px, rgba(0, 0, 0, 0.16) 3.3px 4.2px, transparent 4.4px),
@@ -83,6 +92,8 @@ body {
   background:
     radial-gradient(1200px 700px at 50% -10%, rgba(255, 255, 255, 0.5), transparent 70%),
     radial-gradient(900px 600px at 90% 110%, rgba(140, 120, 90, 0.28), transparent 65%),
+    radial-gradient(130% 115% at 50% 46%, transparent 48%, rgba(96, 80, 54, 0.22)),
+    var(--plate-wear),
     var(--plate);
   color: var(--ink);
   font: 13px/1.5 var(--font-ui);
@@ -121,6 +132,7 @@ button:disabled { cursor: default; }
   background-color: var(--plate);
   background-image:
     var(--rivets),
+    var(--plate-wear),
     linear-gradient(180deg, var(--plate-hi), var(--plate) 38%, var(--plate-lo));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
@@ -193,6 +205,7 @@ button:disabled { cursor: default; }
   border-radius: 12px;
   background-image:
     var(--rivets),
+    var(--plate-wear),
     linear-gradient(180deg, var(--plate-hi), var(--plate) 40%, var(--plate-lo));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
@@ -335,6 +348,7 @@ button:disabled { cursor: default; }
   border: 1px solid var(--plate-edge); border-radius: 11px;
   background-image:
     var(--rivets),
+    var(--plate-wear),
     linear-gradient(180deg, var(--plate-hi), var(--plate) 40%, var(--plate-lo));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
@@ -380,11 +394,10 @@ button:disabled { cursor: default; }
   background: linear-gradient(180deg, #14100a, #221b12);
   box-shadow: inset 0 3px 9px rgba(0, 0, 0, 0.85);
 }
-.currency > .currency__value,
-.currency > .currency__label {
-  position: relative;
-  z-index: 3;
-}
+.currency > .currency__value { position: relative; z-index: 3; }
+/* Absolute, not relative: this is etched into the bezel above the glass, and
+   the z-index is only there to clear the Entropy meter behind it. */
+.currency > .currency__label { position: absolute; z-index: 3; }
 .currency::before {
   content: '✦';
   position: relative;
@@ -763,6 +776,25 @@ button:disabled { cursor: default; }
   }
 }
 
+/* Who built it and which one it is. Cast into the head beside the vent, the
+   way a plate on a real instrument carries its model line. */
+.currencies__stamp {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 2px;
+  padding-bottom: 2px;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
 /* Cooling vent: the last thing on the head, purely cast metal. */
 .currencies::after {
   content: '';
@@ -839,6 +871,7 @@ button:disabled { cursor: default; }
   background-color: var(--plate);
   background-image:
     var(--rivets),
+    var(--plate-wear),
     linear-gradient(180deg, var(--plate-hi), var(--plate) 34%, var(--plate-lo));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
@@ -962,6 +995,7 @@ button:disabled { cursor: default; }
   background-color: var(--plate);
   background-image:
     var(--rivets),
+    var(--plate-wear),
     linear-gradient(180deg, var(--plate-hi), var(--plate) 34%, var(--plate-lo));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
@@ -971,7 +1005,46 @@ button:disabled { cursor: default; }
   z-index: 2;
 }
 .fixed-panel--tree { left: 14px; }
-.fixed-panel--upgrade { right: 14px; }
+
+/* --- the left rail --------------------------------------------------------
+   Two plates share the left column, and the lower one is sized by what is on
+   it. A column that lays itself out means the tree does not have to be told
+   in pixels how much room the goal is taking. */
+.panel-rail {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  width: 25.5%;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 2;
+}
+.panel-rail--left { left: 14px; }
+.panel-rail > .fixed-panel {
+  position: relative;
+  left: auto; right: auto; top: auto; bottom: auto;
+  width: 100%;
+  min-width: 0;
+  max-height: none;
+}
+.panel-rail > .fixed-panel--tree { flex: 1 1 auto; min-height: 0; }
+.panel-rail > .fixed-panel--goal { flex: 0 0 auto; max-height: 46%; }
+/* The inspector is sized by what is in it. Pinned top and bottom it left a
+   tall empty screen under short nodes, which is the one thing a machine face
+   should never show: a lit panel with nothing on it. */
+.fixed-panel--upgrade {
+  right: 14px;
+  bottom: auto;
+  max-height: calc(100% - 24px);
+}
+.fixed-panel--upgrade .fixed-panel__body { flex: 0 1 auto; overflow: auto; }
+
+.fixed-panel--goal { min-height: 0; }
+.fixed-panel--goal .fixed-panel__body { flex: 0 1 auto; overflow: auto; }
+.fixed-panel--goal .goal { min-height: 100%; border: 0; border-radius: 0; background: none; }
+.fixed-panel--goal .goal__unpin { display: none; }
 
 .fixed-panel__bar {
   flex: 0 0 34px;
@@ -1036,6 +1109,31 @@ button:disabled { cursor: default; }
     radial-gradient(130% 120% at 50% 0%, rgba(160, 230, 180, 0.06), transparent 58%);
   pointer-events: none;
 }
+/* Paint along the bottom of the plate: a stencilled line and a hazard flash,
+   the way the rest of the machine is labelled. Nothing here is information,
+   so it is allowed to be small and low-contrast. */
+.fixed-panel__foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 4px 1px 8px;
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+.fixed-panel__stamp {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+.fixed-panel__mark { flex: none; opacity: 0.55; }
+.fixed-panel__footFlash { flex: none; width: 38px; height: 10px; opacity: 0.9; }
+
 .fixed-panel__body > .panel {
   width: 100%;
   height: 100%;
@@ -1108,6 +1206,7 @@ button:disabled { cursor: default; }
   background-color: var(--plate);
   background-image:
     var(--rivets),
+    var(--plate-wear),
     linear-gradient(180deg, var(--plate-hi), var(--plate) 34%, var(--plate-lo));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
@@ -1229,6 +1328,7 @@ button:disabled { cursor: default; }
   background-color: var(--plate);
   background-image:
     var(--rivets),
+    var(--plate-wear),
     linear-gradient(180deg, var(--plate-hi), var(--plate) 34%, var(--plate-lo));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
@@ -2401,6 +2501,14 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   .fixed-panel__body { height: min(64vh, 560px); }
   .fixed-panel--upgrade .fixed-panel__body { height: auto; }
   .fixed-panel--upgrade .panel--right { overflow: visible; }
+  /* Stacked, the rail stops being a column of its own and just flows. */
+  .panel-rail {
+    position: relative;
+    top: auto; bottom: auto; left: auto;
+    width: 100%; min-width: 0;
+  }
+  .panel-rail > .fixed-panel--goal { max-height: none; }
+  .fixed-panel--goal .fixed-panel__body { height: auto; min-height: 0; }
 }
 
 @media (max-width: 720px) {

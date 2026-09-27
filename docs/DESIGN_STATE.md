@@ -869,6 +869,43 @@ its duration, cap and upgrade behavior are unchanged in this pass.
 
 ---
 
+### 30. Plates are sized by what is on them
+
+A second pass against the same mockup. It changed no rule, number or label;
+it changed which surface a thing is printed on and how tall a plate is.
+
+- **The goal has a plate of its own.** It was a shelf bolted inside the tree's
+  screen at a fixed 176px. The mockup gives it its own instrument below the
+  tree, with the lamp and legend every other panel carries, so that is what it
+  has. Its legend is "Next goal" rather than the mockup's "Available upgrades",
+  because the panel also carries milestones and a chosen target, and a legend
+  that only described one of its three states would be a lie on the other two.
+
+- **The left column lays itself out.** Two plates share it, and the lower one
+  is sized by its content, which ranges from a one-line milestone to a target
+  with notation and two bars. A flex column (`.panel-rail`) means the tree is
+  never told in pixels how much room the goal is taking; the alternative was a
+  magic constant that every new goal state would falsify.
+
+- **The inspector is sized by its content too.** Pinned top and bottom it left
+  a tall empty screen under a short node, which is the one thing a machine
+  face must never show: a lit panel with nothing on it. It now hugs what is in
+  it and scrolls at `max-height`.
+
+- **The Score legend went back where it belongs.** The Entropy work gave every
+  child of the Score window `position: relative` so it would clear the meter
+  behind it; that silently outranked the legend's own `position: absolute` and
+  dropped "SCORE" into the flex row beside the digits. It is etched above the
+  glass again, and the z-index it actually needed is all it keeps.
+
+- **Paint, not information.** The enamel gained uneven ageing under the grain;
+  the head gained a maker's stamp; two plates gained a stencilled line along
+  the bottom. All of it is `aria-hidden`, none of it states a rule, and the
+  tree's line is scoped to the Build view — under Stats it read as a caption
+  for the table.
+
+---
+
 ## Unresolved — deliberately not implemented
 
 - **Trauma.** No trauma stat, no damaged dice, no corrupted probability, no

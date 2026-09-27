@@ -32,6 +32,9 @@ export function App(): JSX.Element {
   const knowsB = s.discovered.includes('frameworkB');
   const spent = allocatedCost(s);
   const hasGoalDisplay = treeUnlocked && currentGoal(s).kind !== 'none';
+  // The goal gets its own plate under the tree, so it exists only while the
+  // Build view is the one on screen.
+  const showGoalPanel = hasGoalDisplay && tab === 'web';
 
   const focusNode = (id: string): void => {
     setInspected(id);
@@ -103,6 +106,7 @@ export function App(): JSX.Element {
         </section>
 
         {treeUnlocked && (
+          <div className="panel-rail panel-rail--left">
           <section className="fixed-panel fixed-panel--tree">
             <div className="fixed-panel__bar">
               <span className="fixed-panel__title">
@@ -127,14 +131,6 @@ export function App(): JSX.Element {
                     onFocusConsumed={() => setFocus(null)}
                     embedded
                   />
-                  {hasGoalDisplay && (
-                    <div className="tech-build__goal">
-                      <GoalBar
-                        s={s}
-                        onOpenTree={openGoalInTree}
-                      />
-                    </div>
-                  )}
                 </div>
               )}
               {tab === 'stats' && (
@@ -148,7 +144,20 @@ export function App(): JSX.Element {
                 </aside>
               )}
             </div>
+            <PanelFoot text={tab === 'web' ? 'Expand the machine. Every roll builds a bigger tomorrow.' : undefined} />
           </section>
+
+          {showGoalPanel && (
+            <section className="fixed-panel fixed-panel--goal">
+              <div className="fixed-panel__bar">
+                <span className="fixed-panel__title">Next goal</span>
+              </div>
+              <div className="fixed-panel__body">
+                <GoalBar s={s} onOpenTree={openGoalInTree} />
+              </div>
+            </section>
+          )}
+          </div>
         )}
 
         {treeUnlocked && inspected && (
@@ -159,12 +168,41 @@ export function App(): JSX.Element {
             <div className="fixed-panel__body">
               <SelectedUpgrade s={s} nodeId={inspected} onReveal={selectUpgrade} embedded />
             </div>
+            <PanelFoot text="Small choices. Large consequences." mark />
           </section>
         )}
       </main>
 
       {store.debug && <DebugPanel s={s} />}
     </div>
+  );
+}
+
+/**
+ * The line of paint along the bottom of a plate.
+ *
+ * Decoration only, and `aria-hidden` for it: it states no rule, carries no
+ * number, and nothing in the machine depends on reading it.
+ */
+function PanelFoot({ text, mark = false }: { text?: string; mark?: boolean }): JSX.Element {
+  return (
+    <div className="fixed-panel__foot" aria-hidden>
+      {mark && <OrbitMark />}
+      <span className="fixed-panel__stamp">{text ?? ''}</span>
+      <span className="flash fixed-panel__footFlash" />
+    </div>
+  );
+}
+
+function OrbitMark(): JSX.Element {
+  return (
+    <svg className="fixed-panel__mark" width={22} height={22} viewBox="0 0 24 24" aria-hidden
+      fill="none" stroke="currentColor" strokeWidth={1.1}>
+      <circle cx={12} cy={12} r={7.4} />
+      <ellipse cx={12} cy={12} rx={7.4} ry={3} />
+      <ellipse cx={12} cy={12} rx={3} ry={7.4} />
+      <ellipse cx={12} cy={12} rx={10.6} ry={4.2} transform="rotate(-27 12 12)" />
+    </svg>
   );
 }
 
@@ -233,6 +271,10 @@ function TopBar({
             onToggleLock={actions.toggleScoreLock}
           />
           {knowsB && <Currency label="Meta" value={s.meta} alt />}
+          <span className="currencies__stamp" aria-hidden>
+            <span>Roll Reactor</span>
+            <span>v1.0</span>
+          </span>
         </div>
         <div className="gear">
           <button type="button" className="iconbtn" aria-label="Settings"
@@ -557,7 +599,7 @@ function GamePanel({ s }: { s: GameState }): JSX.Element {
           </span>
           <span className="rollbtn__label">{dice > 1 ? `Roll ${dice} dice` : 'Roll'}</span>
           <span className="rollbtn__time">
-            {ready ? (touchPrimary() ? 'Tap' : 'Space') : `${(s.cooldownRemaining / 1000).toFixed(2)}s`}
+            {ready ? (touchPrimary() ? 'Tap to roll' : 'Press space') : `${(s.cooldownRemaining / 1000).toFixed(2)}s`}
           </span>
           <span className="rollbtn__fill"
             style={{ width: `${cd > 0 ? (1 - Math.min(1, s.cooldownRemaining / cd)) * 100 : 100}%` }} />
