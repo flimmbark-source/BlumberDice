@@ -378,11 +378,13 @@ button:disabled { cursor: default; }
    The field stays quiet enough to read through, but never disappears while
    the floor is active. */
 .currency--goal-shield {
-  border-color: rgba(92, 185, 255, 0.72);
+  z-index: 4;
+  overflow: visible;
+  border-color: rgba(92, 185, 255, 0.95);
   box-shadow:
     inset 0 3px 9px rgba(0, 0, 0, 0.85),
     inset 0 0 12px rgba(66, 166, 255, 0.14),
-    0 0 8px rgba(76, 177, 255, 0.22),
+    0 0 12px rgba(76, 177, 255, 0.42),
     0 1px 0 rgba(255, 255, 255, 0.7);
 }
 .currency--goal-shield::after {
@@ -422,6 +424,61 @@ button:disabled { cursor: default; }
       0 0 12px rgba(83, 183, 255, 0.3),
       inset 0 0 10px rgba(113, 207, 255, 0.12);
   }
+}
+
+/* Explicit shield layer: visible energy bands orbit the protected Score
+   window instead of relying only on a faint border glow. */
+.currency__forcefield {
+  position: absolute;
+  inset: -9px;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: 13px;
+  border: 1px solid rgba(126, 215, 255, 0.72);
+  box-shadow:
+    0 0 8px rgba(74, 184, 255, 0.5),
+    0 0 18px rgba(74, 184, 255, 0.22),
+    inset 0 0 10px rgba(105, 205, 255, 0.12);
+  animation: goalFieldBreathe 2.4s ease-in-out infinite;
+}
+.currency__forcefield::before,
+.currency__forcefield::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.currency__forcefield::before {
+  inset: -3px;
+  border: 2px solid transparent;
+  border-top-color: rgba(150, 226, 255, 0.9);
+  border-right-color: rgba(75, 174, 255, 0.48);
+  filter: drop-shadow(0 0 5px rgba(77, 182, 255, 0.72));
+  animation: goalFieldOrbit 3.6s linear infinite;
+}
+.currency__forcefield::after {
+  inset: 3px;
+  background:
+    linear-gradient(100deg,
+      transparent 0 34%,
+      rgba(159, 229, 255, 0.05) 42%,
+      rgba(159, 229, 255, 0.24) 49%,
+      rgba(159, 229, 255, 0.05) 56%,
+      transparent 64% 100%);
+  background-size: 240% 100%;
+  mix-blend-mode: screen;
+  animation: goalFieldSweep 2.8s ease-in-out infinite;
+}
+@keyframes goalFieldBreathe {
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.015); }
+}
+@keyframes goalFieldOrbit {
+  to { transform: rotate(360deg); }
+}
+@keyframes goalFieldSweep {
+  0%, 100% { background-position: 140% 50%; opacity: 0.35; }
+  50% { background-position: -40% 50%; opacity: 0.85; }
 }
 /* Falling only dims the lamp. Red is reserved for a Score that is actually
    under zero -- with Entropy pulling every second, a red-while-falling
@@ -2069,6 +2126,15 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   }
   .tray__hint--show { animation: none; opacity: 1; }
   .goalbar__fill { transition: none; }
+  .currency__forcefield,
+  .currency__forcefield::before,
+  .currency__forcefield::after,
+  .currency--goal-shield::after {
+    animation: none !important;
+  }
+  .currency__forcefield { opacity: 0.9; }
+  .currency__forcefield::before { transform: rotate(22deg); }
+  .currency__forcefield::after { background-position: 50% 50%; opacity: 0.5; }
   /* Keep the entropy event legible even under reduced motion. It uses only a
      short, slow upward drift rather than the larger normal-motion float. */
   .entropy__tick {
