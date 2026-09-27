@@ -432,6 +432,10 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
           style={{
             ['--entropy-x' as string]: `${p.x}px`,
             ['--entropy-y' as string]: `${p.y}px`,
+            ['--entropy-bounce-x' as string]: `${p.x * 0.18}px`,
+            ['--entropy-bounce-y' as string]: `${p.y * 0.18}px`,
+            ['--entropy-far-x' as string]: `${p.x * 0.48}px`,
+            ['--entropy-far-y' as string]: `${p.y * 0.48}px`,
             ['--entropy-angle' as string]: `${p.angle}rad`,
           }}
         >
