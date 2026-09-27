@@ -1491,7 +1491,20 @@ button.minidie:hover .die__body { stroke: var(--ink-soft); }
 }
 .node--allocated .node__inner { fill: hsl(var(--hue) 70% 78%); }
 .node--inspected .node__shape { stroke: #fff6e6; }
-.node--hidden { fill: #2a3a2d; }
+.node--hidden {
+  fill: rgba(42, 58, 45, 0.55);
+  stroke: rgba(150, 175, 142, 0.42);
+  stroke-width: 1.6;
+  stroke-dasharray: 3 2.6;
+}
+.node__unknown {
+  fill: rgba(150, 175, 142, 0.6);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  text-anchor: middle;
+  pointer-events: none;
+}
 .node--keystone .node__shape { stroke-width: 4; }
 .node--pinned .node__shape {
   stroke: var(--goal); stroke-dasharray: 3 2.5;

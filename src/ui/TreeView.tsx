@@ -280,7 +280,17 @@ export const TreeView = memo(function TreeView({
           {NODES.map((n) => {
             const st = statuses.get(n.id)!;
             if (st === 'hidden') {
-              return <circle key={n.id} cx={n.position.x} cy={n.position.y} r={4.5} className="node--hidden" />;
+              // An undiscovered node is an empty socket on the panel, not a
+              // speck: a dashed ring at the size the tree draws its small
+              // nodes, so a gap in the machine reads as a gap rather than as
+              // grit on the screen. It states exactly what it did before --
+              // something connects here, and nothing about it is known yet.
+              return (
+                <g key={n.id} transform={`translate(${n.position.x} ${n.position.y})`}>
+                  <circle r={11} className="node--hidden" />
+                  <text className="node__unknown" y={4.6}>?</text>
+                </g>
+              );
             }
             return (
               <g
