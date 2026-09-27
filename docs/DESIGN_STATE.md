@@ -57,14 +57,14 @@ useful in one of them except where its own text says so.
 
 ### 0b. Entropy's rate
 
-**Current confirmed behavior.** Entropy moves Score 6 points toward zero per
-tick, behind `CONFIG.entropyPerTick`, and ticks every 2.5 seconds behind
-`CONFIG.entropyIntervalMs`. That is an average pull of 2.4 Score per second.
+**Current confirmed behavior.** Entropy moves Score 1 point toward zero per
+tick, behind `CONFIG.entropyPerTick`, and ticks every second behind
+`CONFIG.entropyIntervalMs`. That is an average pull of 1 Score per second.
 
 **Consequence.** A base build earns about 5 Score per second: one die, a 700ms
 cooldown, and an average face of 3.5. Entropy therefore slows early growth
 without outrunning it. In Framework B the same force restores negative Score
-toward zero at the same 2.4-per-second average rate.
+toward zero at the same 1-per-second average rate.
 
 ### 1. Pacing model
 
