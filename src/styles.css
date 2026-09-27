@@ -624,15 +624,15 @@ button:disabled { cursor: default; }
   66% {
     opacity: 1;
     transform: translate(
-      calc(var(--entropy-x) * 0.18),
-      calc(var(--entropy-y) * 0.18)
+      var(--entropy-bounce-x),
+      var(--entropy-bounce-y)
     ) scale(0.9);
   }
   100% {
     opacity: 0;
     transform: translate(
-      calc(var(--entropy-x) * 0.48),
-      calc(var(--entropy-y) * 0.48)
+      var(--entropy-far-x),
+      var(--entropy-far-y)
     ) scale(0.55);
   }
 }
