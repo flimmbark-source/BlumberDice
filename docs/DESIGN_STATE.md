@@ -58,13 +58,13 @@ useful in one of them except where its own text says so.
 ### 0b. Entropy's rate
 
 **Current confirmed behavior.** Entropy moves Score 1 point toward zero per
-tick, behind `CONFIG.entropyPerTick`, and ticks every 0.5 seconds behind
-`CONFIG.entropyIntervalMs`. That is an average pull of 2 Score per second.
+hit, behind `CONFIG.entropyPerTick`. Its interval is no longer fixed:
+`entropyAttackIntervalMs` scales linearly with the 0–100 Entropy meter from
+1000ms at empty to 50ms at full.
 
-**Consequence.** A base build earns about 5 Score per second: one die, a 700ms
-cooldown, and an average face of 3.5. Entropy therefore slows early growth
-without outrunning it. In Framework B the same force restores negative Score
-toward zero at the same 2-per-second average rate.
+**Consequence.** Entropy begins as light pressure at 1 Score per second and
+accelerates as repeated unshielded hits build the meter. Framework B still uses
+the same force in reverse when Score is negative.
 
 ### 1. Pacing model
 
@@ -948,7 +948,7 @@ not a fix. Making it more visible would start explaining.
 
 ### Score force field
 
-**Current confirmed behavior.** Score protection is independent of Goals. Clicking the Score display toggles a force field. While engaged, passive gains/losses and Entropy cannot move Score, but the player may still deliberately spend Score (for example on upgrades or stakes). Refunds remain blocked because they would increase Score. Entropy continues to attack visually every 0.5 seconds and ricochets from the field in one swift reversal. Clicking Score again disengages the field and restores normal Score movement.
+**Current confirmed behavior.** Score protection is independent of Goals. Clicking the Score display toggles a force field. While engaged, passive gains/losses and Entropy cannot move Score, but the player may still deliberately spend Score (for example on upgrades or stakes). Refunds remain blocked because they would increase Score. Entropy continues to attack at the cadence set by the Entropy meter and ricochets from the field in one swift reversal. Clicking Score again disengages the field and restores normal Score movement.
 
 
 ### Entropy pressure
