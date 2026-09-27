@@ -7,6 +7,7 @@ import {
 } from '../engine/game.ts';
 import { clearStorage, loadFromStorage, saveToStorage } from '../engine/save.ts';
 import type { Face } from '../engine/types.ts';
+import { setGoal } from '../engine/goal.ts';
 
 /**
  * Holds the single mutable GameState and drives it with real time. React reads
@@ -136,8 +137,8 @@ export const actions = {
   roll: () => store.act(manualRoll),
   switchFramework: () => store.act(switchFramework),
   allocate: (id: string) => store.act((s) => { allocate(s, id); }),
-  /** Set or clear the node the player is saving toward. */
-  pin: (id: string | null) => store.act((s) => { s.pinned = id; }),
+  /** Set or clear the node the player is saving toward. Deep/locked nodes are rejected. */
+  pin: (id: string | null) => store.act((s) => { setGoal(s, id); }),
   refund: () => store.act((s) => { refundAll(s); }),
   /** Permanently discard current spendable Score; lifetime earned Score is unchanged. */
   deleteScore: () => store.act((s) => { s.score = 0; }),
