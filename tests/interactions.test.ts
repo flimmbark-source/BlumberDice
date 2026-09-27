@@ -54,7 +54,7 @@ describe('Entropy timing', () => {
   it('goals no longer protect Score from Entropy', () => {
     const s = makeBuild({ seed: 1, startingScore: 47 });
     s.pinned = 'hr_edge';
-    tick(s, CONFIG.entropyIntervalMs);
+    tick(s, CONFIG.entropyIntervalMaxMs);
     expect(s.score).toBe(46);
     expect(s.entropyLog.at(-1)).toMatchObject({ amount: -1 });
   });
