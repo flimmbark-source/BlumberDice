@@ -131,7 +131,6 @@ export function App(): JSX.Element {
                     <div className="tech-build__goal">
                       <GoalBar
                         s={s}
-                        selectedNodeId={inspected}
                         onOpenTree={openGoalInTree}
                       />
                     </div>
