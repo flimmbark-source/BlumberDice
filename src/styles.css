@@ -1977,3 +1977,32 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   @keyframes entropyHold { 0%, 92% { opacity: 1; } 100% { opacity: 0; } }
   .spark__ring, .spark__rays { animation: none; opacity: 0; }
 }
+
+
+/* Fixed-panel responsive behavior mirrors the old window stack without any
+   drag/minimize affordance. */
+@media (max-width: 900px) {
+  .fixed-panel {
+    position: relative;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    width: 100%;
+    min-height: 0;
+  }
+  .fixed-panel__body { height: min(64vh, 560px); }
+  .fixed-panel--upgrade .fixed-panel__body { height: auto; }
+  .fixed-panel--upgrade .panel--right { overflow: visible; }
+}
+
+@media (max-width: 720px) {
+  .fixed-panel { padding: 0 7px 7px; border-radius: 11px; }
+  .fixed-panel__bar { flex-basis: 40px; padding-left: 14px; }
+  .fixed-panel__bar::after { width: 30px; }
+}
+
+@media (max-width: 480px) {
+  .fixed-panel__body { height: min(78vh, 420px); }
+  .fixed-panel--upgrade .fixed-panel__body { height: auto; }
+}
