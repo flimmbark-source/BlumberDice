@@ -29,7 +29,7 @@ const NODE_RADIUS: Record<PassiveNode['nodeType'], number> = {
 /**
  * Smallest a Small node may be drawn before the view zooms in to compensate.
  *
- * Fitting all 54 nodes into the panel is the right default on a wide screen,
+ * Fitting all 56 nodes into the panel is the right default on a wide screen,
  * where a Small lands at about 15px. In a short panel the same fit put it at
  * 5px, which is not a target anyone can hit. Below this the web starts zoomed
  * and centred on `start`, and the player pans.

@@ -481,8 +481,8 @@ describe('a bonus roll leaves a die behind', () => {
     two.actionBudget = CONFIG.maxRollsPerAction;
 
     // Follow Through's duration nodes are build stats: 2s base, then 3s and 4s.
-    expect(displayStats(one).bonusDieDurationMs).toBe(1000);
-    expect(displayStats(two).bonusDieDurationMs).toBe(2000);
+    expect(CONFIG.bonusDieMs + displayStats(one).bonusDieDurationMs).toBe(3000);
+    expect(CONFIG.bonusDieMs + displayStats(two).bonusDieDurationMs).toBe(4000);
   });
 
   it('lets each die run down on its own clock', () => {
@@ -500,7 +500,7 @@ describe('a bonus roll leaves a die behind', () => {
   it('does not extend them when the player rolls', () => {
     const s = makeBuild({ seed: 9, nodes: vol });
     s.bonusDice = [CONFIG.bonusDieMs];
-    tick(s, 3000);
+    tick(s, 1000);
     const left = s.bonusDice[0];
     s.cooldownRemaining = 0;
     manualRoll(s);
