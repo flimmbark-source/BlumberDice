@@ -79,6 +79,8 @@ class GameStore {
       || s.cooldownRemaining > 0
       || s.bonusDice.length > 0
       || s.score !== 0
+      || s.entropyLevel > 0
+      || s.scoreLocked
       || s.entropyDir !== 0;
     if (live) {
       tick(s, dt);
