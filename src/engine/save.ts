@@ -1,5 +1,6 @@
 import { createGame, syncAllowed, type GameState } from './game.ts';
 import { NODES_BY_ID } from './nodes.ts';
+import { canPin } from './goal.ts';
 
 const KEY = 'blumberdice.save.v1';
 const SAVE_VERSION = 1;
@@ -60,8 +61,13 @@ export function deserialize(raw: string): GameState | null {
   merged.allocated = (merged.allocated ?? ['start']).filter((id) => NODES_BY_ID.has(id));
   if (!merged.allocated.includes('start')) merged.allocated.unshift('start');
   // A goal pointing at a node this build no longer has, or never had.
-  if (merged.pinned && (!NODES_BY_ID.has(merged.pinned) || merged.allocated.includes(merged.pinned))) {
+  if (merged.pinned && (
+    !NODES_BY_ID.has(merged.pinned)
+    || merged.allocated.includes(merged.pinned)
+    || !canPin(merged, merged.pinned)
+  )) {
     merged.pinned = null;
+    merged.pinnedReached = false;
   }
   // The window must match the restored build before the first roll.
   syncAllowed(merged);
