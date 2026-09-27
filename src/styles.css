@@ -354,6 +354,17 @@ button:disabled { cursor: default; }
   font-size: 14px; color: var(--amber);
   filter: drop-shadow(0 0 6px rgba(242, 167, 44, 0.75));
 }
+.currency--interactive { cursor: pointer; }
+.currency--interactive:hover {
+  border-color: rgba(153, 123, 68, 0.8);
+}
+.currency--interactive:focus-visible {
+  outline: 2px solid rgba(111, 205, 255, 0.78);
+  outline-offset: 3px;
+}
+.currency--score-lock:hover {
+  border-color: rgba(92, 185, 255, 0.95);
+}
 .currency--alt { min-width: 120px; }
 .currency--alt::before { content: '◈'; color: var(--meta); filter: drop-shadow(0 0 6px rgba(78, 201, 189, 0.6)); }
 .currency__value {
