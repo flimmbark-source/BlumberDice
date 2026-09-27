@@ -434,7 +434,12 @@ function randomEntropyProjectile(tick: EntropyTick): EntropyProjectile {
 function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
   const [shown, setShown] = useState<EntropyProjectile[]>([]);
   const seen = useRef(0);
+  const timers = useRef<number[]>([]);
   const newest = ticks.length > 0 ? ticks[ticks.length - 1].id : 0;
+
+  useEffect(() => () => {
+    for (const timer of timers.current) window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (newest <= seen.current) return;
@@ -442,11 +447,14 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
     seen.current = newest;
     setShown((cur) => [...cur, ...fresh.map(randomEntropyProjectile)]);
     const ids = new Set(fresh.map((t) => t.id));
-    const timer = setTimeout(
-      () => setShown((cur) => cur.filter((p) => !ids.has(p.tick.id))),
+    const timer = window.setTimeout(
+      () => {
+        setShown((cur) => cur.filter((p) => !ids.has(p.tick.id)));
+        timers.current = timers.current.filter((id) => id !== timer);
+      },
       ENTROPY_ATTACK_MS,
     );
-    return () => clearTimeout(timer);
+    timers.current.push(timer);
     // `ticks` is mutated in place by the engine; newest id is the signal.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newest]);
@@ -480,7 +488,7 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
 }
 
 /** Long enough for approach, impact, and either fade or shield ricochet. */
-const ENTROPY_ATTACK_MS = 1250;
+const ENTROPY_ATTACK_MS = 2400;
 
 function GamePanel({ s }: { s: GameState }): JSX.Element {
   const build = getBuild(s);
