@@ -479,7 +479,12 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
           }}
         >
           <span className="entropy__dot" />
-          {!p.tick.blocked && <span className="entropy__impact">-1</span>}
+          {!p.tick.blocked && (
+            <>
+              <span className="entropy__burst" />
+              <span className="entropy__impact">-1</span>
+            </>
+          )}
           {p.tick.blocked && <span className="entropy__spark" />}
         </span>
       ))}
