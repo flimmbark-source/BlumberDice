@@ -228,6 +228,7 @@ function TopBar({
             label="Score"
             value={s.score}
             entropy={s.entropyLog}
+            entropyLevel={s.entropyLevel}
             scoreLocked={s.scoreLocked}
             onToggleLock={actions.toggleScoreLock}
           />
@@ -338,12 +339,14 @@ function GearMark(): JSX.Element {
   );
 }
 
-function Currency({ label, value, alt = false, entropy, scoreLocked = false, onToggleLock }: {
+function Currency({ label, value, alt = false, entropy, entropyLevel = 0, scoreLocked = false, onToggleLock }: {
   label: string;
   value: number;
   alt?: boolean;
   /** Entropy steps to animate around this readout. Score only. */
   entropy?: EntropyTick[];
+  /** 0..100 Entropy pressure shown as a red underlay around the Score glass. */
+  entropyLevel?: number;
   /** True while the player has frozen Score at its current value. */
   scoreLocked?: boolean;
   onToggleLock?: () => void;
@@ -376,6 +379,16 @@ function Currency({ label, value, alt = false, entropy, scoreLocked = false, onT
         }
       } : undefined}
     >
+      {entropy && (
+        <>
+          <span
+            className="currency__entropy-meter"
+            style={{ ['--entropy-fill' as string]: `${Math.max(0, Math.min(100, entropyLevel))}%` }}
+            aria-hidden
+          />
+          <span className="currency__screen" aria-hidden />
+        </>
+      )}
       {scoreLocked && <span className="currency__forcefield" aria-hidden />}
       <span className={`currency__value${state}${scoreLocked ? ' currency__value--score-lock' : ''}`}>
         {Math.floor(shown).toLocaleString()}
