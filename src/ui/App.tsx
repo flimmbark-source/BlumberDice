@@ -40,25 +40,21 @@ export function App(): JSX.Element {
   };
 
   const selectUpgrade = (id: string): void => {
+    // Inspection and commitment are separate: following links through the
+    // inspector never changes the player's explicit Goal.
     focusNode(id);
-    // The inspector's explicit node-selection controls should mean the same
-    // thing as clicking that node in the tree: an unowned node becomes the
-    // current Next Goal.
-    if (!s.allocated.includes(id)) actions.pin(id);
   };
 
   const openGoalInTree = (): void => {
     setTab('web');
 
-    // "X Available to Buy" is a carousel over the nodes that can actually be
-    // purchased now. Each press advances one step, centres that node in the
-    // tree, and makes it the selected/Next Goal node.
+    // "X Available to Buy" is a carousel over nodes that can actually be
+    // purchased now. It changes inspection only; the star sets the Goal.
     const targets = openTargets(s);
     if (targets.length === 0) return;
     const current = inspected ? targets.indexOf(inspected) : -1;
     const next = targets[(current + 1) % targets.length];
     focusNode(next);
-    actions.pin(next);
   };
 
   useEffect(() => {
@@ -349,6 +345,14 @@ function Currency({ label, value, alt = false, entropy }: {
     alt ? () => store.heldBack.meta : () => store.heldBack.score,
   );
   const rising = moving && value > shown;
+  const [goalShield, setGoalShield] = useState(false);
+  const newestEntropy = entropy && entropy.length > 0 ? entropy[entropy.length - 1] : null;
+  useEffect(() => {
+    if (!newestEntropy?.blocked) return;
+    setGoalShield(true);
+    const timer = setTimeout(() => setGoalShield(false), 760);
+    return () => clearTimeout(timer);
+  }, [newestEntropy?.id, newestEntropy?.blocked]);
   // Read off what is on the display rather than off the true total: while the
   // counter is still easing down through zero, the digits are what is red.
   const negative = Math.floor(shown) < 0;
@@ -357,7 +361,7 @@ function Currency({ label, value, alt = false, entropy }: {
     : '';
   return (
     <div className={`currency${alt ? ' currency--alt' : ''}`}>
-      <span className={`currency__value${state}`}>
+      <span className={`currency__value${state}${goalShield ? ' currency__value--goal-shield' : ''}`}>
         {Math.floor(shown).toLocaleString()}
       </span>
       <span className="currency__label">{label}</span>
@@ -403,7 +407,8 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
     if (newest <= seen.current) return;
     const fresh = ticks.filter((t) => t.id > seen.current);
     seen.current = newest;
-    setShown((cur) => [...cur, ...fresh.map(randomEntropyGhost)]);
+    const visible = fresh.filter((t) => t.amount !== 0);
+    setShown((cur) => [...cur, ...visible.map(randomEntropyGhost)]);
     const ids = new Set(fresh.map((t) => t.id));
     const timer = setTimeout(
       () => setShown((cur) => cur.filter((g) => !ids.has(g.tick.id))),
