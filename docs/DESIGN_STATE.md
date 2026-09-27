@@ -381,7 +381,7 @@ breakages rather than matters of taste:
   side panel to zero — including the tab bar, so there was no way back to it.
   Half the game was unreachable at a narrow window. The tray now takes a
   share of the viewport and the web keeps a 300px floor.
-- **The web could not be used without a mouse.** All 54 nodes were bare SVG
+- **The web could not be used without a mouse.** All 56 nodes were bare SVG
   `<g>` elements: no `tabindex`, no role, no label. Tab reached three tab
   buttons and nothing else. Nodes are now focusable and activate on Enter or
   Space, announce their name, class, cost and why they can or cannot be
@@ -897,7 +897,7 @@ its duration, cap and upgrade behavior are unchanged in this pass.
 **1. Prototype scope says 15–25 nodes; the brief also asks for both
 milestones.** Milestone 1 needs enough content to judge whether the game is fun,
 and milestone 2 needs a web that behaves differently under the second framework.
-The web has 54 nodes. The 42 available before discovery are the milestone 1
+The web has 56 nodes. The 44 available before discovery are the milestone 1
 subset; the 12 inner-ring nodes are milestone 2. The scope rule was not
 satisfied and is knowingly overshot.
 
