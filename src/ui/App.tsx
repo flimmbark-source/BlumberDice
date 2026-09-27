@@ -385,68 +385,67 @@ function Currency({ label, value, alt = false, entropy, goalShield = false }: {
  * The engine keeps a short list of steps it has taken; this holds each one on
  * screen for as long as the animation runs and then forgets it.
  */
-type EntropyGhost = {
+type EntropyProjectile = {
   tick: EntropyTick;
   x: number;
   y: number;
+  angle: number;
 };
 
-function randomEntropyGhost(tick: EntropyTick): EntropyGhost {
-  // Pick a point in a loose elliptical ring around the readout, keeping the
-  // ghost off the digits themselves while making consecutive ticks feel alive.
+function randomEntropyProjectile(tick: EntropyTick): EntropyProjectile {
+  // Launch from a nearby point around the Score window. The destination is
+  // always the readout's centre; only the approach angle and distance vary.
   const angle = Math.random() * Math.PI * 2;
-  const radius = 46 + Math.random() * 34;
-  return {
-    tick,
-    x: Math.cos(angle) * radius,
-    y: Math.sin(angle) * radius * 0.58,
-  };
+  const radius = 54 + Math.random() * 34;
+  const x = Math.cos(angle) * radius;
+  const y = Math.sin(angle) * radius * 0.62;
+  return { tick, x, y, angle: Math.atan2(y, x) };
 }
 
 function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
-  const [shown, setShown] = useState<EntropyGhost[]>([]);
+  const [shown, setShown] = useState<EntropyProjectile[]>([]);
   const seen = useRef(0);
-  // The engine mutates its list in place, so the array's identity never
-  // changes; the id of the newest step is what marks one apart from the next.
   const newest = ticks.length > 0 ? ticks[ticks.length - 1].id : 0;
 
   useEffect(() => {
     if (newest <= seen.current) return;
     const fresh = ticks.filter((t) => t.id > seen.current);
     seen.current = newest;
-    const visible = fresh.filter((t) => t.amount !== 0);
-    setShown((cur) => [...cur, ...visible.map(randomEntropyGhost)]);
+    setShown((cur) => [...cur, ...fresh.map(randomEntropyProjectile)]);
     const ids = new Set(fresh.map((t) => t.id));
     const timer = setTimeout(
-      () => setShown((cur) => cur.filter((g) => !ids.has(g.tick.id))),
-      ENTROPY_GHOST_MS,
+      () => setShown((cur) => cur.filter((p) => !ids.has(p.tick.id))),
+      ENTROPY_ATTACK_MS,
     );
     return () => clearTimeout(timer);
-    // `ticks` is read, not depended on: it is the same array every render.
+    // `ticks` is mutated in place by the engine; newest id is the signal.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newest]);
 
   if (shown.length === 0) return <></>;
   return (
     <span className="entropy" aria-hidden>
-      {shown.map((g) => (
+      {shown.map((p) => (
         <span
-          key={g.tick.id}
-          className="entropy__tick"
+          key={p.tick.id}
+          className={`entropy__projectile${p.tick.blocked ? ' entropy__projectile--blocked' : ''}`}
           style={{
-            ['--entropy-x' as string]: `${g.x}px`,
-            ['--entropy-y' as string]: `${g.y}px`,
+            ['--entropy-x' as string]: `${p.x}px`,
+            ['--entropy-y' as string]: `${p.y}px`,
+            ['--entropy-angle' as string]: `${p.angle}rad`,
           }}
         >
-          {g.tick.amount < 0 ? g.tick.amount : `+${g.tick.amount}`}
+          <span className="entropy__dot" />
+          {!p.tick.blocked && <span className="entropy__impact">-1</span>}
+          {p.tick.blocked && <span className="entropy__spark" />}
         </span>
       ))}
     </span>
   );
 }
 
-/** Kept in step with the `entropyFloat` animation in styles.css. */
-const ENTROPY_GHOST_MS = 1350;
+/** Long enough for approach, impact, and either fade or shield ricochet. */
+const ENTROPY_ATTACK_MS = 900;
 
 function GamePanel({ s }: { s: GameState }): JSX.Element {
   const build = getBuild(s);
