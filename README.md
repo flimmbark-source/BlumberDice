@@ -349,8 +349,8 @@ what lets the die say *tap* and the switch stop offering a Space bar.
 
 ### Entropy
 
-A constant pull toward zero Score: `CONFIG.entropyPerTick` (6) applied once
-every 2.5 seconds, in `tick`. It is one rule rather than two — Score moves *toward*
+A constant pull toward zero Score: `CONFIG.entropyPerTick` (1) applied once
+every second, in `tick`. It is one rule rather than two — Score moves *toward*
 zero, so it drains a positive balance and restores a negative one at the same
 rate, and the last step in either direction is short rather than overshooting,
 so zero is a resting point.
@@ -360,8 +360,10 @@ in B costs its face whether or not the Score is there, and Entropy is what
 climbs back out afterwards. That makes Entropy a stabiliser rather than a
 pure tax — it is the only force in the game that pushes in both directions.
 
-Each step is recorded in `entropyLog` and floated off the Score readout by the
-HUD, the way a result floats off a die. A Score under zero turns the readout
+Each step is recorded in `entropyLog`. The HUD represents it as a small red
+particle with a pale-red trail firing into the Score display; an unblocked hit
+resolves to `-1`, while an active Goal shield sparks and knocks the particle
+back without showing a loss. A Score under zero turns the readout
 red; falling merely dims it, because the colour is reserved for actual debt
 rather than every Entropy step.
 
