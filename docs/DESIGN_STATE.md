@@ -1089,6 +1089,47 @@ the photo skin's legends from 9.5px to 11px. `--orange` on enamel sits at
 3.15:1, which is why the nameplate is the only place it is used as type: at
 34px it is large text, where 3:1 is the bar.
 
+### 35. The type scale inside the screens
+
+The chassis matched the mockup; the content on it did not. Measured off the
+supplied image, the reference sets its panel content 1.3–1.6x larger than
+this build did, and the panels here read as a dense readout where the
+reference reads as an instrument you stand back from.
+
+Raised to match, against measurements rather than taste: node name 21→26px,
+prose 12.5→14.5px, chips 9.5→12px (and in the UI face, not the mono, because
+they are words rather than readings), cost figure 21→25px, Allocate 15→20px,
+chain rows 13→16px with the legend 9.5→12px, panel legends 11→13px.
+
+Three things that were not simply size:
+
+- **Dice are drawn as outlined cells, not white chips.** The reference prints
+  a die on a screen the way an instrument would — a thin light outline with
+  lit pips. A white-filled cell is a hole cut in the glass, which is what
+  this build had.
+- **The notation now has two scales.** The inspector prints the mechanic at
+  reading size; the same notation inside a goal strip, a stats row or a
+  decision prompt keeps the compact scale, because those boxes are captions
+  and would otherwise burst. One component, two contexts.
+- **The chamber telemetry speaks in one voice.** The value was white and bold
+  against a muted label, which made three instrument readings look like three
+  headlines. The reference prints the whole line at one weight and lets the
+  colon do the work; the figure keeps only a small lift, so it is still the
+  thing you scan to.
+
+Also: tree node rings are drawn heavier and lit harder, since they carry the
+whole panel; node names are `--text` rather than a shade of the screen; and
+a painted stamp breaks per sentence rather than wherever its box runs out,
+because two short lines read as a stamp and one wrapped line reads as an
+accident.
+
+**The photo skin pays for this**, exactly as entry 33 said it would. The
+chain's hole is 160px and three rows at reading scale do not fit it, so there
+the rows drop a size and their node marks drive the height down — a row you
+cannot see at all is worse than one set a size down. Every hole also gained a
+fade at its bottom edge: a cut-off line reads as a fault, a fade reads as
+"there is more", which is the truth.
+
 ---
 
 ## Unresolved — deliberately not implemented

@@ -24,13 +24,13 @@ const PIPS: Record<Face, [number, number][]> = {
 
 /** A die face at glyph scale: pips only, no bevel. */
 function DieGlyph({ face }: { face: Face }): JSX.Element {
-  const s = 22;
+  const s = 30;
   const off = s * 0.235;
   return (
     <svg className="nt__die" width={s} height={s} viewBox={`0 0 ${s} ${s}`} aria-hidden>
-      <rect x={0.75} y={0.75} width={s - 1.5} height={s - 1.5} rx={5} className="nt__dieBody" />
+      <rect x={0.75} y={0.75} width={s - 1.5} height={s - 1.5} rx={7} className="nt__dieBody" />
       {PIPS[face].map(([dx, dy], i) => (
-        <circle key={i} cx={s / 2 + dx * off} cy={s / 2 + dy * off} r={2} className="nt__diePip" />
+        <circle key={i} cx={s / 2 + dx * off} cy={s / 2 + dy * off} r={2.8} className="nt__diePip" />
       ))}
     </svg>
   );

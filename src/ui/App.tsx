@@ -240,7 +240,11 @@ function PanelFoot({ text, mark = false }: { text?: string; mark?: boolean }): J
   return (
     <div className="fixed-panel__foot" aria-hidden>
       {mark && <OrbitMark />}
-      <span className="fixed-panel__stamp">{text ?? ''}</span>
+      <span className="fixed-panel__stamp">
+        {(text ?? '').split(/(?<=\.)\s+/).map((line) => (
+          <span key={line} className="fixed-panel__stampLine">{line}</span>
+        ))}
+      </span>
       <span className="flash fixed-panel__footFlash" />
     </div>
   );
