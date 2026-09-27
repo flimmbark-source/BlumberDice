@@ -560,11 +560,11 @@ button:disabled { cursor: default; }
   }
   72% {
     opacity: 1;
-    transform: translate(0, 0) scale(1);
+    transform: translate(var(--entropy-hit-x), var(--entropy-hit-y)) scale(1);
   }
   78%, 100% {
     opacity: 0;
-    transform: translate(0, 0) scale(0.72);
+    transform: translate(var(--entropy-hit-x), var(--entropy-hit-y)) scale(0.72);
   }
 }
 @keyframes entropyMinusOne {
@@ -592,10 +592,17 @@ button:disabled { cursor: default; }
   }
   72% {
     opacity: 1;
-    transform: translate(0, 0) scale(1);
+    transform: translate(var(--entropy-hit-x), var(--entropy-hit-y)) scale(1);
   }
-  82% {
+  78% {
     opacity: 1;
+    transform: translate(
+      var(--entropy-bounce-x),
+      var(--entropy-bounce-y)
+    ) scale(1.02);
+  }
+  86% {
+    opacity: 0.9;
     transform: translate(
       var(--entropy-bounce-x),
       var(--entropy-bounce-y)
