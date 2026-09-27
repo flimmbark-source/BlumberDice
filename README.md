@@ -14,6 +14,13 @@ npm run build
 Press `` ` `` in-game for debug tools (grant currency, fast-forward rolls,
 reveal the second framework, hard reset).
 
+In Codespaces, a dev container or any remote VM, open the forwarded URL — the
+**Ports** panel's entry for 5173, not `localhost:5173`, which points at your
+own machine. The server binds every interface (`server.host` in
+`vite.config.ts`) so the forwarder can reach it; Vite's default of loopback
+only would refuse that connection and you would be served a "page can't be
+found" while the dev server sat there reporting itself ready.
+
 ---
 
 ## How it plays
