@@ -2292,6 +2292,21 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   .currency__forcefield { opacity: 0.9; }
   .currency__forcefield::before { transform: rotate(22deg); }
   .currency__forcefield::after { background-position: 50% 50%; opacity: 0.5; }
+
+  /* Entropy is gameplay feedback, not decorative motion. Keep its full,
+     readable lifecycle even when the global reduced-motion rule collapses
+     other animations; otherwise the projectile, explosion, -1 and ricochet
+     all complete in 0.001ms and are effectively invisible. */
+  .entropy__projectile,
+  .entropy__projectile--blocked,
+  .entropy__projectile:not(.entropy__projectile--blocked) .entropy__dot,
+  .entropy__burst,
+  .entropy__impact,
+  .entropy__spark {
+    animation-duration: 3600ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
   .spark__ring, .spark__rays { animation: none; opacity: 0; }
 }
 
