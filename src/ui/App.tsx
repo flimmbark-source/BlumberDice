@@ -12,7 +12,6 @@ import { currentGoal, openTargets } from '../engine/goal.ts';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
 import { SelectedUpgrade } from './SelectedUpgrade.tsx';
-import { DesktopWindow } from './DesktopWindow.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
 import { touchPrimary } from './pointer.ts';
 
@@ -25,7 +24,6 @@ export function App(): JSX.Element {
   const [tab, setTab] = useState<Tab>('web');
   const [expanded, setExpanded] = useState(false);
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
-  const [layoutVersion, setLayoutVersion] = useState(0);
   const focusN = useRef(0);
 
   // scoreEarned is lifetime Score for this run, so spending below 20 never
@@ -75,13 +73,6 @@ export function App(): JSX.Element {
     if (treeUnlocked && tab === 'stats') actions.seenStats();
   }, [treeUnlocked, tab]);
 
-  const alignWindows = (): void => {
-    for (const id of ['tree', 'upgrade']) {
-      try { localStorage.removeItem(`blumberdice.window.${id}`); } catch { /* optional persistence */ }
-    }
-    setLayoutVersion((v) => v + 1);
-  };
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === '`') store.toggleDebug();
@@ -108,75 +99,73 @@ export function App(): JSX.Element {
         treeUnlocked={treeUnlocked}
         tab={tab}
         setTab={setTab}
-        onAlignWindows={alignWindows}
       />
 
-      <main className="desktop" aria-label="BlumberDice workspace">
+      <main className="desktop" aria-label="Roll Reactor workspace">
         <section className="game-area" aria-label="Game area">
           <GamePanel s={s} />
         </section>
 
         {treeUnlocked && (
-          <DesktopWindow
-            key={`tree-${layoutVersion}`}
-            id="tree"
-            title={tab === 'web' ? 'Build tree' : tab === 'stats' ? 'Stats' : 'Log'}
-            className="desktop-window--tree"
-            defaultStyle={{ left: 12, top: 12, width: '25.5%', height: 'calc(100% - 24px)' }}
-          >
-            {tab === 'web' && (
-              <div className="tech-build">
-                <TreeView
-                  allocatedKey={s.allocated.join(',')}
-                  discoveredKey={s.discovered.join(',')}
-                  score={s.score}
-                  meta={s.meta}
-                  framework={s.framework}
-                  pinned={s.pinned}
-                  inspected={inspected}
-                  setInspected={setInspected}
-                  expanded={expanded}
-                  setExpanded={setExpanded}
-                  focus={focus}
-                  onFocusConsumed={() => setFocus(null)}
-                  embedded
-                />
-                {hasGoalDisplay && (
-                  <div className="tech-build__goal">
-                    <GoalBar
-                      s={s}
-                      selectedNodeId={inspected}
-                      onOpenTree={openGoalInTree}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-            {tab === 'stats' && (
-              <aside className="panel panel--utility">
-                <div className="panel__body"><StatsPanel s={s} /></div>
-              </aside>
-            )}
-            {tab === 'log' && (
-              <aside className="panel panel--utility">
-                <div className="panel__body"><LogPanel s={s} /></div>
-              </aside>
-            )}
-          </DesktopWindow>
+          <section className="fixed-panel fixed-panel--tree">
+            <div className="fixed-panel__bar">
+              <span className="fixed-panel__title">
+                {tab === 'web' ? 'Build tree' : tab === 'stats' ? 'Stats' : 'Log'}
+              </span>
+            </div>
+            <div className="fixed-panel__body">
+              {tab === 'web' && (
+                <div className="tech-build">
+                  <TreeView
+                    allocatedKey={s.allocated.join(',')}
+                    discoveredKey={s.discovered.join(',')}
+                    score={s.score}
+                    meta={s.meta}
+                    framework={s.framework}
+                    pinned={s.pinned}
+                    inspected={inspected}
+                    setInspected={setInspected}
+                    expanded={expanded}
+                    setExpanded={setExpanded}
+                    focus={focus}
+                    onFocusConsumed={() => setFocus(null)}
+                    embedded
+                  />
+                  {hasGoalDisplay && (
+                    <div className="tech-build__goal">
+                      <GoalBar
+                        s={s}
+                        selectedNodeId={inspected}
+                        onOpenTree={openGoalInTree}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+              {tab === 'stats' && (
+                <aside className="panel panel--utility">
+                  <div className="panel__body"><StatsPanel s={s} /></div>
+                </aside>
+              )}
+              {tab === 'log' && (
+                <aside className="panel panel--utility">
+                  <div className="panel__body"><LogPanel s={s} /></div>
+                </aside>
+              )}
+            </div>
+          </section>
         )}
 
         {treeUnlocked && inspected && (
-          <DesktopWindow
-            key={`upgrade-${layoutVersion}`}
-            id="upgrade"
-            title="Selected upgrade"
-            className="desktop-window--upgrade"
-            defaultStyle={{ right: 12, top: 12, width: '25.5%', height: 'calc(100% - 24px)' }}
-          >
-            <SelectedUpgrade s={s} nodeId={inspected} onReveal={selectUpgrade} embedded />
-          </DesktopWindow>
+          <section className="fixed-panel fixed-panel--upgrade">
+            <div className="fixed-panel__bar">
+              <span className="fixed-panel__title">Selected upgrade</span>
+            </div>
+            <div className="fixed-panel__body">
+              <SelectedUpgrade s={s} nodeId={inspected} onReveal={selectUpgrade} embedded />
+            </div>
+          </section>
         )}
-
       </main>
 
       {store.debug && <DebugPanel s={s} />}
@@ -186,7 +175,7 @@ export function App(): JSX.Element {
 
 function TopBar({
   s, knowsB, canRefund: mayRefund, refundScore, refundMeta,
-  treeUnlocked, tab, setTab, onAlignWindows,
+  treeUnlocked, tab, setTab,
 }: {
   s: GameState;
   knowsB: boolean;
@@ -196,27 +185,21 @@ function TopBar({
   treeUnlocked: boolean;
   tab: Tab;
   setTab: (tab: Tab) => void;
-  onAlignWindows: () => void;
 }): JSX.Element {
   const [menu, setMenu] = useState(false);
   return (
     <header className="topbar">
       <div className="brand">
         <BrandMark />
-        <span className="brand__word"><b>Blumber</b><i>Dice</i></span>
+        <span className="brand__word"><b>Roll</b><i> Reactor</i></span>
       </div>
 
       {treeUnlocked ? (
-        /* One bank of recessed keys: the three views plus the one command
-           that acts on the windows those views live in. */
+        /* One bank of recessed keys for the three fixed information views. */
         <nav className="tabsx" role="tablist" aria-label="Tech window view">
           <TabBtn id="web" tab={tab} set={setTab} label="Build" icon={<BuildIcon />} />
           <TabBtn id="stats" tab={tab} set={setTab} label="Stats" icon={<StatsIcon />} />
           <TabBtn id="log" tab={tab} set={setTab} label="Log" icon={<LogIcon />} />
-          <button type="button" className="window-arrange" onClick={onAlignWindows}>
-            <AlignIcon />
-            <span>Align windows</span>
-          </button>
         </nav>
       ) : (
         <div />
@@ -330,16 +313,6 @@ function LogIcon(): JSX.Element {
       fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round">
       <rect x={3} y={3} width={12} height={12} rx={1.6} />
       <path d="M5.8 6.6h6.4M5.8 9h6.4M5.8 11.4h4" />
-    </svg>
-  );
-}
-
-function AlignIcon(): JSX.Element {
-  return (
-    <svg className="tab__icon" width={17} height={17} viewBox="0 0 18 18" aria-hidden
-      fill="none" stroke="currentColor" strokeWidth={1.3}>
-      <rect x={2.5} y={4} width={5.6} height={10} rx={1.2} />
-      <rect x={9.9} y={4} width={5.6} height={10} rx={1.2} />
     </svg>
   );
 }
