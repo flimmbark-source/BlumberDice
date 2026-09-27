@@ -999,13 +999,17 @@ flattening them to rings would trade information for a resemblance.
 
 ### 33. The photographed chassis, as an opt-in skin
 
-A second faceplate, behind `?skin=photo` (`?skin=css` returns, and the choice
-is remembered). The supplied photograph is laid down as one image and the
+A second faceplate. It is now the default, with `?skin=css` returning to the
+drawn one and the choice remembered. The supplied photograph is laid down as one image and the
 live content drops into the holes cut in it. No rule, number or label
 changes; only which surface the machine is made of.
 
 It is a skin rather than a replacement because the two are not
-interchangeable, and the trade is worth stating plainly.
+interchangeable, and the trade is worth stating plainly. Both are kept: the
+photograph is the machine this game is meant to be, and the drawn chassis is
+the one that still works when the photograph cannot — which is a real case,
+not a hypothetical, since anything under 1000x560 falls back to it whatever
+was asked for.
 
 **What the photograph wins.** Everything material: enamel, grime, moulded
 bevels, the curved CRT surround, painted hardware. None of that is reachable

@@ -3,13 +3,18 @@ import { useEffect, useState } from 'react';
 /**
  * Which faceplate the machine is wearing.
  *
- * `css` is the drawn chassis: it reflows, it lights its own lamps, and it
- * works at any window shape. `photo` lays the supplied chassis photograph
- * down as one image and drops the live content into the holes cut in it.
+ * `photo` lays the supplied chassis photograph down as one image and drops
+ * the live content into the holes cut in it. It is the default, because it is
+ * the machine this game is meant to be.
  *
- * The photograph is a fixed 1672x941 object, so that skin is a fixed stage
- * scaled to fit, letterboxed on the dark ground. It is opt-in: `?skin=photo`
- * turns it on, `?skin=css` turns it off, and the choice is remembered.
+ * `css` is the drawn chassis. It is still here and still maintained, because
+ * it is the one that reflows, lights its own lamps and works at any window
+ * shape — and because the photograph cannot do any of those things.
+ *
+ * `?skin=css` switches to it, `?skin=photo` switches back, and the choice is
+ * remembered. The photograph is a fixed 1672x941 object, so below the size
+ * where it is still legible the drawn chassis takes over whatever was asked
+ * for; see `fitsPhoto`.
  */
 export type Skin = 'css' | 'photo';
 
@@ -26,11 +31,13 @@ function readSkin(): Skin {
     try { localStorage.setItem(KEY, asked); } catch { /* optional */ }
     return asked === 'photo' && !fitsPhoto() ? 'css' : asked;
   }
-  let stored: Skin = 'css';
+  // Default to the photograph. Only an explicit, remembered 'css' opts out,
+  // so a first visit gets the machine rather than the drawing of it.
+  let stored: Skin = 'photo';
   try {
-    stored = localStorage.getItem(KEY) === 'photo' ? 'photo' : 'css';
+    stored = localStorage.getItem(KEY) === 'css' ? 'css' : 'photo';
   } catch {
-    stored = 'css';
+    stored = 'photo';
   }
   return stored === 'photo' && fitsPhoto() ? 'photo' : 'css';
 }
