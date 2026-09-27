@@ -34,11 +34,10 @@ export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false }: {
   const discovered = new Set(s.discovered as DiscoveryFlag[]);
   const owned = allocated.has(node.id);
   const check = checkAllocation(node.id, { allocated, discovered, score: s.score, meta: s.meta });
-  const scoreBlocked = s.scoreLocked && (node.costs.score ?? 0) > 0;
   const reachable = node.prerequisites.length === 0
     || node.prerequisites.some((p) => allocated.has(p));
   const state: 'owned' | 'available' | 'short' | 'locked' = owned ? 'owned'
-    : check.ok && !scoreBlocked ? 'available'
+    : check.ok ? 'available'
     : reachable ? 'short' : 'locked';
   const isGoal = s.pinned === node.id;
   const pinnable = canPin(s, node.id);
@@ -105,9 +104,6 @@ export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false }: {
           </button>
         )}
 
-        {scoreBlocked && !owned && (
-          <p className="upg__note">Unlock Score to spend it.</p>
-        )}
         {state === 'locked' && (
           <p className="upg__note">Connect an adjacent node first.</p>
         )}
