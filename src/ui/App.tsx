@@ -117,7 +117,6 @@ export function App(): JSX.Element {
                     discoveredKey={s.discovered.join(',')}
                     score={s.score}
                     meta={s.meta}
-                    scoreLocked={s.scoreLocked}
                     framework={s.framework}
                     pinned={s.pinned}
                     inspected={inspected}
