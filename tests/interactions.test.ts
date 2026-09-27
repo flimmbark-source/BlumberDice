@@ -3,7 +3,7 @@ import {
   displayStats,
   drain, getBuild, manualRoll, resolveDecision, setSeal, setStoreNext, setStake,
   setUseHeld, switchFramework, syncAllowed, CONFIG, effectiveDice, tick, type GameState,
-  refundAll, allocate,
+  refundAll, allocate, entropyAttackIntervalMs,
 } from '../src/engine/game.ts';
 import { makeBuild, runManualRolls } from '../src/engine/sim.ts';
 import type { Face } from '../src/engine/types.ts';
@@ -16,20 +16,29 @@ function rollToPrompt(s: GameState): void {
 }
 
 describe('Entropy timing', () => {
-  it('ticks every 0.5 seconds', () => {
+  it('fires once per second at zero Entropy', () => {
     const s = makeBuild({ seed: 1, startingScore: 100 });
     const before = s.score;
-    tick(s, 499);
+    tick(s, 999);
     expect(s.score).toBe(before);
     tick(s, 1);
     expect(s.score).toBe(before - CONFIG.entropyPerTick);
+    expect(s.entropyLevel).toBe(1);
+  });
+
+  it('scales attack cadence from 1s at 0 to 0.05s at 100', () => {
+    expect(entropyAttackIntervalMs(0)).toBe(1000);
+    expect(entropyAttackIntervalMs(100)).toBe(50);
+    expect(entropyAttackIntervalMs(50)).toBe(525);
   });
 
   it('does not move Score while the Score force field is engaged', () => {
     const s = makeBuild({ seed: 1, startingScore: 47 });
+    s.entropyLevel = 20;
     s.scoreLocked = true;
-    tick(s, CONFIG.entropyIntervalMs);
+    tick(s, 1000);
     expect(s.score).toBe(47);
+    expect(s.entropyLevel).toBeCloseTo(10, 5);
     expect(s.entropyLog.at(-1)).toMatchObject({ amount: 0, blocked: true });
   });
 
