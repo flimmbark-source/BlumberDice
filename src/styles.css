@@ -529,6 +529,15 @@ button:disabled { cursor: default; }
     rgba(255, 145, 138, 0.72) 100%);
   filter: blur(0.2px);
 }
+.entropy__projectile--blocked .entropy__dot::after {
+  /* The projectile reverses at the shield, so its wake must reverse too:
+     the tail always points opposite the current direction of travel. */
+  animation: entropyTailReverse 3600ms steps(1, end) forwards;
+}
+@keyframes entropyTailReverse {
+  0%, 69% { transform: rotate(var(--entropy-angle)); }
+  70%, 100% { transform: rotate(var(--entropy-reverse-angle)); }
+}
 .entropy__burst {
   position: absolute;
   left: -2px;
@@ -675,7 +684,7 @@ button:disabled { cursor: default; }
   }
 }
 @keyframes entropyShieldHit {
-  /* Same slow approach, then an immediate visible reversal from the field edge. */
+  /* Same slow approach, then one clean ricochet away from the field edge. */
   0% {
     opacity: 0;
     transform: translate(var(--entropy-x), var(--entropy-y)) scale(0.78);
@@ -688,13 +697,9 @@ button:disabled { cursor: default; }
     opacity: 1;
     transform: translate(var(--entropy-hit-x), var(--entropy-hit-y)) scale(1);
   }
-  76% {
-    opacity: 1;
-    transform: translate(var(--entropy-bounce-x), var(--entropy-bounce-y)) scale(1.03);
-  }
-  90% {
-    opacity: 0.82;
-    transform: translate(var(--entropy-far-x), var(--entropy-far-y)) scale(0.82);
+  82% {
+    opacity: 0.9;
+    transform: translate(var(--entropy-far-x), var(--entropy-far-y)) scale(0.86);
   }
   100% {
     opacity: 0;
@@ -2318,6 +2323,10 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   .entropy__burst,
   .entropy__impact,
   .entropy__spark {
+    animation-duration: 3600ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .entropy__projectile--blocked .entropy__dot::after {
     animation-duration: 3600ms !important;
     animation-iteration-count: 1 !important;
   }
