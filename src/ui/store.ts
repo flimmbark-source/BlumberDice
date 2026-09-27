@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import {
   allocate, createGame, discoverFrameworkB, drain, manualRoll, markStatsSeen, resolveDecision,
   refundAll, setPolicy, setSeal, setStake, setStoreNext, setUseHeld,
-  switchFramework, tick,
+  switchFramework, tick, toggleScoreLock,
   type DecisionChoice, type DecisionPolicy, type GameState,
 } from '../engine/game.ts';
 import { clearStorage, loadFromStorage, saveToStorage } from '../engine/save.ts';
@@ -139,9 +139,11 @@ export const actions = {
   allocate: (id: string) => store.act((s) => { allocate(s, id); }),
   /** Set or clear the node the player is saving toward. Deep/locked nodes are rejected. */
   pin: (id: string | null) => store.act((s) => { setGoal(s, id); }),
+  /** Freeze or unfreeze Score at its current value. */
+  toggleScoreLock: () => store.act(toggleScoreLock),
   refund: () => store.act((s) => { refundAll(s); }),
   /** Permanently discard current spendable Score; lifetime earned Score is unchanged. */
-  deleteScore: () => store.act((s) => { s.score = 0; }),
+  deleteScore: () => store.act((s) => { if (!s.scoreLocked) s.score = 0; }),
   decide: (choice: DecisionChoice) => store.act((s) => resolveDecision(s, choice)),
   seal: (face: Face | null) => store.act((s) => setSeal(s, face)),
   stake: (n: number) => store.act((s) => setStake(s, n)),
