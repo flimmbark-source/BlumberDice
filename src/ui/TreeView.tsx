@@ -312,7 +312,7 @@ export const TreeView = memo(function TreeView({
                   // as user navigation so the auto-fit effect does not recenter
                   // the web in response to that internal layout change.
                   userZoomed.current = true;
-                  selectNode(n.id, st, pinned, setInspected);
+                  selectNode(n.id, setInspected);
                 }}
                 onClick={() => {
                   if (suppressNodeClick.current) {
@@ -320,7 +320,7 @@ export const TreeView = memo(function TreeView({
                     return;
                   }
                   userZoomed.current = true;
-                  selectNode(n.id, st, pinned, setInspected);
+                  selectNode(n.id, setInspected);
                 }}
               >
                 <NodeShape type={n.nodeType} />
@@ -353,16 +353,11 @@ export const TreeView = memo(function TreeView({
 
 function selectNode(
   id: string,
-  status: Status,
-  pinned: string | null,
   setInspected: (id: string | null) => void,
 ): void {
+  // Clicking the web only inspects. Goal selection is an explicit star action
+  // in the inspector, so browsing never changes what the player is saving for.
   setInspected(id);
-  // Selection is the goal gesture. Any unowned visible node becomes the
-  // current Next Goal, even when it is still locked deeper in the tree.
-  // Selecting the current goal again clears it; owned nodes only inspect.
-  if (status === 'allocated' || status === 'hidden') return;
-  actions.pin(pinned === id ? null : id);
 }
 
 function NodeShape({ type }: { type: PassiveNode['nodeType'] }): JSX.Element {
