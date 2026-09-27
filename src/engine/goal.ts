@@ -39,7 +39,7 @@ interface Ctx {
   discovered: Set<DiscoveryFlag>;
   score: number;
   meta: number;
-  scoreLocked: boolean;
+  scoreLocked?: boolean;
 }
 
 const ctxOf = (s: GameState): Ctx => ({
