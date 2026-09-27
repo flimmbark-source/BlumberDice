@@ -363,8 +363,10 @@ pure tax — it is the only force in the game that pushes in both directions.
 Each step is recorded in `entropyLog`. The HUD represents it as a small red
 particle with a pale-red trail firing into the Score display; an unblocked hit
 explodes and resolves to `-1`. Clicking the Score display engages its force
-field and freezes Score at that exact value, blocking gains, losses, spending,
-refunds and Entropy until the player clicks the Score display again. Blocked
+field and protects Score from passive gains/losses and Entropy. Deliberate
+Score spending is still allowed while the field is active; refunds remain
+blocked because they would increase Score. Clicking the Score display again
+disengages the field. Blocked
 Entropy attacks spark on the field and ricochet away. Goals are independent of
 this protection. A Score under zero turns the readout
 red; falling merely dims it, because the colour is reserved for actual debt
