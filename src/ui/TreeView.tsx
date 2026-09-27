@@ -3,7 +3,6 @@ import { EDGES, NODES, NODES_BY_ID } from '../engine/nodes.ts';
 import { checkAllocation, describeNode, isReachable, isVisible } from '../engine/tree.ts';
 import type { DiscoveryFlag, FrameworkId, PassiveNode, Region } from '../engine/types.ts';
 import { KEYWORDS } from '../engine/glossary.ts';
-import { actions } from './store.ts';
 
 /**
  * One interconnected web. Build identity is carried by shape, size and
