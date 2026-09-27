@@ -1,4 +1,4 @@
-# BlumberDice
+# Roll Reactor
 
 A dice-based incremental with a passive web and two mutually exclusive ways of
 resolving a roll.
@@ -51,8 +51,9 @@ above; a screen is dark, green, and lit from inside. Everything the player
 *reads* — the web, the inspector, stats, the log, the chamber — is on a
 screen. Everything the player *grabs* — the view keys, the rockers of the
 control rail, the two big switches — is hardware sitting on the plate around
-it. `DesktopWindow` needed no markup for this: its title bar is the plate and
-its body is the screen.
+it. The fixed side panels use the same visual grammar: their title strip is the
+plate and their body is the screen. They are authored parts of the machine
+face now, not draggable desktop windows.
 
 **Orange is spent, not sprinkled.** It marks the action being offered and
 nothing else, which is why exactly two controls wear it — Roll, and
@@ -335,8 +336,8 @@ onto a second one and leaves the nameplate alone on a third. Below 480px the
 nameplate goes down to its mark, because that row is worth more to the
 chamber.
 
-**Panels stack, play first.** There is nowhere to drag a window to, so the
-chamber and the switch own the first screen and the web, stats and log follow
+**Panels stack, play first.** The chamber and the switch own the first screen
+and the fixed web, stats and log panels follow
 underneath, in the order the desktop reads left to right. Held sideways,
 where there is width to spare and no height at all, the deck stands beside
 the chamber instead of under it.
