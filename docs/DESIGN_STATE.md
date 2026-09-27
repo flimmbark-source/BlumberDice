@@ -949,3 +949,8 @@ not a fix. Making it more visible would start explaining.
 ### Score force field
 
 **Current confirmed behavior.** Score protection is independent of Goals. Clicking the Score display toggles a force field. While engaged, passive gains/losses and Entropy cannot move Score, but the player may still deliberately spend Score (for example on upgrades or stakes). Refunds remain blocked because they would increase Score. Entropy continues to attack visually every 0.5 seconds and ricochets from the field in one swift reversal. Clicking Score again disengages the field and restores normal Score movement.
+
+
+### Entropy pressure
+
+Entropy is now also a 0–100 pressure meter integrated directly into the Score pill. The red underlay fills left-to-right behind the black Score glass and never shows a number. Each unshielded dot hit adds 1 Entropy. Cadence is linear from 1000ms at 0 to 50ms at 100. With the Score force field active, attacks ricochet and do not add pressure; the meter drains continuously at 10 points/second. This decay rate is a tuning value in CONFIG.
