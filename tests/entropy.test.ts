@@ -3,8 +3,8 @@ import { CONFIG, createGame, drain, manualRoll, switchFramework, tick } from '..
 import { FIXTURES } from '../src/engine/fixtures.ts';
 import { makeBuild, runManualRolls } from '../src/engine/sim.ts';
 
-const SECOND = CONFIG.entropyIntervalMs;
-const RATE = CONFIG.entropyPerSecond;
+const SECOND = CONFIG.entropyIntervalMaxMs;
+const RATE = CONFIG.entropyPerTick;
 
 /** Runs `ms` of game time in frame-sized slices, the way the store does. */
 function run(s: ReturnType<typeof createGame>, ms: number, slice = 16): void {
