@@ -4,6 +4,7 @@ import { checkAllocation } from '../engine/tree.ts';
 import type { DiscoveryFlag } from '../engine/types.ts';
 import type { GameState } from '../engine/game.ts';
 import { NotationView } from './Notation.tsx';
+import { NodeMark } from './NodeMark.tsx';
 import { store } from './store.ts';
 import { useCountUp } from './useCountUp.ts';
 
@@ -34,7 +35,10 @@ export function GoalBar({ s, onOpenTree }: {
     <div className={`goal${isReady(goal) ? ' goal--ready' : ''}`}>
       {goal.kind === 'milestone' && (
         <>
-          <Head label="Next milestone" />
+          <div className="goal__top">
+            <Head label="Next milestone" />
+            <Legend />
+          </div>
           <Bar have={shownScore} need={goal.cost} currency="Score" />
           <p className="goal__note">
             {goal.unlocks === 1 ? '1 upgrade unlocks' : `${goal.unlocks} upgrades unlock`}
@@ -45,29 +49,40 @@ export function GoalBar({ s, onOpenTree }: {
 
       {goal.kind === 'ready' && (
         <>
-          <Head label="Upgrade ready" ready />
-          <p className="goal__lead">
-            {goal.available === 1 ? '1 upgrade available' : `${goal.available} upgrades available`}
-          </p>
-          <button type="button" className="goal__open" onClick={() => onOpenTree()}>
-            {goal.available} Available to Buy
-          </button>
+          <div className="goal__top">
+            <span className="goal__mark" aria-hidden>◆</span>
+            <p className="goal__lead">
+              {goal.available === 1 ? '1 upgrade available' : `${goal.available} upgrades available`}
+            </p>
+            <Legend />
+          </div>
+          <div className="goal__act">
+            <OpenButton n={goal.available} onClick={onOpenTree} />
+          </div>
         </>
       )}
 
       {goal.kind === 'target' && (
         <>
-          <Head label={goal.affordable ? 'Upgrade ready' : 'Next'} ready={goal.affordable} />
-          <div className="goal__row">
+          <div className="goal__top">
+            {/* The node the player chose, so naming it here is reporting a
+                decision rather than making one. */}
+            <NodeMark type={goal.node.nodeType} region={goal.node.region} size={26} />
             <span className="goal__name">{goal.node.name}</span>
+            <Legend />
           </div>
 
-          {/* The upgrade is its own reward preview, in the tree's own grammar. */}
+          {/* What the upgrade does, in the tree's own grammar. It sits with
+              the name it belongs to, above the action. */}
           {goal.node.notation && (
             <div className="goal__nt">
               <NotationView notation={goal.node.notation} framework={s.framework} />
             </div>
           )}
+
+          <div className="goal__act">
+            <OpenButton n={availableToBuy} onClick={onOpenTree} />
+          </div>
 
           {!goal.affordable && (
             <>
@@ -87,11 +102,6 @@ export function GoalBar({ s, onOpenTree }: {
               )}
             </>
           )}
-          {/* Always offered while a goal is set: the point is reaching the
-              node, which matters as much while saving as when able to buy. */}
-          <button type="button" className="goal__open" onClick={onOpenTree}>
-            {availableToBuy} Available to Buy
-          </button>
         </>
       )}
     </div>
@@ -108,6 +118,23 @@ function purchasableCount(s: GameState): number {
 
 const isReady = (g: Goal): boolean =>
   g.kind === 'ready' || (g.kind === 'target' && g.affordable);
+
+/**
+ * The panel's own legend, printed on the glass at the end of the top row
+ * rather than on the bezel above it.
+ */
+function Legend(): JSX.Element {
+  return <span className="goal__legend">Next goal</span>;
+}
+
+/** Walks the tree through the nodes that can be bought, one press at a time. */
+function OpenButton({ n, onClick }: { n: number; onClick: () => void }): JSX.Element {
+  return (
+    <button type="button" className="goal__open" onClick={onClick}>
+      {n} Available to Buy
+    </button>
+  );
+}
 
 function Head({ label, ready }: { label: string; ready?: boolean }): JSX.Element {
   return (

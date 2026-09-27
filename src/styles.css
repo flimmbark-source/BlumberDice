@@ -1205,7 +1205,13 @@ button:disabled { cursor: default; }
 
 .fixed-panel--goal { min-height: 0; }
 .fixed-panel--goal .fixed-panel__body { flex: 0 1 auto; overflow: auto; }
-.fixed-panel--goal .goal { min-height: 100%; border: 0; border-radius: 0; background: none; }
+.fixed-panel--goal .goal {
+  min-height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  justify-content: center;
+}
 .fixed-panel--goal .goal__unpin { display: none; }
 
 .fixed-panel__bar {
@@ -2962,7 +2968,9 @@ body:has(.app--photo)::before { display: none; }
 }
 
 .app--photo .fixed-panel--goal .fixed-panel__bar { padding: 5px 11px 0; }
-.app--photo .fixed-panel--goal .goal { padding: 3px 11px 6px; gap: 3px; }
+.app--photo .fixed-panel--goal .goal { padding: 2px 11px 4px; gap: 2px; }
+.app--photo .fixed-panel--goal .goal__note { font-size: 9.5px; }
+.app--photo .fixed-panel--goal .goalbar { margin-top: 4px; }
 .app--photo .fixed-panel--goal .goal__lead { font-size: 12px; }
 .app--photo .fixed-panel--goal .goal__open { padding: 3px 10px; font-size: 11px; }
 /* The row's height is set by its node mark, not its type, so that is what
@@ -2977,8 +2985,69 @@ body:has(.app--photo)::before { display: none; }
 .app--photo .fixed-panel--chain .chain__list { gap: 4px; }
 .app--photo .fixed-panel--chain .chain { padding: 6px 9px 8px; }
 
-.app--photo .fixed-panel--goal .goal__nt,
+/* The photographed hole is 470px wide and fixed. A short name and two dice
+   fit it, as on the reference; "Momentum" and five do not, and the notation
+   wrapping is what pushes the line out of the hole. So here the preview goes
+   and the name stays -- which upgrade this is outranks what it does, and the
+   inspector carries the notation in full either way. The drawn chassis sizes
+   this plate to its content and keeps both. */
+/*
+ * What gives way in a fixed hole.
+ *
+ * The photographed slot is 470px and cannot grow. A short name and two dice
+ * fit it, as on the reference; a long name and a five-die mechanic do not,
+ * and something has to go. The rule is that the name and the action stay
+ * whole -- which upgrade this is, and what you can do about it -- and the
+ * preview is the optional part, because the inspector prints it in full a
+ * panel away. The same call was made for the chain's rows.
+ *
+ * The drawn chassis sizes this plate to its content, so there it keeps both.
+ */
+/*
+ * The photographed slot is 102px and cannot grow, and the stack above is
+ * taller than that once a preview and a progress line are in it. The name
+ * and the action stay -- which upgrade this is, and what you can do about it
+ * -- and the preview goes, because the inspector prints it in full a panel
+ * away. The drawn chassis sizes this plate to its content and keeps both.
+ */
 .app--photo .fixed-panel--goal .goal__after { display: none; }
+/* The flash that pushes the legend right is painted into the art here, so
+   the bar has to do the pushing itself. */
+.app--photo .fixed-panel--goal .fixed-panel__bar { justify-content: flex-end; }
+
+/* The legend moved onto the glass, so this plate's bezel no longer needs
+   the height a legend takes -- it is a strip with a lamp on it, and the
+   rows below get the difference. */
+.fixed-panel--goal .fixed-panel__bar { flex-basis: 18px; }
+.app--photo .fixed-panel--goal .fixed-panel__bar { flex-basis: 12px; padding: 0 8px 0 18px; }
+.app--photo .fixed-panel--goal .fixed-panel__bar::before { width: 7px; height: 7px; left: 8px; }
+
+/*
+ * The photographed slot is 102px and cannot grow, and four stacked rows do
+ * not fit it at panel scale. Everything shrinks rather than anything being
+ * dropped: what the upgrade does is the point of the panel, so the symbol
+ * row stays and pays for itself out of the space around it.
+ */
+.app--photo .fixed-panel--goal .goal { gap: 0; padding: 1px 11px; }
+.app--photo .fixed-panel--goal .goal__legend { font-size: 9.5px; }
+.app--photo .fixed-panel--goal .goal__top .nmark { width: 16px; height: 16px; }
+.app--photo .fixed-panel--goal .goal__name { font-size: 14px; }
+.app--photo .fixed-panel--goal .goal__lead { font-size: 13px; }
+
+.app--photo .fixed-panel--goal .goal__nt .nt__cell {
+  min-width: 20px; height: 20px; padding: 0 1px;
+  border-width: 1px; border-radius: 4px;
+}
+.app--photo .fixed-panel--goal .goal__nt .nt__die { width: 18px; height: 18px; }
+.app--photo .fixed-panel--goal .goal__nt .nt__val { font-size: 11px; }
+.app--photo .fixed-panel--goal .goal__nt .nt__op { font-size: 10px; }
+
+.app--photo .fixed-panel--goal .goal__act { margin-top: 2px; }
+.app--photo .fixed-panel--goal .goal__open { padding: 1px 11px; font-size: 10.5px; }
+.app--photo .fixed-panel--goal .goal .goalbar { margin-top: 2px; gap: 0; }
+.app--photo .fixed-panel--goal .goalbar__nums { font-size: 10px; line-height: 1; }
+.app--photo .fixed-panel--goal .goalbar__track { height: 4px; }
+.app--photo .fixed-panel--goal .goal__nt { margin-top: 2px; }
 
 /* The tube's own curvature, bloom and scanlines are painted, so the tray
    only has to be the picture inside it. */
@@ -3214,3 +3283,71 @@ body:has(.app--photo)::before { display: none; }
 .standby--goal    { left:  3.23%; top: 82.47%; width: 28.11%; height: 10.84%; }
 .standby--upgrade { left: 74.04%; top: 21.25%; width: 24.64%; height: 40.38%; }
 .standby--chain   { left: 74.76%; top: 65.67%; width: 23.21%; height: 17.00%; }
+
+
+/* ------------------------------------------- the goal, set as one line */
+/*
+ * The reference panel puts everything on a single row: what there is on the
+ * left, how many and what to do about it on the right. That reads better than
+ * the stack it replaced and, on the photographed faceplate, it is the only
+ * shape that fits a 102px hole.
+ */
+.goal__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.goal__top > .goal__mark { flex: none; color: var(--amber); }
+.goal__top .goal__lead { flex: none; }
+.goal__top .nmark { flex: none; }
+.goal__top .goal__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The action sits under the name it acts on, at the far end of the plate. */
+.goal__act {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.goal__nt { margin-top: 7px; }
+.goal__nt .nt { margin: 0; flex-direction: row; align-items: center; gap: 9px; }
+.goal__nt .nt__row { flex-wrap: nowrap; gap: 4px; min-height: 0; }
+.goal__nt .nt__row--clause { display: none; }
+
+/* Compact and gold, on its own row under the name. */
+.goal__open {
+  flex: none;
+  align-self: center;
+  width: auto;
+  margin: 0;
+  padding: 6px 14px;
+  white-space: nowrap;
+}
+
+/* The legend is printed on the glass at the end of the top row, so it is
+   the row that pushes it right rather than the bezel. */
+.goal__legend {
+  flex: none;
+  margin-left: auto;
+  padding-left: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.goal__top .goal__head { flex: none; }
+
+/* A chosen target still shows its progress under the line. */
+.goal .goalbar { margin-top: 8px; }

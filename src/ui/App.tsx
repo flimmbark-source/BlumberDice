@@ -181,9 +181,9 @@ export function App(): JSX.Element {
 
           {showGoalPanel && (
             <section className="fixed-panel fixed-panel--goal">
-              <div className="fixed-panel__bar">
-                <span className="fixed-panel__title">Next goal</span>
-              </div>
+              {/* This plate prints its legend inside the screen, beside the
+                  name it labels, so the bezel carries only its furniture. */}
+              <div className="fixed-panel__bar" />
               <div className="fixed-panel__body">
                 <GoalBar s={s} onOpenTree={openGoalInTree} />
               </div>

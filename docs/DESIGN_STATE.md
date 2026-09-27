@@ -1173,6 +1173,55 @@ number, and is the difference between a machine with a channel off and a
 machine that looks broken. The drawn chassis has no hole until there is
 something to put in it and needs none of this.
 
+### 37. The goal plate, restacked
+
+Asked for three moves and given three moves: the legend to the right, the
+name on top, the action under the name.
+
+The legend is now printed on the glass at the end of the top row rather than
+on the bezel above it, so that plate's bezel is a strip with a lamp on it and
+the rows below get the height a legend would have taken — which is most of
+what makes the stack fit the photographed slot.
+
+Order down the plate: name (with its mark), then what the upgrade does, then
+the action, then progress. The symbol row sits with the name it belongs to,
+because it is the point of the panel.
+
+The photographed slot is 102px and cannot grow. Four stacked rows do not fit
+it at panel scale, so in that skin everything shrinks a step rather than
+anything being dropped — an earlier pass hid the notation to make room, which
+removed the one thing the panel exists to show.
+
+Noted against my own earlier work: the pass before this one also swapped the
+tour button for a purchase, renamed it, made the legend change with the goal's
+state and added a count. None of that was asked for and all of it is reverted.
+The button is the tour it always was, and says what it always said.
+
+### 37. The goal plate, restacked
+
+The legend to the right, the name on top, the action under the name and at
+the far end of the plate.
+
+The legend is printed on the glass at the end of the top row rather than on
+the bezel above it, so that plate's bezel is a strip with a lamp on it, and
+the rows below get the height a legend would have taken — which is most of
+what makes the stack fit the photographed slot.
+
+Order down the plate: name with its mark, then what the upgrade does, then
+the action, then progress. The symbol row sits with the name it belongs to,
+because it is the point of the panel.
+
+The photographed slot is 102px and cannot grow. Four stacked rows do not fit
+it at panel scale, so in that skin everything shrinks a step rather than
+anything being dropped — an earlier pass hid the notation to make room, which
+removed the one thing the panel exists to show.
+
+Noted against my own earlier work: the pass before this one also swapped the
+tour button for a purchase, renamed it, made the legend change with the
+goal's state and added a count label. None of that was asked for and all of
+it is reverted. The button is the tour it always was and says what it always
+said.
+
 ---
 
 ## Unresolved — deliberately not implemented
