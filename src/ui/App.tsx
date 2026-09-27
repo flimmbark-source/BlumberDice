@@ -367,6 +367,7 @@ function Currency({ label, value, alt = false, entropy, goalShield = false }: {
     : '';
   return (
     <div className={`currency${alt ? ' currency--alt' : ''}${goalShield ? ' currency--goal-shield' : ''}`}>
+      {goalShield && <span className="currency__forcefield" aria-hidden />}
       <span className={`currency__value${state}${goalShield ? ' currency__value--goal-shield' : ''}`}>
         {Math.floor(shown).toLocaleString()}
       </span>
