@@ -11,7 +11,7 @@ import { GoalBar } from './GoalBar.tsx';
 import { currentGoal, openTargets } from '../engine/goal.ts';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
-import { SelectedUpgrade } from './SelectedUpgrade.tsx';
+import { hasLeadsTo, LeadsTo, SelectedUpgrade } from './SelectedUpgrade.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
 import { touchPrimary } from './pointer.ts';
 
@@ -113,6 +113,9 @@ export function App(): JSX.Element {
           <div className="panel-rail panel-rail--left">
           <section className="fixed-panel fixed-panel--tree">
             <div className="fixed-panel__bar">
+              {/* The ringed body labels the tree; Stats and Log keep the lamp
+                  every other plate carries. */}
+              {tab === 'web' && <PlanetMark />}
               <span className="fixed-panel__title">
                 {tab === 'web' ? 'Build tree' : tab === 'stats' ? 'Stats' : 'Log'}
               </span>
@@ -165,15 +168,36 @@ export function App(): JSX.Element {
         )}
 
         {treeUnlocked && inspected && (
-          <section className="fixed-panel fixed-panel--upgrade">
-            <div className="fixed-panel__bar">
-              <span className="fixed-panel__title">Selected upgrade</span>
-            </div>
-            <div className="fixed-panel__body">
-              <SelectedUpgrade s={s} nodeId={inspected} onReveal={selectUpgrade} embedded />
-            </div>
-            <PanelFoot text="Small choices. Large consequences." mark />
-          </section>
+          <div className="panel-rail panel-rail--right">
+            <section className="fixed-panel fixed-panel--upgrade">
+              <div className="fixed-panel__bar">
+                <span className="fixed-panel__title">Selected upgrade</span>
+              </div>
+              <div className="fixed-panel__body">
+                <SelectedUpgrade
+                  s={s} nodeId={inspected} onReveal={selectUpgrade} embedded withChain={false}
+                />
+              </div>
+              {/* The column's stamp belongs to whichever plate ends it. */}
+              {!hasLeadsTo(inspected) && (
+                <PanelFoot text="Small choices. Large consequences." mark />
+              )}
+            </section>
+
+            {/* Its own plate, as the reference machine gives it -- but only
+                when the node actually leads somewhere. */}
+            {hasLeadsTo(inspected) && (
+              <section className="fixed-panel fixed-panel--chain">
+                <div className="fixed-panel__bar">
+                  <span className="fixed-panel__title">Leads to</span>
+                </div>
+                <div className="fixed-panel__body">
+                  <LeadsTo s={s} nodeId={inspected} onReveal={selectUpgrade} />
+                </div>
+                <PanelFoot text="Small choices. Large consequences." mark />
+              </section>
+            )}
+          </div>
         )}
       </main>
 
@@ -195,6 +219,24 @@ function PanelFoot({ text, mark = false }: { text?: string; mark?: boolean }): J
       <span className="fixed-panel__stamp">{text ?? ''}</span>
       <span className="flash fixed-panel__footFlash" />
     </div>
+  );
+}
+
+/**
+ * The tree plate's legend mark. The reference machine gives this one panel a
+ * ringed body rather than a plain lamp, and it suits the thing it labels:
+ * one centre with everything else in orbit around it.
+ */
+function PlanetMark(): JSX.Element {
+  return (
+    <svg className="fixed-panel__glyph" width={15} height={15} viewBox="0 0 16 16" aria-hidden>
+      <circle cx={8} cy={7.4} r={3.9} fill="currentColor" />
+      <ellipse
+        cx={8} cy={8.4} rx={7} ry={2.4}
+        fill="none" stroke="currentColor" strokeWidth={1.3}
+        transform="rotate(-17 8 8.4)"
+      />
+    </svg>
   );
 }
 
@@ -367,7 +409,7 @@ function LogIcon(): JSX.Element {
 
 function BrandMark(): JSX.Element {
   return (
-    <svg className="brand__mark" width={34} height={34} viewBox="-16 -16 32 32" aria-hidden>
+    <svg className="brand__mark" width={42} height={42} viewBox="-16 -16 32 32" aria-hidden>
       <rect x={-11} y={-11} width={22} height={22} rx={6} />
       <circle cx={-4.5} cy={-4.5} r={2} /><circle cx={4.5} cy={4.5} r={2} />
       <circle cx={4.5} cy={-4.5} r={2} /><circle cx={-4.5} cy={4.5} r={2} />

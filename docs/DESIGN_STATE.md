@@ -946,6 +946,57 @@ painted and handled rather than as rectangles with gradients.
 Everything that animates is covered by the existing global
 `prefers-reduced-motion` rule.
 
+### 32. A second pass against the same photograph
+
+Another look at the supplied mockup, item by item. Everything below is
+presentation; the list at the end is the part of that image that cannot be
+reproduced without inventing mechanics, and was not.
+
+Matched:
+
+- **The machine is an object.** It has a rounded edge and sits on something
+  darker, instead of running off the window on four sides. Below a desktop
+  there is no room to show an edge, so the face runs to the glass there.
+- **Grime crosses panel seams.** Identical staining baked into every plate is
+  the tell that gives a CSS mockup away — the eye reads the repeat. It now
+  lives on one field over the whole face, unaligned to anything beneath it,
+  and multiplies, so the near-black screens barely register it. Glass gets
+  dusty; it does not get stained. Plates keep only what is genuinely theirs:
+  their own scuffs and the rim where they turn from the light.
+- **Screens sit behind a machined lip** rather than in a hole cut in the
+  plate, and the chamber — the one screen big enough for it to read — has the
+  corner radius and centre bloom of a real tube.
+- **The reticle is a reticle.** Four rings, a doubled limit ring and a
+  48-tick graduated dial were all doing the same job badly: past two circles
+  the rings stop reading as a scale and start reading as texture. Two rings,
+  the sighting cross, and square index marks where they meet.
+- **The head is a bolted-on band**, with the seam below it showing, and the
+  nameplate is screened straight onto the enamel instead of sitting on a
+  bezel of its own.
+- **The Score legend is dark ink on the enamel above the window.** The glass
+  keeps its own box, so the Entropy field around it is unmoved.
+- **"Leads to" has a plate of its own** under the inspector, and the column's
+  stamp moves to whichever plate ends it — a terminal node has no chain, so
+  there is no second plate to put it on.
+- The tree plate takes a ringed body for its legend mark, on the Build view
+  only; under Stats or Log the plate keeps the lamp every other one carries.
+
+Not matched, because each one is a mechanic the game does not have:
+
+- **AUTO ROLL and FAST MODE switches.** There is no auto-roll and no fast
+  mode. Two dead levers on the deck would be worse than two absent ones.
+- **"BUY 5" and an "N AVAILABLE" row.** Bulk purchase does not exist;
+  allocation is one node at a time, chosen in the tree. The plate in that
+  position carries the goal instead, and is labelled for what it holds.
+- **GRAVITY and SPIN telemetry.** The chamber prints dice, rolls and seed,
+  which are real state a player can act on. Gravity and spin would be two
+  invented numbers that never change.
+
+One more is a deliberate keep rather than a miss: the mockup draws every node
+mark as a plain colour ring, where this build draws small, notable, keystone
+and bridge as different shapes. The shape carries the node's class, so
+flattening them to rings would trade information for a resemblance.
+
 ---
 
 ## Unresolved — deliberately not implemented

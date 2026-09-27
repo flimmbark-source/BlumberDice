@@ -147,39 +147,34 @@ export function drawSurface(c: CanvasRenderingContext2D, world: World, theme: Th
   c.fillStyle = wash;
   c.fill();
 
-  // Four rings, drawn like a gauge face: heaviest at the rim the dice
-  // actually bounce off, and doubled there the way a scale's limit is.
-  const rings = [0.34, 0.58, 0.79, 1];
+  // Two rings, heaviest at the rim the dice actually bounce off. A reticle,
+  // not a bullseye: past two circles the rings stop reading as a scale and
+  // start reading as texture, which is what a graduated dial and a stack of
+  // four were both doing here.
+  const rings = [0.62, 1];
   rings.forEach((k, i) => {
     c.beginPath();
     ringPath(c, cx, cy, outer * k);
     c.strokeStyle = theme.grid;
-    c.lineWidth = i === rings.length - 1 ? 2.2 : 1;
-    c.globalAlpha = i === rings.length - 1 ? 1 : 0.42 + i * 0.12;
+    c.lineWidth = i === rings.length - 1 ? 2 : 1;
+    c.globalAlpha = i === rings.length - 1 ? 1 : 0.6;
     c.stroke();
   });
-  c.beginPath();
-  ringPath(c, cx, cy, outer * 0.955);
-  c.strokeStyle = theme.grid;
-  c.lineWidth = 0.9;
-  c.globalAlpha = 0.7;
-  c.stroke();
-
-  // Ticks around the rim, so the circle reads as a graduated dial.
-  c.globalAlpha = 0.55;
-  c.lineWidth = 1.2;
-  for (let i = 0; i < 48; i++) {
-    const t = (i / 48) * Math.PI * 2;
-    const a = project(v3(cx + Math.cos(t) * outer, cy + Math.sin(t) * outer, 0));
-    const b = project(v3(cx + Math.cos(t) * outer * 1.035, cy + Math.sin(t) * outer * 1.035, 0));
-    c.beginPath();
-    c.moveTo(a.x, a.y);
-    c.lineTo(b.x, b.y);
-    c.stroke();
-  }
   c.globalAlpha = 1;
 
   drawReticle(c, cx, cy, outer, theme);
+
+  // Index marks where the sighting arms cross each ring. Square, because a
+  // round dot reads as a bead rather than as a graduation.
+  c.fillStyle = theme.grid;
+  const k = Math.SQRT1_2;
+  for (const ring of rings) {
+    const size = ring === 1 ? 4.6 : 3.4;
+    for (const [ux, uy] of [[1, -1], [-1, 1], [1, 1], [-1, -1]] as const) {
+      const p = project(v3(cx + ux * k * outer * ring, cy + uy * k * outer * ring, 0));
+      c.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+    }
+  }
 }
 
 /**
@@ -209,13 +204,6 @@ function drawReticle(
     c.stroke();
   }
 
-  c.globalAlpha = 1;
-  c.fillStyle = theme.grid;
-  for (const tip of tips) {
-    c.beginPath();
-    c.arc(tip.x, tip.y, 2.2, 0, Math.PI * 2);
-    c.fill();
-  }
   c.restore();
 }
 

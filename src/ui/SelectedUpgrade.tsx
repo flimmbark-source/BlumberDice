@@ -14,11 +14,13 @@ import { canPin } from '../engine/goal.ts';
  * cannot shove the layout around the way a docked panel in the flow once
  * did, which was the reason for floating it in the first place.
  */
-export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false }: {
+export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false, withChain = true }: {
   s: GameState;
   nodeId: string | null;
   onReveal: (id: string) => void;
   embedded?: boolean;
+  /** False when the caller mounts `LeadsTo` on a plate of its own. */
+  withChain?: boolean;
 }): JSX.Element {
   const node = nodeId ? NODES_BY_ID.get(nodeId) ?? null : null;
   if (!node) {
@@ -109,7 +111,7 @@ export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false }: {
         )}
       </div>
 
-      <Chain s={s} node={node} onReveal={onReveal} />
+      {withChain && <Chain s={s} node={node} onReveal={onReveal} />}
     </aside>
   );
 }
@@ -127,10 +129,29 @@ const STATE_LABEL = {
  * Facts of the graph, not advice — every one of them is listed, and a node
  * the player cannot see yet stays unnamed rather than being spoiled.
  */
-function Chain({ s, node, onReveal }: {
+/** Whether this node leads anywhere, so a caller can skip drawing the plate. */
+export function hasLeadsTo(nodeId: string | null): boolean {
+  if (!nodeId) return false;
+  return NODES.some((n) => n.prerequisites.includes(nodeId));
+}
+
+/** The chain, mounted on its own plate. */
+export function LeadsTo({ s, nodeId, onReveal }: {
+  s: GameState;
+  nodeId: string | null;
+  onReveal: (id: string) => void;
+}): JSX.Element | null {
+  const node = nodeId ? NODES_BY_ID.get(nodeId) ?? null : null;
+  if (!node) return null;
+  return <Chain s={s} node={node} onReveal={onReveal} bare />;
+}
+
+function Chain({ s, node, onReveal, bare = false }: {
   s: GameState;
   node: PassiveNode;
   onReveal: (id: string) => void;
+  /** On its own plate the legend is the plate's, so the heading is dropped. */
+  bare?: boolean;
 }): JSX.Element | null {
   const allocated = new Set(s.allocated);
   const discovered = new Set(s.discovered as DiscoveryFlag[]);
@@ -138,8 +159,8 @@ function Chain({ s, node, onReveal }: {
   if (next.length === 0) return null;
 
   return (
-    <div className="chain">
-      <h3 className="chain__title">Leads to</h3>
+    <div className={`chain${bare ? ' chain--bare' : ''}`}>
+      {!bare && <h3 className="chain__title">Leads to</h3>}
       <ul className="chain__list">
         {next.map((n) => {
           const seen = isVisible(n, discovered);
