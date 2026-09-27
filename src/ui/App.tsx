@@ -16,6 +16,7 @@ import { StatsPanel } from './StatsPanel.tsx';
 import { touchPrimary } from './pointer.ts';
 import { STAGE_H, STAGE_W, useSkin, useStageScale } from './skin.ts';
 import chassisUrl from './chassis.webp';
+import { playChannelClick } from './sound.ts';
 
 const TREE_UNLOCK_SCORE = 20;
 type Tab = 'web' | 'stats' | 'log';
@@ -26,6 +27,15 @@ export function App(): JSX.Element {
   const stageScale = useStageScale(skin === 'photo');
   const [inspected, setInspected] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('web');
+  // Bumped on every channel change. It keys the flicker overlay, so the
+  // animation restarts even when the same channel is picked twice.
+  const [channel, setChannel] = useState(0);
+
+  const changeChannel = (next: Tab): void => {
+    setTab(next);
+    setChannel((n) => n + 1);
+    playChannelClick();
+  };
   const [expanded, setExpanded] = useState(false);
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
   const focusN = useRef(0);
@@ -53,7 +63,7 @@ export function App(): JSX.Element {
   };
 
   const openGoalInTree = (): void => {
-    setTab('web');
+    if (tab !== 'web') changeChannel('web');
 
     // "X Available to Buy" is a carousel over nodes that can actually be
     // purchased now. It changes inspection only; the star sets the Goal.
@@ -110,7 +120,7 @@ export function App(): JSX.Element {
         refundMeta={spent.meta}
         treeUnlocked={treeUnlocked}
         tab={tab}
-        setTab={setTab}
+        setTab={changeChannel}
       />
 
       <main className="desktop" aria-label="Roll Reactor workspace">
@@ -134,6 +144,7 @@ export function App(): JSX.Element {
               </span>
             </div>
             <div className="fixed-panel__body">
+              <span key={channel} className="crt-restrike" aria-hidden />
               {tab === 'web' && (
                 <div className="tech-build">
                   <TreeView
@@ -595,7 +606,10 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
       {shown.map((p) => (
         <span
           key={p.tick.id}
-          className={`entropy__projectile${p.tick.blocked ? ' entropy__projectile--blocked' : ''}`}
+          className={
+            `entropy__projectile${p.tick.blocked ? ' entropy__projectile--blocked' : ''}`
+            + (p.tick.amount > 0 ? ' entropy__projectile--gain' : '')
+          }
           style={{
             ['--entropy-x' as string]: `${p.x}px`,
             ['--entropy-y' as string]: `${p.y}px`,
@@ -615,7 +629,9 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
           {!p.tick.blocked && (
             <>
               <span className="entropy__burst" />
-              <span className="entropy__impact">-1</span>
+              <span className="entropy__impact">
+                {p.tick.amount > 0 ? `+${p.tick.amount}` : String(p.tick.amount)}
+              </span>
             </>
           )}
           {p.tick.blocked && <span className="entropy__spark" />}

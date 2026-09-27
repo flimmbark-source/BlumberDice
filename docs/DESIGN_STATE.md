@@ -1046,6 +1046,49 @@ from this side:
 
 Fixing any of those means re-exporting the art, not editing the CSS.
 
+### 34. The nameplate, the sign of a step, and changing channel
+
+Four small things, none of which moves a rule.
+
+**The photograph's nameplate is now the app's.** The painted *BlumberDice*
+wordmark was cloned out of `ui/chassis.webp` itself rather than covered over:
+an averaged column of clean enamel from inside the same plate, stretched
+across the text, re-grained to match, and feathered at the edges. A patch
+laid on top would have been a sticker; this keeps the plate's own vertical
+shading. The app then prints its own nameplate on the blank plate, so the
+name lives in one place and the art no longer contradicts the code.
+
+**An Entropy step is drawn with its sign.** `EntropyTick.amount` was always
+signed — negative while draining, positive while restoring — but the
+projectile was red whatever it carried and the figure was the literal string
+`-1`. The particle, its wake, its burst and its figure are now all written
+against one set of custom properties, so a restoring step flips the whole
+thing green together rather than in pieces, and the figure says what actually
+moved.
+
+**Changing channel restrikes the tube.** A tube does not cut between
+pictures: the beam collapses, the new frame strikes bright, and it settles
+over two shallow beats. The overlay is keyed on a counter rather than on the
+channel, so picking the same channel twice still replays — a selector you can
+hear moving but not see is worse than one you cannot hear at all. The
+brightness flash across a whole panel is exactly what `prefers-reduced-motion`
+exists to stop, so it is dropped entirely there.
+
+**And it clunks.** `ui/sound.ts` synthesises the selector rather than
+shipping a sample: a 45ms band-passed noise burst for the contact, whose
+noise decays as well as its gain so the tail is duller than the head, over a
+triangle dropping 190Hz to 74Hz for the housing. Everything is best-effort —
+no `AudioContext`, no gesture yet, or a throw anywhere, and the channel still
+changes in silence.
+
+**Readability was measured, not eyeballed.** Against `--plate`, `--ink-soft`
+was 4.24:1 where body text needs 4.5 and `--ink-faint` was 2.36:1 where even
+decoration wants 3. Both were darkened until they cleared. The painted stamps
+went from 7.5px to 8.5px, since quiet is the intent and invisible is not, and
+the photo skin's legends from 9.5px to 11px. `--orange` on enamel sits at
+3.15:1, which is why the nameplate is the only place it is used as type: at
+34px it is large text, where 3:1 is the bar.
+
 ---
 
 ## Unresolved — deliberately not implemented

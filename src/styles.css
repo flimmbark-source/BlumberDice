@@ -27,9 +27,9 @@
   --plate-deep: #8d8069;
 
   /* --- ink on the faceplate -------------------------------------------- */
-  --ink: #3a332a;
-  --ink-soft: #6f6555;
-  --ink-faint: #9a8f7b;
+  --ink: #3a332a;        /* 9.2:1 on --plate */
+  --ink-soft: #6b6152;   /* 4.5:1  — the floor for body text */
+  --ink-faint: #827867;  /* 3.2:1  — paint, but paint you can still read */
 
   /* --- phosphor screens ------------------------------------------------- */
   --screen: #1a2b21;
@@ -304,7 +304,7 @@ button:disabled { cursor: default; }
   font: 700 9px/1 var(--font-mono);
   letter-spacing: 0.23em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
 }
 
 /* --- view selector -------------------------------------------------------- */
@@ -625,6 +625,30 @@ button:disabled { cursor: default; }
   height: 1px;
   overflow: visible;
   animation: entropyAttack 3600ms cubic-bezier(0.22, 0.68, 0.24, 1) forwards;
+
+  /* Entropy usually drains, so the projectile is red by default. A step is
+     signed, though, and a positive one gives Score back -- so the whole
+     particle, wake, burst and figure included, is written against these and
+     flips together rather than in pieces. */
+  --ent-core: #f25f58;
+  --ent-glow: 242, 95, 88;
+  --ent-wake: 255, 145, 138;
+  --ent-burst: #ffb09a;
+  --ent-fleck-hi: #ffcfb8;
+  --ent-fleck-lo: #ff8b73;
+  --ent-figure: var(--risk);
+  --ent-figure-glow: 226, 86, 58;
+}
+/* A step that restores Score is the same event running the other way. */
+.entropy__projectile--gain {
+  --ent-core: #79d66a;
+  --ent-glow: 121, 214, 106;
+  --ent-wake: 168, 236, 152;
+  --ent-burst: #b6eea4;
+  --ent-fleck-hi: #d8f7cc;
+  --ent-fleck-lo: #7fc96e;
+  --ent-figure: #8ee07a;
+  --ent-figure-glow: 121, 214, 106;
 }
 .entropy__dot {
   position: absolute;
@@ -633,8 +657,10 @@ button:disabled { cursor: default; }
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #f25f58;
-  box-shadow: 0 0 5px rgba(242, 95, 88, 0.95), 0 0 10px rgba(242, 95, 88, 0.42);
+  background: var(--ent-core);
+  box-shadow:
+    0 0 5px rgba(var(--ent-glow), 0.95),
+    0 0 10px rgba(var(--ent-glow), 0.42);
 }
 .entropy__projectile:not(.entropy__projectile--blocked) .entropy__dot {
   animation: entropyDotImpact 3600ms linear forwards;
@@ -650,9 +676,9 @@ button:disabled { cursor: default; }
   transform: rotate(var(--entropy-angle));
   border-radius: 999px;
   background: linear-gradient(90deg,
-    rgba(255, 145, 138, 0),
-    rgba(255, 145, 138, 0.18) 30%,
-    rgba(255, 145, 138, 0.72) 100%);
+    rgba(var(--ent-wake), 0),
+    rgba(var(--ent-wake), 0.18) 30%,
+    rgba(var(--ent-wake), 0.72) 100%);
   filter: blur(0.2px);
 }
 .entropy__projectile--blocked .entropy__dot::after {
@@ -672,10 +698,10 @@ button:disabled { cursor: default; }
   height: 4px;
   border-radius: 50%;
   opacity: 0;
-  background: #ffb09a;
+  background: var(--ent-burst);
   box-shadow:
-    0 0 0 0 rgba(255, 115, 90, 0.65),
-    0 0 10px rgba(255, 88, 62, 0.8);
+    0 0 0 0 rgba(var(--ent-glow), 0.65),
+    0 0 10px rgba(var(--ent-glow), 0.8);
   animation: entropyBurst 3600ms ease-out forwards;
 }
 .entropy__burst::before,
@@ -688,12 +714,12 @@ button:disabled { cursor: default; }
   height: 2px;
   border-radius: 50%;
   box-shadow:
-    0 -8px 0 -1px #ffcfb8,
-    7px -5px 0 -1px #ff8b73,
-    8px 3px 0 -1px #ffd4c3,
-    3px 8px 0 -1px #ff8b73,
-    -6px 6px 0 -1px #ffc3ad,
-    -8px -2px 0 -1px #ff8b73;
+    0 -8px 0 -1px var(--ent-fleck-hi),
+    7px -5px 0 -1px var(--ent-fleck-lo),
+    8px 3px 0 -1px var(--ent-fleck-hi),
+    3px 8px 0 -1px var(--ent-fleck-lo),
+    -6px 6px 0 -1px var(--ent-fleck-hi),
+    -8px -2px 0 -1px var(--ent-fleck-lo);
 }
 .entropy__burst::after {
   transform: rotate(28deg);
@@ -708,9 +734,9 @@ button:disabled { cursor: default; }
   font-size: 22px;
   font-weight: 800;
   line-height: 1;
-  color: var(--risk);
+  color: var(--ent-figure);
   white-space: nowrap;
-  text-shadow: 0 0 9px rgba(226, 86, 58, 0.9);
+  text-shadow: 0 0 9px rgba(var(--ent-figure-glow), 0.9);
   opacity: 0;
   animation: entropyMinusOne 3600ms ease-out forwards;
 }
@@ -863,9 +889,9 @@ button:disabled { cursor: default; }
   gap: 2px;
   padding-bottom: 2px;
   font-family: var(--font-mono);
-  font-size: 7.5px;
+  font-size: 8.5px;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-faint);
   white-space: nowrap;
@@ -1284,10 +1310,10 @@ button:disabled { cursor: default; }
   flex: 1;
   min-width: 0;
   font-family: var(--font-mono);
-  font-size: 7.5px;
+  font-size: 8.5px;
   font-weight: 700;
-  line-height: 1.35;
-  letter-spacing: 0.17em;
+  line-height: 1.4;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 .fixed-panel__mark { flex: none; opacity: 0.55; }
@@ -2908,7 +2934,7 @@ body:has(.app--photo)::before { display: none; }
   width: 6px; height: 6px;
   box-shadow: 0 0 5px rgba(208, 83, 29, 0.8);
 }
-.app--photo .fixed-panel__title { font-size: 9.5px; color: #93a98c; text-shadow: none; }
+.app--photo .fixed-panel__title { font-size: 11px; color: #b6c9ac; text-shadow: none; }
 .app--photo .fixed-panel__glyph { width: 12px; height: 12px; }
 .app--photo .fixed-panel__body {
   flex: 1 1 auto;
@@ -3026,3 +3052,75 @@ body:has(.app--photo)::before { display: none; }
   left: 35.41%; top: 74%;
   z-index: 40;
 }
+
+
+/* ------------------------------------------------- changing the channel */
+/*
+ * A tube does not cut between pictures: the beam collapses, the new frame
+ * strikes bright, and it settles. The overlay is keyed on the channel count
+ * in App, so it remounts and replays even when the same channel is picked
+ * twice -- a selector you can hear moving but not see is worse than one you
+ * cannot hear at all.
+ */
+.crt-restrike {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  transform-origin: center;
+  animation: crtRestrike 320ms steps(1, end) forwards;
+}
+@keyframes crtRestrike {
+  /* collapse */
+  0%   { background: rgba(214, 240, 208, 0.16); opacity: 1; transform: scaleY(0.04); }
+  9%   { background: rgba(232, 248, 226, 0.5);  opacity: 1; transform: scaleY(0.02); }
+  /* strike */
+  16%  { background: rgba(232, 248, 226, 0.34); opacity: 1; transform: scaleY(0.9); }
+  26%  { background: rgba(160, 220, 170, 0.12); opacity: 1; transform: scaleY(1.03); }
+  /* settle: two shallow beats, then gone */
+  40%  { background: rgba(160, 220, 170, 0.1);  opacity: 1; transform: scaleY(1); }
+  56%  { background: rgba(0, 0, 0, 0.26);       opacity: 1; transform: scaleY(1); }
+  72%  { background: rgba(160, 220, 170, 0.06); opacity: 1; transform: scaleY(1); }
+  100% { background: rgba(0, 0, 0, 0);          opacity: 0; transform: scaleY(1); }
+}
+/* The content behind it takes the same jolt, so the picture moves rather
+   than a grey sheet passing over a still one. */
+.fixed-panel__body:has(.crt-restrike) > *:not(.crt-restrike) {
+  animation: crtContent 320ms steps(1, end);
+}
+@keyframes crtContent {
+  0%, 14% { opacity: 0; transform: scaleY(0.05); filter: brightness(2.6); }
+  15%     { opacity: 1; transform: scaleY(0.96); filter: brightness(2.2); }
+  28%     { opacity: 1; transform: scaleY(1.02); filter: brightness(1.25); }
+  56%     { opacity: 0.86; filter: brightness(0.82); }
+  100%    { opacity: 1; transform: scaleY(1); filter: none; }
+}
+/* A tube restriking is a brightness flash across a whole panel, which is
+   exactly the kind of motion the setting exists to stop. */
+@media (prefers-reduced-motion: reduce) {
+  .crt-restrike { display: none; }
+  .fixed-panel__body:has(.crt-restrike) > *:not(.crt-restrike) { animation: none; }
+}
+
+/* ------------------------------------- the photo skin keeps its own badge */
+/*
+ * The photograph's nameplate has been cleaned off the asset, so the plate is
+ * blank enamel and the app prints its own name on it -- the same nameplate
+ * the drawn chassis uses, sized to the hole it now sits in.
+ */
+.app--photo .brand {
+  display: flex;
+  position: absolute;
+  left: 2.39%;
+  top: 1.28%;
+  width: 27.27%;
+  height: 11.48%;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0;
+  pointer-events: none;
+}
+.app--photo .brand__mark { width: 38px; height: 38px; }
+.app--photo .brand__word { font-size: 30px; }
+.app--photo .brand__word::after { margin-top: 5px; font-size: 8.5px; }
