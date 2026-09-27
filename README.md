@@ -225,7 +225,7 @@ effect**, sometimes with a probability or a duration attached. The conditions
 come from a small closed set (eleven pattern shapes, five face sets, three
 Score thresholds, two chance gates, the switch, a counter) and so do the
 effects (a payout, a bonus roll, a weight change, a multiplier, a
-substitution, storage, a counter tick). Fifty-four nodes, one grammar.
+substitution, storage, a counter tick). Fifty-six nodes, one grammar.
 
 `src/engine/notation.ts` is that grammar, and `src/ui/Notation.tsx` draws it.
 A node's `notation` is one or two rows of tokens — die faces, a blank die for
@@ -407,7 +407,7 @@ automation, and it is why the player can set a *default* per mechanic — take t
 higher of two dice, or the lower. That setting is the shortest expression of
 what the player currently thinks a roll is for.
 
-54 nodes — 20 small, 20 notable, 8 bridge, 6 keystone. Prerequisites are OR, so
+56 nodes — 22 small, 20 notable, 8 bridge, 6 keystone. Prerequisites are OR, so
 most deep nodes have several routes in. Build identity is carried by shape, size
 and connection structure; there are no branch labels.
 
