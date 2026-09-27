@@ -16,10 +16,10 @@ function rollToPrompt(s: GameState): void {
 }
 
 describe('Entropy timing', () => {
-  it('ticks every 2.5 seconds', () => {
+  it('ticks every second', () => {
     const s = makeBuild({ seed: 1, startingScore: 100 });
     const before = s.score;
-    tick(s, 2499);
+    tick(s, 999);
     expect(s.score).toBe(before);
     tick(s, 1);
     expect(s.score).toBe(before - CONFIG.entropyPerTick);
@@ -30,8 +30,11 @@ describe('Entropy timing', () => {
     s.pinned = 'hr_edge';
     s.pinnedReached = true;
     tick(s, CONFIG.entropyIntervalMs);
+    expect(s.score).toBe(46);
+    expect(s.entropyLog.at(-1)).toMatchObject({ amount: -1 });
+    tick(s, CONFIG.entropyIntervalMs);
     expect(s.score).toBe(45);
-    expect(s.entropyLog.at(-1)).toMatchObject({ amount: -2, blocked: true });
+    expect(s.entropyLog.at(-1)).toMatchObject({ amount: -1, blocked: true });
     tick(s, CONFIG.entropyIntervalMs);
     expect(s.score).toBe(45);
     expect(s.entropyLog.at(-1)).toMatchObject({ amount: 0, blocked: true });
@@ -42,7 +45,7 @@ describe('Entropy timing', () => {
     s.pinned = 'hr_edge';
     s.pinnedReached = false;
     tick(s, CONFIG.entropyIntervalMs);
-    expect(s.score).toBe(38);
+    expect(s.score).toBe(43);
   });
 });
 
