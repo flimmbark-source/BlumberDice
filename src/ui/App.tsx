@@ -391,6 +391,8 @@ type EntropyProjectile = {
   y: number;
   hitX: number;
   hitY: number;
+  impactX: number;
+  impactY: number;
   bounceX: number;
   bounceY: number;
   farX: number;
@@ -418,6 +420,11 @@ function randomEntropyProjectile(tick: EntropyTick): EntropyProjectile {
   const x = hitX + dx * launchGap;
   const y = hitY + dy * launchGap;
 
+  // Unshielded attacks penetrate into the Score glass before terminating,
+  // rather than exploding immediately on the outer edge.
+  const impactX = hitX * 0.38;
+  const impactY = hitY * 0.38;
+
   // Shielded attacks reverse away from the exact collision point instead of
   // travelling through the field to the middle before changing direction.
   const bounceX = hitX + dx * 20;
@@ -426,7 +433,7 @@ function randomEntropyProjectile(tick: EntropyTick): EntropyProjectile {
   const farY = hitY + dy * 54;
 
   return {
-    tick, x, y, hitX, hitY, bounceX, bounceY, farX, farY,
+    tick, x, y, hitX, hitY, impactX, impactY, bounceX, bounceY, farX, farY,
     angle: Math.atan2(dy, dx),
   };
 }
@@ -471,6 +478,8 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
             ['--entropy-y' as string]: `${p.y}px`,
             ['--entropy-hit-x' as string]: `${p.hitX}px`,
             ['--entropy-hit-y' as string]: `${p.hitY}px`,
+            ['--entropy-impact-x' as string]: `${p.impactX}px`,
+            ['--entropy-impact-y' as string]: `${p.impactY}px`,
             ['--entropy-bounce-x' as string]: `${p.bounceX}px`,
             ['--entropy-bounce-y' as string]: `${p.bounceY}px`,
             ['--entropy-far-x' as string]: `${p.farX}px`,
