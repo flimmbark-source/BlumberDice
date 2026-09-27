@@ -4,7 +4,10 @@ import {
   add, depthOf, dot, ISO_X, ISO_Y, normalize, project, qRotate, scale, v3,
   VIEW_DIR, type Vec2, type Vec3,
 } from './math3d.ts';
-import { DIE, DIE_HALF as H, type DieBody, type ResultGhost, type World } from './physics.ts';
+import {
+  DIE, DIE_HALF as H, ZAP_HOLD_MS, ZAP_TOTAL_MS,
+  type DieBody, type ResultGhost, type World,
+} from './physics.ts';
 
 /** Isometric painting for the dice tray. Reads the world, never changes it. */
 
@@ -568,6 +571,77 @@ function drawDetachedGhost(
   );
 }
 
+// ---------------------------------------------------------------------------
+// The destruct beam
+// ---------------------------------------------------------------------------
+
+/**
+ * The machine's own red, and the only red on the screen.
+ *
+ * Deliberately not a theme colour: the beam means the same thing under either
+ * framework, and reading as "this is being destroyed" matters more than
+ * matching the phosphor it happens in front of.
+ */
+const ZAP_CORE = '255, 238, 226';
+const ZAP_EDGE = '236, 62, 32';
+
+/**
+ * A bonus die running out of time, drawn as the thing that kills it.
+ *
+ * The beam is struck in world space along z, which under this projection is
+ * straight up the screen -- so it falls vertically however the arena is
+ * panned or zoomed, the way a beam from directly above should. What it leaves
+ * behind is a ring on the ground plane, which is a circle in the world and so
+ * an ellipse on the screen without any of it being faked.
+ */
+function drawZap(c: CanvasRenderingContext2D, die: DieBody, t: number): void {
+  if (die.zapAt === null) return;
+  const age = t - die.zapAt;
+  if (age < 0 || age > ZAP_TOTAL_MS) return;
+
+  const foot = project(v3(die.pos.x, die.pos.y, 0));
+  const head = project(v3(die.pos.x, die.pos.y, DIE * 16));
+
+  // Full width for the strike, then narrowing to nothing as it lifts.
+  const strike = Math.min(1, age / 55);
+  const decay = age <= ZAP_HOLD_MS ? 1 : 1 - (age - ZAP_HOLD_MS) / (ZAP_TOTAL_MS - ZAP_HOLD_MS);
+  const width = DIE * 0.5 * strike * decay;
+  if (width <= 0.01) return;
+
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+
+  // The column: a bloom either side of a hot core.
+  const bloom = c.createLinearGradient(foot.x - width * 2.4, 0, foot.x + width * 2.4, 0);
+  bloom.addColorStop(0, `rgba(${ZAP_EDGE}, 0)`);
+  bloom.addColorStop(0.5, `rgba(${ZAP_EDGE}, ${0.5 * decay})`);
+  bloom.addColorStop(1, `rgba(${ZAP_EDGE}, 0)`);
+  c.fillStyle = bloom;
+  c.fillRect(foot.x - width * 2.4, head.y, width * 4.8, foot.y - head.y);
+
+  c.fillStyle = `rgba(${ZAP_CORE}, ${0.95 * decay})`;
+  c.fillRect(foot.x - width * 0.34, head.y, width * 0.68, foot.y - head.y);
+
+  // The flash where it lands, and the ring it pushes out along the ground.
+  const flash = c.createRadialGradient(foot.x, foot.y, 0, foot.x, foot.y, DIE * 1.5 * decay);
+  flash.addColorStop(0, `rgba(${ZAP_CORE}, ${0.9 * decay})`);
+  flash.addColorStop(0.4, `rgba(${ZAP_EDGE}, ${0.55 * decay})`);
+  flash.addColorStop(1, `rgba(${ZAP_EDGE}, 0)`);
+  c.fillStyle = flash;
+  c.beginPath();
+  c.arc(foot.x, foot.y, DIE * 1.5 * decay, 0, Math.PI * 2);
+  c.fill();
+
+  const spread = age / ZAP_TOTAL_MS;
+  c.strokeStyle = `rgba(${ZAP_EDGE}, ${0.75 * (1 - spread)})`;
+  c.lineWidth = 2.4 * (1 - spread);
+  c.beginPath();
+  ringPath(c, die.pos.x, die.pos.y, DIE * (0.35 + spread * 1.9));
+  c.stroke();
+
+  c.restore();
+}
+
 /**
  * Everything that stands on the ground, but not the ground itself.
  *
@@ -596,6 +670,9 @@ export function drawWorld(c: CanvasRenderingContext2D, world: World, theme: Them
   for (const die of order) drawDie(c, die, theme);
   for (const ghost of world.ghosts) drawDetachedGhost(c, ghost, theme, world.t);
   for (const die of order) drawGhost(c, die, theme, world.t);
+  // Last, and additively: the beam is light, and light is in front of what
+  // it is destroying.
+  for (const die of world.dice) drawZap(c, die, world.t);
 }
 
 /**

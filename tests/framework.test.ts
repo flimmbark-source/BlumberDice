@@ -78,14 +78,16 @@ describe('Framework B', () => {
     }
   });
 
-  it('floors Score at zero and keeps granting Meta below the floor', () => {
+  it('spends Score it does not have, and keeps granting Meta below zero', () => {
+    // B has no floor: the debt is real, and Entropy is what climbs back out
+    // of it. See tests/entropy.test.ts.
     const s = makeBuild({ framework: 'B', startingScore: 4 });
     resolveFace(s, 6);
-    expect(s.score).toBe(0);
+    expect(s.score).toBe(-2);
     expect(s.meta).toBe(1);
 
     resolveFace(s, 6);
-    expect(s.score).toBe(0);
+    expect(s.score).toBe(-8);
     expect(s.meta).toBe(2);
   });
 
@@ -110,11 +112,12 @@ describe('Framework B', () => {
   it('lets the player return to Framework A and earn Score again', () => {
     const s = makeBuild({ framework: 'B', startingScore: 2 });
     resolveFace(s, 6);
-    expect(s.score).toBe(0);
+    expect(s.score).toBe(-4);
     switchFramework(s);
     expect(s.framework).toBe('A');
+    // A pays into the debt first, rather than starting again from zero.
     resolveFace(s, 5);
-    expect(s.score).toBe(5);
+    expect(s.score).toBe(1);
   });
 
   it('never grants Meta scaled by the rolled value, in any build', () => {

@@ -111,6 +111,12 @@ export interface DieBody {
 
   alpha: number;
   retiring: boolean;
+  /**
+   * World time the destruct beam struck, or null. A zapped die is on its way
+   * out: it stops being thrown, stops being reused, and burns off far faster
+   * than a die that is merely being cleared away.
+   */
+  zapAt: number | null;
   hover: boolean;
   /** Landing rings, drawn on the surface. */
   impacts: { t: number; strength: number; x: number; y: number }[];
@@ -212,6 +218,7 @@ export function spawnDie(
     alignMs: ALIGN_MIN_MS,
     alpha: opts.dropped ? 0 : 1,
     retiring: false,
+    zapAt: null,
     hover: false,
     impacts: [],
     ghostLife: 1400,
@@ -278,6 +285,46 @@ function detachReveal(world: World, die: DieBody): void {
 
 export function retireDie(die: DieBody): void {
   die.retiring = true;
+}
+
+/** How long a zapped die stays lit under the beam before it goes out. */
+export const ZAP_HOLD_MS = 150;
+/** The whole strike, beam and shockwave included. */
+export const ZAP_TOTAL_MS = 420;
+
+/**
+ * Destroys a die where it lies.
+ *
+ * Called when a bonus die runs out of time, which the engine allows to happen
+ * mid-throw -- so this has to cope with a die that is still tumbling and may
+ * still owe the HUD a reveal. It gives that reveal up immediately: the Score
+ * was credited when the engine resolved the roll, and the withholding is only
+ * there to keep the counter in step with a number that is about to stop
+ * existing.
+ */
+export function zapDie(world: World, die: DieBody): void {
+  if (die.zapAt !== null) return;
+  die.zapAt = world.t;
+  die.retiring = true;
+  die.rollId = null;
+  die.heldScore = 0;
+  die.heldMeta = 0;
+  die.procs = [];
+  world.shake = Math.max(world.shake, 9);
+}
+
+/**
+ * The die a destruct beam should take: the one that has been standing idle
+ * longest, and only a tumbling one if nothing is standing still. A bonus die
+ * is an extra on the surface, so the extras go first.
+ */
+export function zapTarget(world: World): DieBody | null {
+  const live = world.dice.filter((die) => die.zapAt === null && !die.retiring);
+  if (live.length === 0) return null;
+  const resting = live
+    .filter((die) => die.state === 'rest' || die.state === 'idle')
+    .sort((a, b) => a.settledAt - b.settledAt);
+  return resting[0] ?? live[live.length - 1];
 }
 
 export function nudgeDie(die: DieBody): void {
@@ -447,7 +494,14 @@ export function step(world: World, dtMs: number): void {
 
   for (const die of world.dice) {
     if (die.alpha < 1 && !die.retiring) die.alpha = Math.min(1, die.alpha + dt * 5);
-    if (die.retiring) die.alpha = Math.max(0, die.alpha - dt * 2.6);
+    // A zapped die holds full brightness under the beam and then goes out at
+    // once, rather than drifting off the way a swept-up die does.
+    if (die.zapAt !== null) {
+      const since = world.t - die.zapAt;
+      die.alpha = since < ZAP_HOLD_MS ? 1 : Math.max(0, die.alpha - dt * 9);
+    } else if (die.retiring) {
+      die.alpha = Math.max(0, die.alpha - dt * 2.6);
+    }
     for (const im of die.impacts) im.t += dtMs;
     die.impacts = die.impacts.filter((im) => im.t < 520);
 
@@ -604,7 +658,8 @@ export function planThrow(world: World, count: number, max = 9): {
   retire: DieBody[];
 } {
   const settled = world.dice.filter(
-    (die) => !die.retiring && (die.state === 'rest' || die.state === 'idle'),
+    (die) => !die.retiring && die.zapAt === null
+      && (die.state === 'rest' || die.state === 'idle'),
   );
   const spent = settled.filter((die) => !owesReveal(die));
   const showing = settled.filter(owesReveal);
@@ -644,7 +699,7 @@ export function planThrow(world: World, count: number, max = 9): {
  */
 export function sweepSpent(world: World, keep: number, graceMs = 700): void {
   const idle = world.dice.filter(
-    (die) => !die.retiring && die.state === 'rest' && !owesReveal(die),
+    (die) => !die.retiring && die.zapAt === null && die.state === 'rest' && !owesReveal(die),
   );
   if (idle.length <= keep) return;
   // Newest last, so the ones kept are the ones just thrown.

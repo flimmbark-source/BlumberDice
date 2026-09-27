@@ -346,6 +346,53 @@ and still touched: controls grow to finger size under `(pointer: coarse)`,
 and the prompts stop naming keys that are not there — `ui/pointer.ts` is
 what lets the die say *tap* and the switch stop offering a Space bar.
 
+### Entropy
+
+A constant pull toward zero Score: `CONFIG.entropyPerSecond` (6) applied once
+a second, in `tick`. It is one rule rather than two — Score moves *toward*
+zero, so it drains a positive balance and restores a negative one at the same
+rate, and the last step in either direction is short rather than overshooting,
+so zero is a resting point.
+
+Framework B is what lets Score go under. It no longer floors at zero: a roll
+in B costs its face whether or not the Score is there, and Entropy is what
+climbs back out afterwards. That makes Entropy a stabiliser rather than a
+pure tax — it is the only force in the game that pushes in both directions.
+
+Each step is recorded in `entropyLog` and floated off the Score readout by the
+HUD, the way a result floats off a die. A Score under zero turns the readout
+red; falling merely dims it, because with Entropy pulling every second a
+red-while-falling readout would be red almost always and stop meaning
+anything.
+
+Entropy steps are **not** logged one a second — that would bury everything
+else the log is for. A change of direction is logged once, when it turns.
+
+### The log mirrors the dice
+
+Every proc handed to the tray is written to the log in the same place, from
+the same array, in `completeRoll`. Nothing can be shown at a die without also
+being recorded, because it is one loop over `intent.procs` rather than a
+`log()` call remembered at each of nineteen sites.
+
+The log keeps 240 lines for this. A cascading build throws dozens of procs
+from a single click, and at the old depth of 60 a couple of clicks pushed the
+whole of the previous minute out of the panel.
+
+### Bonus dice are destroyed, not forgotten
+
+A bonus die runs on its own clock and, when that clock runs out, is destroyed
+where it lies — mid-throw or not. The engine counts the lapses in
+`bonusLapses`; the tray diffs that count and fires one destruct beam per die,
+drawn in `render.ts`. The beam is struck along world z, which under this
+projection is straight up the screen, so it falls vertically however the arena
+is panned or zoomed.
+
+The tray also keeps the surface populated up to `effectiveDice`, not just
+trimmed down to it. A bonus roll puts a die on the clock the moment it is
+granted, so one appears to roll alongside yours — which is also what the beam
+has to take when that clock runs out.
+
 ### The roll pipeline
 
 `generate → loadedChoice → hold → flip → finalize → ride`

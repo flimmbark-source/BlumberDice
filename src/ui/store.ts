@@ -71,9 +71,15 @@ class GameStore {
 
   private step(dt: number, now: number): void {
     const s = this.state;
-    // Bonus dice run on a clock of their own, so the loop has to keep
-    // turning for them even when nothing is rolling and the cooldown is up.
-    if (s.pending.length > 0 || s.cooldownRemaining > 0 || s.bonusDice.length > 0) {
+    // Entropy never stops, so neither does the loop while there is any Score
+    // for it to pull on. Bonus dice and the cooldown also run on clocks of
+    // their own, and all of them need the turn even when nothing is rolling.
+    const live = s.pending.length > 0
+      || s.cooldownRemaining > 0
+      || s.bonusDice.length > 0
+      || s.score !== 0
+      || s.entropyDir !== 0;
+    if (live) {
       tick(s, dt);
       this.notify();
     }

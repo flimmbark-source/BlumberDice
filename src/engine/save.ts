@@ -51,6 +51,11 @@ export function deserialize(raw: string): GameState | null {
     // Pacing state, like the cooldown: a run does not resume mid-window.
     bonusDice: [],
     actionBudget: 0,
+    // Entropy's clock restarts with the session, and its unshown steps are
+    // feedback for a moment that has passed. The Score it already took is in
+    // the number itself and in the run's stats.
+    entropyTimer: fresh.entropyTimer,
+    entropyLog: [],
   };
   merged.allocated = (merged.allocated ?? ['start']).filter((id) => NODES_BY_ID.has(id));
   if (!merged.allocated.includes('start')) merged.allocated.unshift('start');

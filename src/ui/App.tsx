@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   allocatedCost, canRefund, canRoll, canSwitchFramework, CONFIG, displayStats,
-  effectiveDice, getBuild, type GameState,
+  effectiveDice, getBuild, type EntropyTick, type GameState,
 } from '../engine/game.ts';
 import { actions, store, useGame } from './store.ts';
 import { useCountUp } from './useCountUp.ts';
@@ -246,7 +246,7 @@ function TopBar({
           </div>
         )}
         <div className="currencies">
-          <Currency label="Score" value={s.score} />
+          <Currency label="Score" value={s.score} entropy={s.entropyLog} />
           {knowsB && <Currency label="Meta" value={s.meta} alt />}
         </div>
         <div className="gear">
@@ -364,21 +364,79 @@ function GearMark(): JSX.Element {
   );
 }
 
-function Currency({ label, value, alt = false }: { label: string; value: number; alt?: boolean }): JSX.Element {
+function Currency({ label, value, alt = false, entropy }: {
+  label: string;
+  value: number;
+  alt?: boolean;
+  /** Entropy steps to float off this readout. Score only. */
+  entropy?: EntropyTick[];
+}): JSX.Element {
   const { value: shown, moving } = useCountUp(
     value,
     alt ? () => store.heldBack.meta : () => store.heldBack.score,
   );
   const rising = moving && value > shown;
+  // Read off what is on the display rather than off the true total: while the
+  // counter is still easing down through zero, the digits are what is red.
+  const negative = Math.floor(shown) < 0;
+  const state = negative ? ' currency__value--neg'
+    : moving ? (rising ? ' currency__value--up' : ' currency__value--down')
+    : '';
   return (
     <div className={`currency${alt ? ' currency--alt' : ''}`}>
-      <span className={`currency__value${moving ? (rising ? ' currency__value--up' : ' currency__value--down') : ''}`}>
+      <span className={`currency__value${state}`}>
         {Math.floor(shown).toLocaleString()}
       </span>
       <span className="currency__label">{label}</span>
+      {entropy && <EntropyGhosts ticks={entropy} />}
     </div>
   );
 }
+
+/**
+ * Entropy, floated off the Score readout.
+ *
+ * The same idea as the number that lifts off a die: the amount that moved,
+ * shown where it moved from, so the total never changes without saying why.
+ * The engine keeps a short list of steps it has taken; this holds each one on
+ * screen for as long as the animation runs and then forgets it.
+ */
+function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
+  const [shown, setShown] = useState<EntropyTick[]>([]);
+  const seen = useRef(0);
+  // The engine mutates its list in place, so the array's identity never
+  // changes; the id of the newest step is what marks one apart from the next.
+  const newest = ticks.length > 0 ? ticks[ticks.length - 1].id : 0;
+
+  useEffect(() => {
+    if (newest <= seen.current) return;
+    const fresh = ticks.filter((t) => t.id > seen.current);
+    seen.current = newest;
+    setShown((cur) => [...cur, ...fresh]);
+    const ids = new Set(fresh.map((t) => t.id));
+    const timer = setTimeout(
+      () => setShown((cur) => cur.filter((t) => !ids.has(t.id))),
+      ENTROPY_GHOST_MS,
+    );
+    return () => clearTimeout(timer);
+    // `ticks` is read, not depended on: it is the same array every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newest]);
+
+  if (shown.length === 0) return <></>;
+  return (
+    <span className="entropy" aria-hidden>
+      {shown.map((t) => (
+        <span key={t.id} className="entropy__tick">
+          {t.amount < 0 ? t.amount : `+${t.amount}`}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** Kept in step with the `entropyFloat` animation in styles.css. */
+const ENTROPY_GHOST_MS = 1150;
 
 function GamePanel({ s }: { s: GameState }): JSX.Element {
   const build = getBuild(s);
@@ -443,6 +501,8 @@ function DebugPanel({ s }: { s: GameState }): JSX.Element {
         <span>rolls</span><b>{s.totalRolls}</b>
         <span>rng calls</span><b>{s.rng.calls}</b>
         <span>pending</span><b>{s.pending.length}</b>
+        <span>bonus dice</span><b>{s.bonusDice.length}</b>
+        <span>entropy</span><b>{s.entropyDir === 0 ? 'idle' : s.entropyDir < 0 ? 'draining' : 'restoring'}</b>
       </div>
       <div className="debug__row">
         <button type="button" className="chip" onClick={() => store.act((g) => {
@@ -452,9 +512,21 @@ function DebugPanel({ s }: { s: GameState }): JSX.Element {
         <button type="button" className="chip" onClick={() => store.act((g) => { g.meta += 500; })}>+500 Meta</button>
         <button
           type="button" className="chip"
+          onClick={() => store.act((g) => { g.score -= 500; })}
+        >
+          −500 Score
+        </button>
+        <button
+          type="button" className="chip"
           onClick={() => store.act((g) => { if (!g.discovered.includes('frameworkB')) g.discovered.push('frameworkB'); })}
         >
           reveal second framework
+        </button>
+        <button
+          type="button" className="chip"
+          onClick={() => store.act((g) => { g.bonusDice.push(CONFIG.bonusDieMs); })}
+        >
+          +1 bonus die
         </button>
         <button type="button" className="chip" onClick={() => store.fastForward(100)}>+100 rolls</button>
         <button type="button" className="chip" onClick={() => store.reset()}>hard reset</button>

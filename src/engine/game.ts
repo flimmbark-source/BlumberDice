@@ -39,6 +39,17 @@ export const CONFIG = {
   /** How long a die left behind by a bonus roll keeps rolling with you. */
   bonusDieMs: 5000,
   /**
+   * Entropy: the machine's pull toward zero Score.
+   *
+   * It is one direction, not two rules -- it always moves Score toward 0, so
+   * it drains a positive balance and restores a negative one at the same
+   * rate. Framework B is what lets Score go under; this is what brings it
+   * back. Both numbers are here rather than inline so the whole force is one
+   * knob to turn.
+   */
+  entropyPerSecond: 6,
+  entropyIntervalMs: 1000,
+  /**
    * Ceiling on those dice. Each one rolls, each roll can grant another bonus
    * roll, so without a cap the loop feeds itself; this also keeps a click
    * inside what the tray can show.
@@ -137,6 +148,18 @@ export interface RollRecord {
   procs?: RollProc[];
 }
 
+/**
+ * One step of Entropy, for the presentation layer.
+ *
+ * The HUD floats each of these off the Score readout the way the tray floats
+ * a result off a die: the number that moved, where it moved from.
+ */
+export interface EntropyTick {
+  id: number;
+  /** Signed: negative while draining, positive while restoring. */
+  amount: number;
+}
+
 export interface LogEntry {
   id: number;
   text: string;
@@ -152,6 +175,11 @@ export interface RunStats {
   scoreLost: number;
   metaEarned: number;
   jackpots: number;
+  /** Score Entropy has taken, and Score it has handed back. */
+  entropyDrained: number;
+  entropyRestored: number;
+  /** Bonus dice the clock destroyed before they could be thrown. */
+  bonusLapsed: number;
   faceCounts: Record<Face, number>;
   patternCounts: Partial<Record<PatternName, number>>;
   switches: number;
@@ -198,6 +226,12 @@ export interface GameState {
    * alongside yours until they lapse, and rolling does not extend them.
    */
   bonusDice: number[];
+  /**
+   * Bonus dice the clock has destroyed, counted rather than listed: the tray
+   * only needs to know how many went since it last looked, so it can zap that
+   * many. Monotonic for the life of a run.
+   */
+  bonusLapses: number;
   resolveTimer: number;
   pending: RollIntent[];
   decision: Decision | null;
@@ -215,6 +249,15 @@ export interface GameState {
   awaitingReflection: boolean;
   pendulumRollsLeft: number;
   pendulumPayout: number;
+
+  // Entropy
+  /** Milliseconds until the next Entropy step. */
+  entropyTimer: number;
+  /** Which way Entropy last pulled, so a reversal is announced once. */
+  entropyDir: -1 | 0 | 1;
+  /** Steps the HUD has still to float. Capped; purely for feedback. */
+  entropyLog: EntropyTick[];
+  nextEntropyId: number;
 
   policies: DecisionPolicy;
   log: LogEntry[];
@@ -246,6 +289,7 @@ export function createGame(seed = 0x5eed1e): GameState {
     storeNext: false,
     cooldownRemaining: 0,
     bonusDice: [],
+    bonusLapses: 0,
     resolveTimer: 0,
     pending: [],
     decision: null,
@@ -258,6 +302,10 @@ export function createGame(seed = 0x5eed1e): GameState {
     awaitingReflection: false,
     pendulumRollsLeft: 0,
     pendulumPayout: 0,
+    entropyTimer: CONFIG.entropyIntervalMs,
+    entropyDir: 0,
+    entropyLog: [],
+    nextEntropyId: 1,
     policies: { loadedChoice: 'ask', hold: 'ask', flip: 'ask', letItRide: 'ask' },
     log: [],
     nextLogId: 1,
@@ -265,6 +313,7 @@ export function createGame(seed = 0x5eed1e): GameState {
     stats: {
       rollsA: 0, rollsB: 0, manualRolls: 0, bonusRolls: 0,
       scoreEarned: 0, scoreLost: 0, metaEarned: 0, jackpots: 0,
+      entropyDrained: 0, entropyRestored: 0, bonusLapsed: 0,
       faceCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
       patternCounts: {},
       switches: 0,
@@ -397,9 +446,38 @@ function collectWeightPush(s: GameState, build: ResolvedBuild): Partial<Record<F
 // Logging
 // ---------------------------------------------------------------------------
 
+/**
+ * How many lines the log keeps.
+ *
+ * Deeper than it looks like it needs to be, because every event shown at a
+ * die is written here too: a cascading build throws dozens of procs from a
+ * single click, and at the old depth of 60 a couple of clicks would push the
+ * whole of the previous minute out of the panel.
+ */
+const LOG_DEPTH = 240;
+
 function log(s: GameState, kind: LogEntry['kind'], text: string): void {
   s.log.push({ id: s.nextLogId++, kind, text });
-  if (s.log.length > 60) s.log.splice(0, s.log.length - 60);
+  if (s.log.length > LOG_DEPTH) s.log.splice(0, s.log.length - LOG_DEPTH);
+}
+
+/** Which colour a proc's log line takes, from the kind the die drew it in. */
+const LOG_KIND_FOR_PROC: Record<RollProc['kind'], LogEntry['kind']> = {
+  jackpot: 'jackpot',
+  pattern: 'pattern',
+  bonus: 'bonus',
+  ability: 'system',
+};
+
+/**
+ * A proc as one line of log.
+ *
+ * The die shouts its label in caps because it has a moment to be read in; the
+ * log is a list, so the same event is set as a sentence.
+ */
+function procLine(p: RollProc): string {
+  const name = p.label.charAt(0) + p.label.slice(1).toLowerCase();
+  return p.detail ? `${name} ${p.detail}` : name;
 }
 
 // ---------------------------------------------------------------------------
@@ -758,7 +836,6 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
     if (jackpotNow) {
       const won = Math.round(s.riding * CONFIG.letItRideMult);
       grantScore(s, won);
-      log(s, 'jackpot', `Ride paid +${won} Score`);
       intent.procs.push({ kind: 'jackpot', label: 'RIDE HIT', detail: `+${won} Score` });
     } else {
       log(s, 'loss', `Ride lost ${Math.round(s.riding)} Score`);
@@ -804,8 +881,7 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
       const mult = build.flags.has('duality') ? 2 : 1;
       const queued = queueBonusRolls(s, 2 * mult, depth);
       const reward = inA ? `+${60 * mult} Score` : `+${4 * mult} Meta`;
-      if (inA) { grantScore(s, 60 * mult); log(s, 'score', `Reflection ${reward}`); }
-      else { grantMeta(s, 4 * mult); log(s, 'meta', `Reflection ${reward}`); }
+      if (inA) grantScore(s, 60 * mult); else grantMeta(s, 4 * mult);
       intent.procs.push({
         kind: 'ability',
         label: 'REFLECTION',
@@ -822,14 +898,12 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
       const amt = Math.round((s.pendulumPayout / 5) * mult);
       if (amt > 0) {
         grantScore(s, amt);
-        log(s, 'score', `Pendulum +${amt} Score`);
         intent.procs.push({ kind: 'ability', label: 'PENDULUM', detail: `+${amt} Score` });
       }
     } else {
       const amt = Math.round((s.pendulumPayout / 10) * mult);
       if (amt > 0) {
         grantMeta(s, amt);
-        log(s, 'meta', `Pendulum +${amt} Meta`);
         intent.procs.push({ kind: 'ability', label: 'PENDULUM', detail: `+${amt} Meta` });
       }
     }
@@ -871,7 +945,6 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
       s.transient.counters.pressure = 0;
       s.transient.counters.tickets = 0;
       s.stats.jackpots += 1;
-      log(s, 'jackpot', `Jackpot +${Math.round(payout)} Score`);
       intent.procs.push({
         kind: 'jackpot',
         label: 'JACKPOT',
@@ -922,9 +995,10 @@ function finalizeRoll(s: GameState, build: ResolvedBuild, intent: RollIntent): b
     // Framework B: exactly one Meta per resolved roll, independent of value.
     grantMeta(s, 1);
     const loss = face * stats.lossMult;
-    const actual = Math.min(s.score, loss);
-    s.score = Math.max(0, s.score - loss);
-    s.stats.scoreLost += actual;
+    // No floor here. B is allowed to spend Score it does not have, and
+    // Entropy is what climbs back out of the hole afterwards.
+    s.score -= loss;
+    s.stats.scoreLost += loss;
   }
 
   completeRoll(s, build, intent, ctx, hits, rewardMult, stats);
@@ -1007,6 +1081,11 @@ function completeRoll(
   // --- Bookkeeping --------------------------------------------------------
   if (s.transient.flipCooldown > 0) s.transient.flipCooldown -= 1;
   s.lastFace = intent.face!;
+  // The log mirrors the dice, by construction: every proc about to be handed
+  // to the tray is written down here, from the same array, so nothing can be
+  // shown at a die without also being recorded.
+  for (const pr of intent.procs) log(s, LOG_KIND_FOR_PROC[pr.kind], procLine(pr));
+
   s.rollLog.push({
     id: intent.id,
     face: intent.face!,
@@ -1078,13 +1157,71 @@ export function manualRoll(s: GameState): void {
 }
 
 /** Advances real time. `dt` is milliseconds. */
+/**
+ * One step of Entropy: Score moves toward zero, and never past it.
+ *
+ * It is a single rule rather than a drain and a separate refund. Above zero
+ * it takes; below zero -- which only Framework B can reach -- it gives back
+ * the same amount. The last step in either direction is short rather than
+ * overshooting, so Entropy settles exactly on zero and stays there.
+ */
+function applyEntropy(s: GameState): void {
+  const rate = CONFIG.entropyPerSecond;
+  const step = s.score > 0 ? -Math.min(rate, s.score)
+    : s.score < 0 ? Math.min(rate, -s.score)
+    : 0;
+  const dir: -1 | 0 | 1 = step < 0 ? -1 : step > 0 ? 1 : 0;
+
+  // Announced on the turn, not on the tick: a line a second would bury every
+  // other thing the log is for.
+  if (dir !== s.entropyDir) {
+    if (dir === -1) log(s, 'loss', 'Entropy is draining Score.');
+    else if (dir === 1) log(s, 'system', 'Entropy reverses — Score climbing back to 0.');
+    else log(s, 'system', 'Entropy settles at 0.');
+    s.entropyDir = dir;
+  }
+  if (step === 0) return;
+
+  s.score += step;
+  if (step < 0) s.stats.entropyDrained += -step;
+  else s.stats.entropyRestored += step;
+
+  s.entropyLog.push({ id: s.nextEntropyId++, amount: step });
+  if (s.entropyLog.length > 12) s.entropyLog.splice(0, s.entropyLog.length - 12);
+}
+
 export function tick(s: GameState, dt: number): void {
   if (s.cooldownRemaining > 0) s.cooldownRemaining = Math.max(0, s.cooldownRemaining - dt);
   if (s.bonusDice.length > 0) {
     // Each one runs down on its own clock; rolling does not top them up.
     for (let i = 0; i < s.bonusDice.length; i++) s.bonusDice[i] -= dt;
+    const before = s.bonusDice.length;
     s.bonusDice = s.bonusDice.filter((ms) => ms > 0);
+    const lapsed = before - s.bonusDice.length;
+    if (lapsed > 0) {
+      // A die that runs out of time is destroyed where it lies, mid-throw or
+      // not. The tray reads this count and zaps that many.
+      s.bonusLapses += lapsed;
+      s.stats.bonusLapsed += lapsed;
+      log(s, 'loss', lapsed === 1
+        ? 'Bonus die out of time — destroyed'
+        : `${lapsed} bonus dice out of time — destroyed`);
+    }
   }
+
+  // Entropy keeps its own clock and runs through everything: a pending
+  // cascade, an open decision, an idle machine. It is the one thing in here
+  // that is not waiting for the player.
+  s.entropyTimer -= dt;
+  let entropyGuard = 0;
+  while (s.entropyTimer <= 0 && entropyGuard++ < 8) {
+    s.entropyTimer += CONFIG.entropyIntervalMs;
+    applyEntropy(s);
+  }
+  // A tab left in the background can come back owing more steps than the
+  // guard allows; drop the arrears rather than paying them all at once.
+  if (s.entropyTimer <= 0) s.entropyTimer = CONFIG.entropyIntervalMs;
+
   if (s.decision !== null) return;
 
   s.resolveTimer -= dt;
@@ -1177,7 +1314,6 @@ export function resolveDecision(s: GameState, choice: DecisionChoice): void {
         if (s.held.length < Math.floor(displayStats(s, build).holdCapacity)) s.held.push(d.face);
         intent.face = swapped;
         intent.procs.push({ kind: 'ability', label: 'HOLD', detail: `${d.face} → ${swapped}` });
-        log(s, 'system', `Swapped in ${swapped}`);
       }
       intent.stage = 'flip';
       break;

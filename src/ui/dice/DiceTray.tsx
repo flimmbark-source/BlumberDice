@@ -9,7 +9,7 @@ import { ISO_X, ISO_Y, project, v3 } from './math3d.ts';
 import {
   createWorld, dieAt, DIE, nudgeDie, planThrow, releaseFadedGhosts, retireDie, setWorldSize,
   sweepSpent,
-  spawnDie, step, throwDie, type DieBody, type World,
+  spawnDie, step, throwDie, zapDie, zapTarget, type DieBody, type World,
 } from './physics.ts';
 import {
   drawBackdrop, drawProcOverlay, drawSurface, drawWorld, THEME_A, THEME_B,
@@ -56,6 +56,8 @@ export function DiceTray({ s, rollRef }: {
   const wrapRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<World>(createWorld());
   const cursorRef = useRef<number>(0);
+  /** Bonus dice the engine had already destroyed when the tray last looked. */
+  const lapseRef = useRef<number>(0);
   const stateRef = useRef(s);
   stateRef.current = s;
   /** Current surface width, so the frame loop can spot when it must change. */
@@ -164,6 +166,7 @@ export function DiceTray({ s, rollRef }: {
     {
       const existing = stateRef.current.rollLog;
       cursorRef.current = existing.length > 0 ? existing[existing.length - 1].id : 0;
+      lapseRef.current = stateRef.current.bonusLapses;
     }
 
     /** Hands a resolved roll to a die that is waiting for one. */
@@ -211,6 +214,17 @@ export function DiceTray({ s, rollRef }: {
         cursorRef.current = fresh[fresh.length - 1].id;
       }
 
+      // A bonus die that ran out of time is destroyed where it lies, whatever
+      // else is happening on the surface. The engine counts them; the tray
+      // owes one beam each.
+      if (game.bonusLapses > lapseRef.current) {
+        for (let i = lapseRef.current; i < game.bonusLapses; i++) {
+          const doomed = zapTarget(world);
+          if (doomed) zapDie(world, doomed);
+        }
+        lapseRef.current = game.bonusLapses;
+      }
+
       // Re-fit the floor when the dice in play change, not only on resize.
       // Hysteresis, so a die landing and fading does not rescale every frame.
       if (Math.abs(sideFor(neededDice()) - sideRef.current) > DIE * 0.4) resize();
@@ -218,6 +232,25 @@ export function DiceTray({ s, rollRef }: {
       step(world, dt);
       // Keep the surface to what the next throw will actually use.
       sweepSpent(world, effectiveDice(game));
+
+      // And keep it up to that number as well as down to it. A bonus roll
+      // puts a die on the clock the moment it is granted, so one appears on
+      // the surface to roll alongside yours -- which is also what the beam
+      // has to destroy when that clock runs out. Without this the tray only
+      // ever materialised a bonus die when a roll was handed to it, and the
+      // beam had nothing to take but the die the player rolls with.
+      {
+        const want = effectiveDice(game);
+        let live = 0;
+        for (const die of world.dice) if (!die.retiring && die.zapAt === null) live++;
+        while (live < want && world.dice.length < MAX_DICE) {
+          // Thrown, not just placed: the physics only integrates a tumbling
+          // die, so one spawned above the surface and left alone would hang
+          // in the air. It arrives the way every other die does.
+          throwDie(world, spawnDie(world, { dropped: true }), { minTumbleMs: 260 });
+          live++;
+        }
+      }
       // The HUD counts a roll only once its number has faded off the die.
       store.heldBack = releaseFadedGhosts(world);
 

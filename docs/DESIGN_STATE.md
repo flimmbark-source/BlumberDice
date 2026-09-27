@@ -35,6 +35,10 @@ Three labels are used:
 | A pinned goal appears at the bottom of the Build view inside the tech window | `ui/App.tsx`, `ui/GoalBar.tsx` |
 | Tech and Selected Upgrade are movable/minimizable windows; the Dice is a fixed central game area; Align Windows restores the authored side-window layout | `ui/DesktopWindow.tsx`, `ui/App.tsx` |
 | The shell is presentation only: the instrument-faceplate skin changes no rule, no number and no label the game produces | `src/styles.css`, `ui/dice/render.ts` |
+| Entropy pulls Score toward 0 at a fixed rate, draining above it and restoring below it | `engine/game.ts` → `applyEntropy` |
+| Framework B may take Score below 0; Entropy is what brings it back | `engine/game.ts` → `finalizeRoll` |
+| A bonus die that runs out of time is destroyed, even mid-roll | `engine/game.ts` → `tick`, `ui/dice/render.ts` → `drawZap` |
+| Every mechanical event shown at a die is also written to the log | `engine/game.ts` → `completeRoll` |
 
 There is no "correct" framework. Framework A remains fully functional after the
 second framework is found, and the passive web contains no node that is only
@@ -50,6 +54,25 @@ useful in one of them except where its own text says so.
 
 **Implementation detail.** The prototype records that threshold against lifetime `scoreEarned`, rather than current spendable Score, so buying an upgrade cannot make those windows disappear again.
 
+
+### 0b. Entropy's rate
+
+**Why it exists.** The rate was given as 6 Score per second and is implemented
+as stated, behind `CONFIG.entropyPerSecond`.
+
+**What it currently means.** A base build earns about 5 Score per second: one
+die, a 700ms cooldown, an average face of 3.5. Entropy takes 6. A run that
+starts from nothing therefore loses ground faster than it gains it and cannot
+reach the 20 lifetime Score that reveals the tree, so nothing can be bought
+to counter it. The tuning knob is one constant, and the upgrade tree this
+mechanic is waiting on is the intended answer; until then a fresh run is not
+winnable.
+
+**A second consequence.** In Framework B the same rate outruns the loss: B
+costs its face per roll, about 5 per second at base, against Entropy's 6 of
+restoration. Score settles near zero rather than going meaningfully negative,
+so the reversal and the red readout are only reachable with a raised
+`lossMult` or a faster cooldown.
 
 ### 1. Pacing model
 
