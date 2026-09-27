@@ -5,7 +5,7 @@ import type { Face, FrameworkId } from './types.ts';
  *
  * Every node in the web says the same kind of thing: some condition produces
  * some effect, sometimes with a probability or a duration attached. Writing
- * that as one closed grammar rather than 54 sentences means a player can learn
+ * that as one closed grammar rather than 56 sentences means a player can learn
  * the shapes once and then read any node at a glance, and can recognise an
  * archetype across the tree before reading a word — rows of faces are High
  * Roller, roll chips are Volume, sequences are Pattern, substitutions are
