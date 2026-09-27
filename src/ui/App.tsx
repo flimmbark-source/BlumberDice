@@ -493,7 +493,7 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
 }
 
 /** Long enough for approach, impact, and either fade or shield ricochet. */
-const ENTROPY_ATTACK_MS = 2400;
+const ENTROPY_ATTACK_MS = 3600;
 
 function GamePanel({ s }: { s: GameState }): JSX.Element {
   const build = getBuild(s);
