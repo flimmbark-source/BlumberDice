@@ -518,6 +518,42 @@ button:disabled { cursor: default; }
     rgba(255, 145, 138, 0.72) 100%);
   filter: blur(0.2px);
 }
+.entropy__burst {
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  opacity: 0;
+  background: #ffb09a;
+  box-shadow:
+    0 0 0 0 rgba(255, 115, 90, 0.65),
+    0 0 10px rgba(255, 88, 62, 0.8);
+  animation: entropyBurst 2400ms ease-out forwards;
+}
+.entropy__burst::before,
+.entropy__burst::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  box-shadow:
+    0 -8px 0 -1px #ffcfb8,
+    7px -5px 0 -1px #ff8b73,
+    8px 3px 0 -1px #ffd4c3,
+    3px 8px 0 -1px #ff8b73,
+    -6px 6px 0 -1px #ffc3ad,
+    -8px -2px 0 -1px #ff8b73;
+}
+.entropy__burst::after {
+  transform: rotate(28deg);
+  opacity: 0.7;
+}
+
 .entropy__impact {
   position: absolute;
   left: 8px;
@@ -574,6 +610,37 @@ button:disabled { cursor: default; }
   0%, 67% { opacity: 1; }
   73%, 100% { opacity: 0; }
 }
+@keyframes entropyBurst {
+  0%, 66% {
+    opacity: 0;
+    transform: scale(0.2);
+    box-shadow:
+      0 0 0 0 rgba(255, 115, 90, 0.65),
+      0 0 8px rgba(255, 88, 62, 0.5);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow:
+      0 0 0 3px rgba(255, 115, 90, 0.3),
+      0 0 16px rgba(255, 88, 62, 0.95);
+  }
+  76% {
+    opacity: 0.9;
+    transform: scale(2.2);
+    box-shadow:
+      0 0 0 7px rgba(255, 115, 90, 0.08),
+      0 0 20px rgba(255, 88, 62, 0.45);
+  }
+  84%, 100% {
+    opacity: 0;
+    transform: scale(3);
+    box-shadow:
+      0 0 0 11px rgba(255, 115, 90, 0),
+      0 0 0 rgba(255, 88, 62, 0);
+  }
+}
+
 @keyframes entropyMinusOne {
   0%, 66% {
     opacity: 0;
