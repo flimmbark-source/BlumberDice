@@ -434,7 +434,7 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
 }
 
 /** Kept in step with the `entropyFloat` animation in styles.css. */
-const ENTROPY_GHOST_MS = 1150;
+const ENTROPY_GHOST_MS = 1350;
 
 function GamePanel({ s }: { s: GameState }): JSX.Element {
   const build = getBuild(s);
