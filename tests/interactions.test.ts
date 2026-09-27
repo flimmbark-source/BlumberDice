@@ -15,6 +15,17 @@ function rollToPrompt(s: GameState): void {
   drain(s, false);
 }
 
+describe('Entropy timing', () => {
+  it('ticks every 2.5 seconds', () => {
+    const s = makeBuild({ seed: 1, startingScore: 100 });
+    const before = s.score;
+    tick(s, 2499);
+    expect(s.score).toBe(before);
+    tick(s, 1);
+    expect(s.score).toBe(before - CONFIG.entropyPerTick);
+  });
+});
+
 describe('Loaded Choice and Prepared Roll compose', () => {
   it('draws both candidates from inside the window', () => {
     const s = makeBuild({ seed: 11, nodes: ['ct_prepared', 'key_loaded'] });
