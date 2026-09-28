@@ -116,6 +116,91 @@ export function SelectedUpgrade({ s, nodeId, onReveal, embedded = false, withCha
   );
 }
 
+/**
+ * Phone inspector: the same complete mechanical effect, with redundant
+ * representations removed. The tree stays on screen behind it and the
+ * spending controls stay in the same compact sheet, so inspecting a node
+ * never turns into a page-scroll task.
+ */
+export function MobileSelectedUpgrade({ s, nodeId, onClose }: {
+  s: GameState;
+  nodeId: string | null;
+  onClose: () => void;
+}): JSX.Element | null {
+  const node = nodeId ? NODES_BY_ID.get(nodeId) ?? null : null;
+  if (!node) return null;
+
+  const allocated = new Set(s.allocated);
+  const discovered = new Set(s.discovered as DiscoveryFlag[]);
+  const owned = allocated.has(node.id);
+  const check = checkAllocation(node.id, {
+    allocated, discovered, score: s.score, meta: s.meta,
+  });
+  const reachable = node.prerequisites.length === 0
+    || node.prerequisites.some((p) => allocated.has(p));
+  const state: 'owned' | 'available' | 'short' | 'locked' = owned ? 'owned'
+    : check.ok ? 'available'
+    : reachable ? 'short' : 'locked';
+  const isGoal = s.pinned === node.id;
+  const pinnable = canPin(s, node.id);
+
+  return (
+    <aside className="mobile-upgrade" aria-label={`Selected upgrade: ${node.name}`}>
+      <div className="mobile-upgrade__head">
+        <NodeMark type={node.nodeType} region={node.region} size={34} glyph />
+        <div className="mobile-upgrade__identity">
+          <span className="mobile-upgrade__name">{node.name}</span>
+          <span className={`mobile-upgrade__state mobile-upgrade__state--${state}`}>
+            {STATE_LABEL[state]}
+          </span>
+        </div>
+        {!owned && (
+          <button
+            type="button"
+            className={`mobile-upgrade__goal${isGoal ? ' mobile-upgrade__goal--on' : ''}`}
+            aria-label={isGoal ? 'Clear goal' : pinnable ? `Set ${node.name} as goal` : 'Connect this upgrade before setting it as a goal'}
+            disabled={!pinnable && !isGoal}
+            onClick={() => actions.pin(isGoal ? null : node.id)}
+          >
+            {isGoal ? '★' : '☆'}
+          </button>
+        )}
+        <button type="button" className="mobile-upgrade__close" aria-label="Close selected upgrade" onClick={onClose}>
+          ×
+        </button>
+      </div>
+
+      {/* The full authored effect stays visible on phone. We save height by
+          dropping the duplicate notation/chips/chain, not by truncating it. */}
+      <div className="mobile-upgrade__effect">
+        <Prose text={describeNode(node, s.framework)} />
+      </div>
+
+      <div className="mobile-upgrade__footer">
+        <span className="mobile-upgrade__cost" aria-label="Cost">
+          {(node.costs.score ?? 0) > 0 && (
+            <span className="coin coin--score">{(node.costs.score ?? 0).toLocaleString()}</span>
+          )}
+          {(node.costs.meta ?? 0) > 0 && (
+            <span className="coin coin--meta">{(node.costs.meta ?? 0).toLocaleString()}</span>
+          )}
+          {!node.costs.score && !node.costs.meta && <span className="coin">—</span>}
+        </span>
+
+        {state === 'available' && (
+          <button type="button" className="btn btn--primary mobile-upgrade__allocate"
+            onClick={() => actions.allocate(node.id)}>
+            Allocate
+          </button>
+        )}
+        {state === 'locked' && (
+          <span className="mobile-upgrade__note">Connect an adjacent node first.</span>
+        )}
+      </div>
+    </aside>
+  );
+}
+
 const CLASS_LABEL: Record<PassiveNode['nodeType'], string> = {
   small: 'Small node', notable: 'Notable', keystone: 'Keystone', bridge: 'Bridge',
 };
