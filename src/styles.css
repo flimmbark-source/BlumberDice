@@ -2178,6 +2178,8 @@ button.minidie:hover .die__body { stroke: var(--ink-soft); }
 
 /* ========================================================= selected upgrade */
 
+.mobile-upgrade-sheet { display: none; }
+
 .upg { padding: 14px 15px 15px; }
 .upg__head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .upg__nameRow { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -2621,6 +2623,126 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   .app[data-tab='stats'] .panel-rail--right,
   .app[data-tab='log'] .panel-rail--right { display: none; }
 
+  /*
+   * Node inspection is a viewport sheet, not another panel in the page flow.
+   * The complete authored effect is shown; height is saved by removing the
+   * duplicate notation/chips/chain and putting cost + Allocate on one row.
+   */
+  .mobile-upgrade-sheet {
+    display: block;
+    position: fixed;
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    z-index: 95000;
+    max-height: calc(100dvh - 150px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--plate-edge);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(18, 32, 23, 0.985), rgba(9, 19, 13, 0.99));
+    box-shadow:
+      0 0 0 4px var(--plate-lo),
+      0 0 0 5px var(--plate-edge),
+      0 16px 44px rgba(0, 0, 0, 0.68);
+  }
+  .mobile-upgrade {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 11px 11px;
+    color: var(--text);
+  }
+  .mobile-upgrade__head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+  }
+  .mobile-upgrade__identity {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    min-width: 0;
+    flex: 1;
+  }
+  .mobile-upgrade__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 900;
+    color: #eef3e6;
+  }
+  .mobile-upgrade__state {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .mobile-upgrade__state--available { color: var(--good); }
+  .mobile-upgrade__state--short { color: var(--risk); }
+  .mobile-upgrade__state--owned { color: var(--amber); }
+  .mobile-upgrade__goal,
+  .mobile-upgrade__close {
+    flex: none;
+    border: 0;
+    background: transparent;
+    padding: 4px;
+    line-height: 1;
+  }
+  .mobile-upgrade__goal {
+    color: #d4a72c;
+    font-size: 24px;
+  }
+  .mobile-upgrade__goal--on { color: #f2b72f; }
+  .mobile-upgrade__goal:disabled { color: #655f50; opacity: 0.45; }
+  .mobile-upgrade__close {
+    color: var(--muted);
+    font-size: 24px;
+  }
+  .mobile-upgrade__effect .upg__desc {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.38;
+    color: #d0ddc7;
+  }
+  .mobile-upgrade__footer {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 38px;
+    padding-top: 7px;
+    border-top: 1px solid var(--line);
+  }
+  .mobile-upgrade__cost {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .mobile-upgrade__cost .coin { font-size: 18px; }
+  .mobile-upgrade__cost .coin--score::before { font-size: 14px; }
+  .mobile-upgrade__cost .coin--meta::before { font-size: 10px; }
+  .mobile-upgrade__allocate {
+    width: auto;
+    flex: 1 1 auto;
+    margin-left: auto;
+    padding: 8px 14px;
+    font-size: 15px;
+    letter-spacing: 0.12em;
+  }
+  .mobile-upgrade__note {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    color: var(--muted);
+    text-align: right;
+  }
+
   /* Build is tree-only on mobile. Goal belongs to Roll and is rendered
      directly under the chamber/deck instead of inside this rail. */
   .app[data-tab='web'] .panel-rail--left {
@@ -2827,6 +2949,18 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
    room to be hit. Keyed to the pointer, not the width, because a tablet is
    wide and still touched. */
 @media (pointer: coarse) {
+  /* SVG drop-shadows force expensive offscreen filtering on many nodes at
+     once. Shape/stroke/fill already encode every state, so phones keep the
+     information while dropping the GPU-heavy glow layer. */
+  .tree { contain: layout paint; }
+  .tree .node__shape { transition: none; }
+  .tree .node--available .node__shape,
+  .tree .node--allocated .node__shape,
+  .tree .node--pinned .node__shape,
+  .tree .node:focus-visible .node__shape {
+    filter: none;
+  }
+
   .iconbtn { width: 38px; height: 38px; }
   .desktop-window__minimize { width: 34px; height: 34px; font-size: 13px; line-height: 30px; }
   .chip { padding: 8px 12px; }
@@ -3664,6 +3798,18 @@ body:has(.viewport--exiting .app--photo) {
   touch-action: none;
 }
 
+/* Exit is still visually in Roll until the camera is home, but its camera
+   transform must use the shorter return curve rather than the entry curve. */
+.viewport--exiting {
+  transition: transform 1400ms cubic-bezier(0.2, 0, 0.25, 1);
+  transition: transform 1400ms linear(
+    0, -0.004 3%, 0.033 7%, 0.143 15%,
+    0.389 30%, 0.425 32%, 0.503 36%, 0.517 40%,
+    0.645 50%, 0.775 62%, 0.825 66%, 0.839 70%,
+    0.952 85%, 1
+  );
+}
+
 /* The elements that are not part of rolling move past the player rather than
    being scaled together with the dice surface. Transform + opacity stays on
    compositor-friendly properties for phones. */
@@ -3707,6 +3853,20 @@ body:has(.viewport--exiting .app--photo) {
 .viewport--driven .standby,
 .viewport--driven .game__controls {
   pointer-events: none;
+}
+
+/* Returning to Plan is deliberately two-stage: camera first, UI second.
+   The driven class keeps every peripheral hidden for the full exit. When the
+   camera lands, React removes driven and adds this class for one frame so the
+   normal Plan positions are restored instantly rather than animated back in. */
+.viewport--restore-snap .topbar,
+.viewport--restore-snap .panel-rail,
+.viewport--restore-snap .fixed-panel,
+.viewport--restore-snap .face-vent,
+.viewport--restore-snap .standby,
+.viewport--restore-snap .game__controls,
+.viewport--restore-snap .fixed-panel--goal-mobile {
+  transition: none !important;
 }
 
 /* The threshold is visible only while crossing it. The settled Plan UI gets
