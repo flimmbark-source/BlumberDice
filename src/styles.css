@@ -2588,6 +2588,7 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   .tabsx { order: 4; flex: 1 0 100%; gap: 0; padding: 3px; }
   .tab { flex: 1 1 0; min-width: 0; padding: 8px 6px 7px; gap: 4px; font-size: 10px; letter-spacing: 0.1em; }
   .tab--roll { display: flex; }
+  .rollhud .currency__label { display: none; }
   /* Nothing to align: below a desktop the panels are a stack, not a desktop. */
   .window-arrange { display: none; }
 
@@ -2963,25 +2964,10 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   background: var(--chassis) center / 100% 100% no-repeat;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
 }
-/* The photograph normally supplies its own grime, rim and speckle.
-   ::before is reserved as a temporary copy of the chassis during the Roll
-   passage. Unlike the app background, that copy can move in depth without
-   scaling the live dice tray. */
-.app--photo::before {
-  display: block;
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: 0;
-  background: var(--chassis) center / 100% 100% no-repeat;
-  mix-blend-mode: normal;
-  opacity: 0;
-  pointer-events: none;
-  transform-origin: 53.71% 44.32%;
-  transform: translateZ(0) scale(1);
-  will-change: transform, opacity;
-}
+/* The photographed chassis is already the resting shell. During a Roll
+   passage a separate four-piece shell is mounted at viewport level so its
+   CRT opening can remain transparent to the live dice. */
+.app--photo::before,
 .app--photo::after { display: none; }
 body:has(.app--photo) {
   padding: 0;
@@ -3758,29 +3744,61 @@ body:has(.viewport--exiting .app--photo) {
 .viewport--driven .app::after {
   opacity: 0;
 }
-/* The desktop/photo machine is one bitmap, so it needs its own passage
-   layer. The static background is suppressed only while the duplicate shell
-   is crossing the viewer or while Roll is fully open. */
+/* The photo machine is a single bitmap, so desktop needs an actual opening
+   through it. The static app background disappears during passage and a
+   four-piece copy of the chassis takes its place above the live UI. Each
+   piece uses the full photograph as its background but clips away the CRT
+   aperture. Scaling that shell therefore makes the photographed bezel pass
+   the player while the dice remain visible through the hole. */
 .viewport--entering .app--photo,
 .viewport--driven .app--photo,
 .viewport--exiting .app--photo {
   background-image: none;
 }
-.viewport--entering .app--photo::before {
-  animation: photoChassisPassIn 2200ms cubic-bezier(0.55, 0, 0.2, 1) both;
+
+.photo-passage-shell {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 110000;
+  pointer-events: none;
+  transform-origin: 53.71% 44.32%;
+  transform: translate(-50%, -50%) scale(var(--stage-k, 1));
+  will-change: transform, opacity;
 }
-.viewport--exiting .app--photo::before {
-  animation: photoChassisPassOut 1400ms cubic-bezier(0.2, 0, 0.25, 1) both;
+.photo-passage-shell__piece {
+  position: absolute;
+  inset: 0;
+  background: var(--chassis) center / 100% 100% no-repeat;
 }
-@keyframes photoChassisPassIn {
-  0%   { opacity: 1; transform: translateZ(0) scale(1); }
-  62%  { opacity: 1; }
-  100% { opacity: 0; transform: translateZ(380px) scale(4.8); }
+.photo-passage-shell__piece--top {
+  clip-path: polygon(0 0, 100% 0, 100% 16.37%, 0 16.37%);
 }
-@keyframes photoChassisPassOut {
-  0%   { opacity: 0; transform: translateZ(380px) scale(4.8); }
-  30%  { opacity: 1; }
-  100% { opacity: 1; transform: translateZ(0) scale(1); }
+.photo-passage-shell__piece--left {
+  clip-path: polygon(0 16.37%, 35.41% 16.37%, 35.41% 72.27%, 0 72.27%);
+}
+.photo-passage-shell__piece--right {
+  clip-path: polygon(72.01% 16.37%, 100% 16.37%, 100% 72.27%, 72.01% 72.27%);
+}
+.photo-passage-shell__piece--bottom {
+  clip-path: polygon(0 72.27%, 100% 72.27%, 100% 100%, 0 100%);
+}
+
+.photo-passage-shell--in {
+  animation: photoPassThroughIn 2200ms cubic-bezier(0.55, 0, 0.2, 1) both;
+}
+.photo-passage-shell--out {
+  animation: photoPassThroughOut 1400ms cubic-bezier(0.2, 0, 0.25, 1) both;
+}
+@keyframes photoPassThroughIn {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(var(--stage-k, 1)) scale(1); }
+  64%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(var(--stage-k, 1)) scale(5); }
+}
+@keyframes photoPassThroughOut {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(var(--stage-k, 1)) scale(5); }
+  28%  { opacity: 1; }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(var(--stage-k, 1)) scale(1); }
 }
 
 /* In the photo skin the rail wrappers are display:contents, so transforms on
@@ -3840,33 +3858,33 @@ body:has(.viewport--exiting .app--photo) {
   }
   .viewport--entering .chamber__threshold,
   .viewport--exiting .chamber__threshold,
-  .viewport--entering .app--photo::before,
-  .viewport--exiting .app--photo::before {
+  .photo-passage-shell {
     animation: none !important;
     display: none;
   }
 }
 
-/* Once the player crosses the CRT, its phosphor world continues beyond the
-   old glass rectangle. The dice canvas remains its original size; only the
-   passive background fills the rest of the viewport. Keep it through the
-   return passage as well so the TV edge cannot pop back in mid-flight. */
-body:has(.viewport--entering),
-body:has(.viewport--driven),
-body:has(.viewport--exiting) {
+/* The Roll world is a viewport-level field, not the old CRT rectangle. It
+   sits behind the unchanged-size dice surface and guarantees the chamber
+   background reaches every screen edge in both UI configurations. */
+.rollfield {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
   background:
+    radial-gradient(70% 58% at 50% 42%, rgba(150, 220, 170, 0.07), transparent 72%),
     radial-gradient(120% 130% at 50% 42%, var(--screen-hi), var(--screen) 45%, var(--screen-lo));
+}
+.viewport {
+  z-index: 1;
+}
+body:has(.rollfield) {
   overflow: hidden;
+  background: var(--screen-lo);
 }
-body:has(.viewport--entering)::before,
-body:has(.viewport--driven)::before,
-body:has(.viewport--exiting)::before {
-  opacity: 0;
-}
-.viewport--driven {
-  background:
-    radial-gradient(120% 130% at 50% 42%, var(--screen-hi), var(--screen) 45%, var(--screen-lo));
-}
+body:has(.rollfield)::before { opacity: 0; }
+.viewport--driven { background: transparent; }
 
 /* Stacked layouts still need document height in Plan. Roll locks pan gestures
    but otherwise uses exactly the same centred fixed-size tray composition as
