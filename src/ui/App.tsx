@@ -20,8 +20,8 @@ import { STAGE_H, STAGE_W, useSkin, useStageScale } from './skin.ts';
 import chassisUrl from './chassis.webp';
 import { playChannelClick, playWhirr } from './sound.ts';
 import {
-  canDrive, DRIVE_IN_MS, DRIVE_OUT_MS, NO_ZOOM, type Phase,
-  zoomForRoll, zoomStyle, type Zoom,
+  centreRollView, DRIVE_IN_MS, DRIVE_OUT_MS, NO_VIEW_TRANSFORM, type Phase,
+  viewTransformStyle, type ViewTransform,
 } from './phase.ts';
 
 const TREE_UNLOCK_SCORE = 20;
@@ -43,25 +43,19 @@ export function App(): JSX.Element {
    * with Score exposed.
    */
   const [phase, setPhase] = useState<Phase>('plan');
-  const [zoom, setZoom] = useState<Zoom>(NO_ZOOM);
+  const [view, setView] = useState<ViewTransform>(NO_VIEW_TRANSFORM);
   const chamberRef = useRef<HTMLDivElement>(null);
-  const rollHudRef = useRef<HTMLDivElement>(null);
   const trayResizeRef = useRef<(() => void) | null>(null);
 
   /**
-   * Drive into the chamber. The shield comes off as the view arrives, which
-   * is the whole point of the phase: Score is frozen while planning and live
-   * while rolling.
+   * Pass through the chamber glass. The tray itself never scales: after the
+   * phase commits we translate its existing rendered rectangle to the centre
+   * of the viewport while the surrounding machine supplies the depth cue.
    */
   const enterRoll = (): void => {
     if (phase === 'roll') return;
-    const el = chamberRef.current;
-    if (!el) return;
+    if (!chamberRef.current) return;
     playWhirr('in', DRIVE_IN_MS);
-    if (!canDrive()) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // The zoom is worked out once the phase has committed, not here: the
-    // phase changes what is on the deck, and measuring beforehand aims the
-    // drive at a layout that is about to move.
     setPhase('roll');
     if (s.scoreLocked) actions.toggleScoreLock();
   };
@@ -139,41 +133,33 @@ export function App(): JSX.Element {
     if (phase === 'plan' && !s.scoreLocked) actions.toggleScoreLock();
   }, [phase, s.scoreLocked]);
 
-  // Aim the drive at the committed layout. Measured from a layout effect the
-  // element is in its roll-phase shape and still untransformed, which is the
-  // only moment both are true.
-  //
-  // The skin and the stage scale are dependencies because a phone turned
-  // sideways mid-roll changes both, and a drive aimed at the chassis it was
-  // wearing a moment ago points nowhere.
+  // Re-centre only after Roll has committed. The chamber's DOMRect already
+  // includes the active skin scale and any document scroll, so the view only
+  // needs the remaining screen-space translation. There is intentionally no
+  // camera scale here.
   useLayoutEffect(() => {
-    if (phase !== 'roll') { setZoom(NO_ZOOM); return; }
+    if (phase !== 'roll') { setView(NO_VIEW_TRANSFORM); return; }
     const el = chamberRef.current;
-    if (el && canDrive()) {
-      const hudHeight = rollHudRef.current?.getBoundingClientRect().height ?? 0;
-      setZoom((z) => zoomForRoll(el.getBoundingClientRect(), z, hudHeight));
-    }
+    if (el) setView((v) => centreRollView(el.getBoundingClientRect(), v));
   }, [phase, skin, stageScale]);
 
-  // A transform changes nothing about layout, so the tray has to be told the
-  // drive has finished or it keeps the backing store it was sized for.
+  // Photo-skin scaling changes the tray's visual pixel density without
+  // changing its layout box. Re-measure after the scene settles so the canvas
+  // backing store stays crisp; translation alone does not increase its size.
   useEffect(() => {
     const ms = (phase === 'roll' ? DRIVE_IN_MS : DRIVE_OUT_MS) + 40;
     const t = window.setTimeout(() => trayResizeRef.current?.(), ms);
     return () => window.clearTimeout(t);
-  }, [zoom, phase]);
+  }, [view, phase, stageScale]);
 
-  // The window changing shape while driven in would otherwise leave the
-  // chamber off-centre until the phase ended.
+  // Keep the unchanged-size tray centred if the viewport changes while Roll
+  // is active.
   useEffect(() => {
     if (phase !== 'roll') return;
     const onResize = (): void => {
       const el = chamberRef.current;
       if (!el) return;
-      const hudHeight = rollHudRef.current?.getBoundingClientRect().height ?? 0;
-      setZoom((z) => (
-        canDrive() ? zoomForRoll(el.getBoundingClientRect(), z, hudHeight) : NO_ZOOM
-      ));
+      setView((v) => centreRollView(el.getBoundingClientRect(), v));
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
@@ -197,10 +183,10 @@ export function App(): JSX.Element {
 
   return (
     <>
-    {/* The drive lives on a wrapper, outside the faceplate's own transform,
-        so the two compose instead of fighting. */}
+    {/* The outer view only translates. Depth comes from the machine layers
+        moving around the stable dice tray, not from scaling the tray itself. */}
     <div className={`viewport${phase === 'roll' ? ' viewport--driven' : ''}`}
-      style={{ transform: zoomStyle(zoom) }}>
+      style={{ transform: viewTransformStyle(view) }}>
     <div
       className={`app${photo ? ' app--photo' : ''}`}
       style={photo ? {
@@ -347,7 +333,7 @@ export function App(): JSX.Element {
         rises into the player's view when the chamber opens, and engaging its
         shield is what closes it again. */}
     {phase === 'roll' && (
-      <div className="rollhud" ref={rollHudRef}>
+      <div className="rollhud">
         <div className="rollhud__inner">
           {/* The readout shakes harder the fuller the pressure meter behind
               it gets, so the thing you are about to lose is the thing that
@@ -367,7 +353,7 @@ export function App(): JSX.Element {
               entropyLevel={s.entropyLevel}
               scoreLocked={s.scoreLocked}
               onToggleLock={endRoll}
-              tab="Click to stop"
+              tab={touchPrimary() ? 'Tap to stop' : 'Click to stop'}
             />
           </div>
         </div>
@@ -842,6 +828,9 @@ function GamePanel({ s, sealed, onSealed, resizeRef, glassRef }: {
   return (
     <section className="game game-area__panel">
       <div className="game__arena">
+        {/* A physical threshold around the glass. During the phase transition
+            it rushes past the player while the tray itself remains unscaled. */}
+        <span className="chamber__threshold" aria-hidden />
         {/* The status lamp every other plate carries. It repeats what the
             telemetry line on the glass already says in words. */}
         <span className={`chamber__lamp${ready ? '' : ' chamber__lamp--busy'}`} aria-hidden />
