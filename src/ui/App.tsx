@@ -398,6 +398,7 @@ export function App(): JSX.Element {
 
       {store.debug && <DebugPanel s={s} />}
     </div>
+    </div>
 
     {photo && passage !== null && (
       <div
@@ -416,7 +417,6 @@ export function App(): JSX.Element {
         <span className="photo-passage-shell__piece photo-passage-shell__piece--bottom" />
       </div>
     )}
-    </div>
 
     {/* Outside the drive, so it stays put while the view moves. The readout
         rises into the player's view when the chamber opens, and engaging its
