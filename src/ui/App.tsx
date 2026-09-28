@@ -370,16 +370,11 @@ export function App(): JSX.Element {
 
           {mobileSurfaces && tab === 'web' && inspected && (
             <section className="fixed-panel fixed-panel--upgrade-mobile">
-              <div className="fixed-panel__bar">
-                <span className="fixed-panel__title">Selected upgrade</span>
-              </div>
-              <div className="fixed-panel__body">
-                <MobileSelectedUpgrade
-                  s={s}
-                  nodeId={inspected}
-                  onClose={() => setInspected(null)}
-                />
-              </div>
+              <MobileSelectedUpgrade
+                s={s}
+                nodeId={inspected}
+                onClose={() => setInspected(null)}
+              />
             </section>
           )}
 
