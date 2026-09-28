@@ -1,5 +1,5 @@
 import {
-  useEffect, useLayoutEffect, useRef, useState, type MutableRefObject,
+  useCallback, useEffect, useLayoutEffect, useRef, useState, type MutableRefObject,
 } from 'react';
 import {
   allocatedCost, canRefund, canRoll, canSwitchFramework, CONFIG, displayStats,
@@ -13,7 +13,9 @@ import { GoalBar } from './GoalBar.tsx';
 import { currentGoal, openTargets } from '../engine/goal.ts';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
-import { hasLeadsTo, LeadsTo, SelectedUpgrade } from './SelectedUpgrade.tsx';
+import {
+  hasLeadsTo, LeadsTo, MobileSelectedUpgrade, SelectedUpgrade,
+} from './SelectedUpgrade.tsx';
 import { StatsPanel } from './StatsPanel.tsx';
 import { touchPrimary } from './pointer.ts';
 import { STAGE_H, STAGE_W, useSkin, useStageScale } from './skin.ts';
@@ -71,14 +73,28 @@ export function App(): JSX.Element {
   const [phase, setPhase] = useState<Phase>('plan');
   const [view, setView] = useState<ViewTransform>(NO_VIEW_TRANSFORM);
   const [passage, setPassage] = useState<'in' | 'out' | null>(null);
+  const [restoreSnap, setRestoreSnap] = useState(false);
   const chamberRef = useRef<HTMLDivElement>(null);
   const trayResizeRef = useRef<(() => void) | null>(null);
   const passageTimerRef = useRef<number | null>(null);
+  const restoreTimerRef = useRef<number | null>(null);
 
   const runPassage = (direction: 'in' | 'out', duration: number): void => {
     if (passageTimerRef.current !== null) window.clearTimeout(passageTimerRef.current);
+    if (restoreTimerRef.current !== null) window.clearTimeout(restoreTimerRef.current);
+    setRestoreSnap(false);
     setPassage(direction);
     passageTimerRef.current = window.setTimeout(() => {
+      // On return, the camera reaches Plan first. Only then is the machine UI
+      // restored, in one frame, instead of individual panels sliding back
+      // while the camera itself is still moving.
+      if (direction === 'out') {
+        setRestoreSnap(true);
+        restoreTimerRef.current = window.setTimeout(() => {
+          setRestoreSnap(false);
+          restoreTimerRef.current = null;
+        }, 50);
+      }
       setPassage(null);
       passageTimerRef.current = null;
     }, duration);
@@ -124,6 +140,7 @@ export function App(): JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
   const focusN = useRef(0);
+  const clearFocus = useCallback((): void => setFocus(null), []);
 
   // scoreEarned is lifetime Score for this run, so spending below 20 never
   // makes the tree vanish again after the player has discovered it.
@@ -224,6 +241,7 @@ export function App(): JSX.Element {
 
   useEffect(() => () => {
     if (passageTimerRef.current !== null) window.clearTimeout(passageTimerRef.current);
+    if (restoreTimerRef.current !== null) window.clearTimeout(restoreTimerRef.current);
   }, []);
 
   useEffect(() => {
@@ -249,9 +267,10 @@ export function App(): JSX.Element {
         moving around the stable dice tray, not from scaling the tray itself. */}
     <div
       className={
-        `viewport${phase === 'roll' ? ' viewport--driven' : ''}`
+        `viewport${phase === 'roll' || passage === 'out' ? ' viewport--driven' : ''}`
         + (passage === 'in' ? ' viewport--entering' : '')
         + (passage === 'out' ? ' viewport--exiting' : '')
+        + (restoreSnap ? ' viewport--restore-snap' : '')
       }
       style={{ transform: viewTransformStyle(view) }}
     >
@@ -330,7 +349,7 @@ export function App(): JSX.Element {
                     expanded={expanded}
                     setExpanded={setExpanded}
                     focus={focus}
-                    onFocusConsumed={() => setFocus(null)}
+                    onFocusConsumed={clearFocus}
                     embedded
                   />
                 </div>
@@ -371,7 +390,7 @@ export function App(): JSX.Element {
         {photo && !(treeUnlocked && inspected) && <Standby slot="upgrade" />}
         {photo && !showChain && <Standby slot="chain" />}
 
-        {treeUnlocked && inspected && (
+        {treeUnlocked && inspected && !mobileSurfaces && (
           <div className="panel-rail panel-rail--right">
             <section className="fixed-panel fixed-panel--upgrade">
               <div className="fixed-panel__bar">
@@ -401,6 +420,16 @@ export function App(): JSX.Element {
                 <PanelFoot text="Small choices. Large consequences." mark />
               </section>
             )}
+          </div>
+        )}
+
+        {treeUnlocked && inspected && mobileSurfaces && tab === 'web' && (
+          <div className="mobile-upgrade-sheet">
+            <MobileSelectedUpgrade
+              s={s}
+              nodeId={inspected}
+              onClose={() => setInspected(null)}
+            />
           </div>
         )}
       </main>
