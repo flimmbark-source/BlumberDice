@@ -1296,12 +1296,14 @@ Consequences worth naming:
   still inside the same hit area, so the label that says "click to stop" can
   itself be clicked. A label that looks pressable and is not would be worse
   than no label. The standing hint line it replaced is gone.
-- **Stacked layouts do not drive.** Where the panels stack, the chamber is
-  already the widest thing on the page and the page itself scrolls; a
-  transform on an ancestor of a scrolling document is a trap. The phase still
-  happens there — shield off, readout up — and the view scrolls to the
-  chamber instead. See 39: "where the panels stack" is not the same as
-  "below 901px".
+- **Stacked mobile now drives with a different composition.** The old stacked
+  exception is stale: the roll phase must still feel like entering the dice
+  chamber on a phone. The mobile camera is not the desktop's generic
+  full-window cover. It measures the live bottom Score/Entropy HUD, reserves
+  that region, and drives the chamber into the remaining field above it. The
+  page's scroll offset is part of the transform calculation, so the drive
+  starts and returns correctly from wherever the player was in the stacked
+  document. Desktop keeps the original full-window chamber drive.
 
 ---
 
