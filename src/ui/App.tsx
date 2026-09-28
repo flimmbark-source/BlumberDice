@@ -25,14 +25,40 @@ import {
 } from './phase.ts';
 
 const TREE_UNLOCK_SCORE = 20;
-type Tab = 'web' | 'stats' | 'log';
+type Tab = 'roll' | 'web' | 'stats' | 'log';
+
+const MOBILE_SURFACE_QUERY =
+  '(max-width: 759px),'
+  + '(max-width: 900px) and (min-height: 521px),'
+  + '(max-width: 900px) and (orientation: portrait)';
+
+function useMobileSurfaces(): boolean {
+  const read = (): boolean => (
+    typeof window !== 'undefined' && window.matchMedia(MOBILE_SURFACE_QUERY).matches
+  );
+  const [mobile, setMobile] = useState(read);
+
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_SURFACE_QUERY);
+    const update = (): void => setMobile(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  return mobile;
+}
 
 export function App(): JSX.Element {
   const s = useGame();
   const skin = useSkin();
   const stageScale = useStageScale(skin === 'photo');
+  const mobileSurfaces = useMobileSurfaces();
   const [inspected, setInspected] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>('web');
+  const [tab, setTab] = useState<Tab>(() => (
+    typeof window !== 'undefined' && window.matchMedia(MOBILE_SURFACE_QUERY).matches
+      ? 'roll'
+      : 'web'
+  ));
   // Bumped on every channel change. It keys the flicker overlay, so the
   // animation restarts even when the same channel is picked twice.
   const [channel, setChannel] = useState(0);
@@ -66,6 +92,10 @@ export function App(): JSX.Element {
   const enterRoll = (): void => {
     if (phase === 'roll') return;
     if (!chamberRef.current) return;
+    // Surface navigation and the mechanical Roll phase are separate. If a
+    // phone opens Roll from Score while looking at Build/Stats/Log, reveal the
+    // chamber first so the passage always has a visible screen to cross.
+    if (mobileSurfaces && tab !== 'roll') setTab('roll');
     playWhirr('in', DRIVE_IN_MS);
     runPassage('in', DRIVE_IN_MS);
     setPhase('roll');
@@ -87,6 +117,9 @@ export function App(): JSX.Element {
     setTab(next);
     setChannel((n) => n + 1);
     playChannelClick();
+    // Each mobile tab is a complete surface. Do not leave the newly selected
+    // one stranded above the current page scroll from a long Build tree.
+    if (mobileSurfaces) window.scrollTo(0, 0);
   };
   const [expanded, setExpanded] = useState(false);
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
@@ -135,6 +168,17 @@ export function App(): JSX.Element {
       return;
     }
   }, [treeUnlocked]);
+
+  // Roll is a mobile-only navigation surface. If the viewport crosses back
+  // into the desktop machine while it is selected, return the information
+  // window to Build. Before the tree exists, mobile has only Roll to show.
+  useEffect(() => {
+    if (mobileSurfaces) {
+      if (!treeUnlocked && tab !== 'roll') setTab('roll');
+      return;
+    }
+    if (tab === 'roll') setTab('web');
+  }, [mobileSurfaces, treeUnlocked, tab]);
 
   useEffect(() => {
     if (treeUnlocked && tab === 'stats') actions.seenStats();
@@ -212,6 +256,7 @@ export function App(): JSX.Element {
     >
     <div
       className={`app${photo ? ' app--photo' : ''}`}
+      data-tab={tab}
       style={photo ? {
         ['--chassis' as string]: `url(${chassisUrl})`,
         ['--stage-k' as string]: String(stageScale),
@@ -226,6 +271,7 @@ export function App(): JSX.Element {
         refundScore={spent.score}
         refundMeta={spent.meta}
         treeUnlocked={treeUnlocked}
+        mobileSurfaces={mobileSurfaces}
         tab={tab}
         setTab={changeChannel}
         onUnshield={enterRoll}
@@ -453,7 +499,7 @@ function OrbitMark(): JSX.Element {
 
 function TopBar({
   s, knowsB, canRefund: mayRefund, refundScore, refundMeta,
-  treeUnlocked, tab, setTab, onUnshield,
+  treeUnlocked, mobileSurfaces, tab, setTab, onUnshield,
 }: {
   s: GameState;
   /** Taking the shield off is what opens the chamber. */
@@ -463,6 +509,7 @@ function TopBar({
   refundScore: number;
   refundMeta: number;
   treeUnlocked: boolean;
+  mobileSurfaces: boolean;
   tab: Tab;
   setTab: (tab: Tab) => void;
 }): JSX.Element {
@@ -474,12 +521,19 @@ function TopBar({
         <span className="brand__word"><b>Roll</b><i> Reactor</i></span>
       </div>
 
-      {treeUnlocked ? (
-        /* One bank of recessed keys for the three fixed information views. */
+      {(treeUnlocked || mobileSurfaces) ? (
+        /* Desktop keeps its three information channels. Stacked/mobile adds
+            Roll as a real surface alongside them. Before the tree unlocks,
+            Roll is the only mobile tab because it is the only surface. */}
         <nav className="tabsx" role="tablist" aria-label="Game view">
-          <TabBtn id="web" tab={tab} set={setTab} label="Build" icon={<BuildIcon />} />
-          <TabBtn id="stats" tab={tab} set={setTab} label="Stats" icon={<StatsIcon />} />
-          <TabBtn id="log" tab={tab} set={setTab} label="Log" icon={<LogIcon />} />
+          <TabBtn id="roll" tab={tab} set={setTab} label="Roll" icon={<RollIcon />} />
+          {treeUnlocked && (
+            <>
+              <TabBtn id="web" tab={tab} set={setTab} label="Build" icon={<BuildIcon />} />
+              <TabBtn id="stats" tab={tab} set={setTab} label="Stats" icon={<StatsIcon />} />
+              <TabBtn id="log" tab={tab} set={setTab} label="Log" icon={<LogIcon />} />
+            </>
+          )}
         </nav>
       ) : (
         <div />
@@ -567,7 +621,7 @@ function TabBtn({ id, tab, set, label, icon }: {
   return (
     <button
       type="button"
-      className={`tab${tab === id ? ' tab--on' : ''}`}
+      className={`tab tab--${id}${tab === id ? ' tab--on' : ''}`}
       onClick={() => set(id)}
     >
       {icon}
@@ -577,6 +631,20 @@ function TabBtn({ id, tab, set, label, icon }: {
 }
 
 /* Key-cap glyphs. Each one draws the panel its key opens. */
+
+function RollIcon(): JSX.Element {
+  return (
+    <svg className="tab__icon" width={17} height={17} viewBox="0 0 18 18" aria-hidden
+      fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round">
+      <rect x={3.2} y={3.2} width={11.6} height={11.6} rx={3} />
+      <circle cx={6.3} cy={6.3} r={1} fill="currentColor" stroke="none" />
+      <circle cx={11.7} cy={6.3} r={1} fill="currentColor" stroke="none" />
+      <circle cx={9} cy={9} r={1} fill="currentColor" stroke="none" />
+      <circle cx={6.3} cy={11.7} r={1} fill="currentColor" stroke="none" />
+      <circle cx={11.7} cy={11.7} r={1} fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
 
 function BuildIcon(): JSX.Element {
   return (
