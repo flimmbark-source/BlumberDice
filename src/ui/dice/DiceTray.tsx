@@ -96,6 +96,12 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
     const world = worldRef.current;
     let raf = 0;
     let last = performance.now();
+    const mobile = touchPrimary();
+    const activeFrameMs = mobile ? 1000 / 30 : 0;
+    const idleFrameMs = mobile ? 1000 / 20 : 0;
+    let groundDirty = true;
+    let groundFramework: 'A' | 'B' | null = null;
+    let groundWasShaking = false;
     // Screen-space placement and zoom of the projected surface.
     let originX = 0;
     let originY = 0;
@@ -134,7 +140,11 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
       // the chamber magnifies it several times over, and a backing store
       // sized for the layout box alone would be that many times too coarse.
       const view = w > 0 ? wrap.getBoundingClientRect().width / w : 1;
-      const dpr = Math.min((window.devicePixelRatio || 1) * view, 3);
+      // High-DPI phone screens can turn the two tray canvases into several
+      // million pixels each. The chamber is moving content, so a modest
+      // mobile backing-store cap buys a large fill-rate reduction with little
+      // perceptual loss; desktop keeps the existing 3x ceiling.
+      const dpr = Math.min((window.devicePixelRatio || 1) * view, mobile ? 1.75 : 3);
       for (const el of [canvas, ground]) {
         el.width = Math.max(1, Math.round(w * dpr));
         el.height = Math.max(1, Math.round(h * dpr));
@@ -182,6 +192,7 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
         arena.style.setProperty('--arena-back', `${originY}px`);
         arena.style.setProperty('--arena-depth', `${diamondH * zoom}px`);
       }
+      groundDirty = true;
     };
     resize();
     if (resizeRef) resizeRef.current = resize;
@@ -249,9 +260,32 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
     };
 
     const frame = (now: number): void => {
+      const game = stateRef.current;
+      const newestRollId = game.rollLog.length > 0
+        ? game.rollLog[game.rollLog.length - 1].id
+        : 0;
+      const visuallyBusy = newestRollId > cursorRef.current
+        || game.pending.length > 0
+        || game.bonusLapses > lapseRef.current
+        || world.shake > 0.01
+        || world.ghosts.length > 0
+        || world.dice.some((die) => (
+          die.state === 'tumbling'
+          || die.state === 'aligning'
+          || die.retiring
+          || die.zapAt !== null
+          || die.rollId !== null
+          || die.alpha < 0.999
+          || die.impacts.length > 0
+        ));
+      const minFrameMs = visuallyBusy ? activeFrameMs : idleFrameMs;
+      if (minFrameMs > 0 && now - last < minFrameMs) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+
       const dt = Math.min(now - last, 60);
       last = now;
-      const game = stateRef.current;
 
       const fresh = game.rollLog.filter((r) => r.id > cursorRef.current);
       if (fresh.length > 0) {
@@ -307,15 +341,30 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
       const shakeX = shake ? (Math.random() - 0.5) * shake : 0;
       const shakeY = shake ? (Math.random() - 0.5) * shake : 0;
 
-      gctx.clearRect(0, 0, ground.width, ground.height);
-      drawBackdrop(gctx, viewW, viewH, theme);
-      gctx.save();
-      gctx.translate(originX + shakeX, originY + shakeY);
-      gctx.scale(zoom, zoom);
-      drawSurface(gctx, world, theme);
-      gctx.restore();
+      // The backdrop and arena floor are static. Repainting their gradients,
+      // grain and ring geometry every frame was pure fill-rate/CPU work.
+      // During shake they still redraw in lockstep with the dice, followed by
+      // one clean unshifted frame when the shake ends.
+      const shaking = shake > 0.01;
+      if (
+        groundDirty
+        || groundFramework !== game.framework
+        || shaking
+        || groundWasShaking
+      ) {
+        gctx.clearRect(0, 0, viewW, viewH);
+        drawBackdrop(gctx, viewW, viewH, theme);
+        gctx.save();
+        gctx.translate(originX + shakeX, originY + shakeY);
+        gctx.scale(zoom, zoom);
+        drawSurface(gctx, world, theme);
+        gctx.restore();
+        groundDirty = false;
+        groundFramework = game.framework;
+        groundWasShaking = shaking;
+      }
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, viewW, viewH);
       ctx.save();
       ctx.translate(originX + shakeX, originY + shakeY);
       ctx.scale(zoom, zoom);
