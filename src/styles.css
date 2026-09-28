@@ -2675,6 +2675,14 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
     font-weight: 900;
     color: #eef3e6;
   }
+  .fixed-panel__bar--mobile-upgrade {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .fixed-panel__bar--mobile-upgrade .fixed-panel__title {
+    flex: 0 1 auto;
+  }
   .mobile-upgrade__state {
     flex: none;
     font-family: var(--font-mono);
@@ -3051,6 +3059,7 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   }
   .fixed-panel__body { height: min(64vh, 560px); }
   .fixed-panel--upgrade .fixed-panel__body,
+  .fixed-panel--upgrade-mobile .fixed-panel__body,
   .fixed-panel--chain .fixed-panel__body { height: auto; }
   .fixed-panel--upgrade .panel--right { overflow: visible; }
   .face-vent { display: none; }
@@ -3075,6 +3084,7 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
 @media (max-width: 480px) {
   .fixed-panel__body { height: min(78vh, 420px); }
   .fixed-panel--upgrade .fixed-panel__body,
+  .fixed-panel--upgrade-mobile .fixed-panel__body,
   .fixed-panel--chain .fixed-panel__body { height: auto; }
 }
 
@@ -3117,8 +3127,64 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
 .app--photo::after { display: none; }
 body:has(.app--photo) {
   padding: 0;
-  background: #16110b;
   overflow: hidden;
+
+  /*
+   * The photo stage is letterboxed on screens that do not match 1672×941.
+   * Treat that exposed perimeter as part of the machine instead of empty
+   * transparency: worn metal plate with repeating screw heads around all
+   * four viewport edges. The chassis bitmap sits above it, so this also
+   * catches any transparent outer pixels in the source artwork.
+   */
+  background-color: var(--plate);
+  background-image:
+    radial-gradient(circle at 12px 12px,
+      #655a47 0 1.7px,
+      #d8ccb5 1.9px 3.2px,
+      rgba(70, 58, 40, 0.65) 3.4px 4px,
+      transparent 4.2px),
+    radial-gradient(circle at 12px 12px,
+      #655a47 0 1.7px,
+      #d8ccb5 1.9px 3.2px,
+      rgba(70, 58, 40, 0.65) 3.4px 4px,
+      transparent 4.2px),
+    radial-gradient(circle at 12px 12px,
+      #655a47 0 1.7px,
+      #d8ccb5 1.9px 3.2px,
+      rgba(70, 58, 40, 0.65) 3.4px 4px,
+      transparent 4.2px),
+    radial-gradient(circle at 12px 12px,
+      #655a47 0 1.7px,
+      #d8ccb5 1.9px 3.2px,
+      rgba(70, 58, 40, 0.65) 3.4px 4px,
+      transparent 4.2px),
+    var(--plate-wear),
+    linear-gradient(180deg, var(--plate-hi), var(--plate) 42%, var(--plate-lo));
+  background-size:
+    48px 24px,
+    48px 24px,
+    24px 48px,
+    24px 48px,
+    auto,
+    auto;
+  background-position:
+    left top,
+    left bottom,
+    left top,
+    right top,
+    center,
+    center;
+  background-repeat:
+    repeat-x,
+    repeat-x,
+    repeat-y,
+    repeat-y,
+    no-repeat,
+    no-repeat;
+  box-shadow:
+    inset 0 0 0 1px rgba(68, 57, 39, 0.9),
+    inset 0 0 0 7px rgba(190, 176, 148, 0.55),
+    inset 0 0 28px rgba(72, 58, 38, 0.38);
 }
 body:has(.app--photo)::before { display: none; }
 
