@@ -380,6 +380,24 @@ export function App(): JSX.Element {
 
   useEffect(() => clearPassageTimers, []);
 
+  /**
+   * Publish the photo stage's fit to the document root.
+   *
+   * The panel the photograph is mounted in is not part of the photograph: it
+   * is whatever the window has left over once the stage has been fitted into
+   * it. Two places have to draw that panel -- the document, at rest, and the
+   * shell, while it is travelling -- and they have to agree exactly or the
+   * handoff at each end of the drive is a change of material. Publishing the
+   * one number they both derive it from is cheaper than measuring it twice
+   * and safer than writing it down twice. `0` means there is no stage,
+   * which is how the drawn chassis says it fills the window itself.
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--stage-k', photo ? String(stageScale) : '0');
+    return () => { root.style.removeProperty('--stage-k'); };
+  }, [photo, stageScale]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === '`') store.toggleDebug();
@@ -578,34 +596,9 @@ export function App(): JSX.Element {
     </div>
     </div>
 
-    {/* The drawn chassis passing the player. Four full-frame layers of the
-        same enamel, each clipped to one band around the chamber, so the
-        plate runs continuously across the seams instead of being four boxes
-        that each paint their own gradient. Scaling them about the chamber's
-        centre is what takes the faceplate past the camera while the tray
-        inside the hole keeps exactly the size it had. */}
-    {!photo && shell && (passage === 'in' || passage === 'out') && (
-      <DrawnPassageShell passage={passage} shell={shell} />
-    )}
-
-    {photo && (passage === 'in' || passage === 'out') && (
-      <div
-        className={`photo-passage-shell photo-passage-shell--${passage}`}
-        style={{
-          ['--chassis' as string]: `url(${chassisUrl})`,
-          ['--stage-k' as string]: String(stageScale),
-          width: STAGE_W,
-          height: STAGE_H,
-        }}
-        aria-hidden
-      >
-        <div className="photo-passage-shell__camera">
-          <span className="photo-passage-shell__piece photo-passage-shell__piece--top" />
-          <span className="photo-passage-shell__piece photo-passage-shell__piece--left" />
-          <span className="photo-passage-shell__piece photo-passage-shell__piece--right" />
-          <span className="photo-passage-shell__piece photo-passage-shell__piece--bottom" />
-        </div>
-      </div>
+    {/* The machine passing the player, as one object. */}
+    {shell && (passage === 'in' || passage === 'out') && (
+      <PassageShell passage={passage} shell={shell} photo={photo} />
     )}
 
     {/* Outside the drive, so it stays put while the view moves. The readout
@@ -661,58 +654,83 @@ export function App(): JSX.Element {
  * machine with a channel off and a machine that looks broken.
  */
 /**
- * The drawn chassis, cut into four bands around the chamber and driven past
- * the camera.
+ * The machine, cut into four bands around the chamber and driven past the
+ * camera.
  *
  * It exists because the tray must not scale. The depth in this passage is
  * the machine moving, not the subject growing, and the only piece of machine
  * that can travel past the player without taking the dice with it is the
  * faceplate itself -- which therefore has to be a separate copy with the
- * chamber cut out of it. The photograph gets the same treatment a few
- * elements below; this is the version for the chassis that reflows, so its
- * hole is measured rather than written down.
+ * chamber cut out of it.
  *
- * It covers the live interface while it runs. That is the point rather than
- * a side effect: panels peeling off sideways is a thing a faceplate cannot
- * do, so instead the whole face goes by as one object, and the panels behind
- * it are simply dark by then -- the machine armed and put its screens out
- * before any of this started moving.
+ * Four full-window layers, each clipped to one band around the opening. Four
+ * bands rather than four boxes is what keeps the material continuous across
+ * the seams: one plate, four windows onto it, no joins to see. The opening is
+ * measured from the tray the instant the drive engages, and the same
+ * measurement is kept for the return, because the machine a player comes back
+ * to is the one they left.
+ *
+ * Both skins are the same object here, which they did not used to be. The
+ * photograph had its own shell, sized to the stage and clipped with the
+ * aperture's percentages written down by hand; the surround it is letterboxed
+ * into was not in that shell at all -- it was painted on the document, so it
+ * could not travel, and it simply blinked out on the drive's first frame
+ * while the machine it belongs to drove away without it. Measuring the
+ * opening instead of writing it down lets the photograph, the panel it is
+ * mounted in and the drawn chassis all be bands of one sheet, and one sheet
+ * is the only thing that can move as one object.
+ *
+ * It covers the live interface while it runs. That is the point rather than a
+ * side effect: panels peeling off sideways is a thing a faceplate cannot do,
+ * so instead the whole face goes by at once, and the panels behind it are
+ * dark by then -- the machine armed and put its screens out before any of
+ * this started moving.
  */
-function DrawnPassageShell({ passage, shell }: {
+function PassageShell({ passage, shell, photo }: {
   passage: 'in' | 'out';
   shell: { geom: PassageGeometry; camX: number; camY: number };
+  photo: boolean;
 }): JSX.Element {
   const clips = passageClipPaths(shell.geom);
   const origin = `${shell.geom.originX}% ${shell.geom.originY}%`;
   return (
     <div
-      className={`drawn-passage-shell drawn-passage-shell--${passage}`}
+      className={`passage-shell passage-shell--${passage} passage-shell--${photo ? 'photo' : 'drawn'}`}
       style={{
         ['--cam-x' as string]: `${shell.camX}px`,
         ['--cam-y' as string]: `${shell.camY}px`,
+        ...(photo ? { ['--chassis' as string]: `url(${chassisUrl})` } : null),
       }}
       aria-hidden
     >
-      <div className="drawn-passage-shell__camera">
+      <div className="passage-shell__camera">
         {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
           <span
             key={side}
-            className="drawn-passage-shell__piece"
+            className="passage-shell__piece"
             style={{ clipPath: clips[side], transformOrigin: origin }}
           />
         ))}
+        {/* The milled step the photograph is set into. It paints only outside
+            its own box, so it lands on the panel around the stage and never
+            on the stage itself. The drawn chassis has no stage to be set
+            into, so it gets no recess. */}
+        {photo && <span className="passage-shell__recess" style={{ transformOrigin: origin }} />}
         {/* The chamber's own lip, drawn on the hole rather than around the
             frame, so the opening the player goes through keeps the edge it
-            has at rest instead of being a rectangle punched in a plate. */}
-        <span
-          className="drawn-passage-shell__rim"
-          style={{
-            left: `${shell.geom.x}px`,
-            top: `${shell.geom.y}px`,
-            width: `${shell.geom.width}px`,
-            height: `${shell.geom.height}px`,
-          }}
-        />
+            has at rest instead of being a rectangle punched in a plate. The
+            photograph carries its lip in the bitmap already. */}
+        {!photo && (
+          <span
+            className="passage-shell__rim"
+            style={{
+              left: `${shell.geom.x}px`,
+              top: `${shell.geom.y}px`,
+              width: `${shell.geom.width}px`,
+              height: `${shell.geom.height}px`,
+            }}
+          />
+        )}
       </div>
     </div>
   );

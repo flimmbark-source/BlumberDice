@@ -1547,17 +1547,15 @@ hides them going out. It has its own sound: a falling blip and two ticks.
 
 **Beat two: drive.** As §41, with one change of subject. What passes the
 camera is the faceplate, in one piece, with the chamber cut out of it. Both
-skins now do this the same way: four full-window layers of the same material,
-each clipped to one band around the opening so the enamel runs continuously
-across the seams, scaled about the opening's centre. The photograph's bands
-are written down, because it is one bitmap at one known size. The drawn
-chassis reflows, so its bands are cut from the tray's measured rectangle at
-the moment the drive engages (`passageGeometry`, `passageClipPaths`) and the
-same measurement is kept for the return. A rim carrying the tray's own enamel
-rings is drawn on the opening, so the tray can give its rings up in the same
-frame the shell puts identical ones back in the same place: the edge of the
-opening is continuous for the entire passage rather than a rectangle punched
-in a plate.
+skins do this with the same element: four full-window layers of the same
+material, each clipped to one band around the opening so the material runs
+continuously across the seams, scaled about the opening's centre. The bands
+are cut from the tray's measured rectangle at the moment the drive engages
+(`passageGeometry`, `passageClipPaths`) and the same measurement is kept for
+the return. A rim carrying the tray's own enamel rings is drawn on the
+opening, so the tray can give its rings up in the same frame the shell puts
+identical ones back in the same place: the edge of the opening is continuous
+for the entire passage rather than a rectangle punched in a plate.
 
 **Beat three: land.** Unchanged in shape — camera first, screens second — but
 the faceplate is now solid again before the camera arrives, and the tubes
@@ -1621,6 +1619,45 @@ Consequences worth naming:
   that effect to see Plan and an unlocked Score together and put the shield
   straight back on, so the chamber opened with Score frozen and the roll could
   neither earn nor lose. One effect now sets the lock from the phase.
+- **The panel the photograph is mounted in travels with it.** The stage is a
+  fixed 1672x941 object fitted into whatever window it is given, so on most
+  windows there is a margin left over, and that margin is part of the machine
+  — the panel the faceplate is bolted into. It used to be painted on the
+  document, which meant it could not travel: on the drive's first frame it
+  simply blinked out while the machine it belongs to drove away without it.
+  It is a band of the shell now. That is what collapsed the two shells into
+  one: the photograph used to have its own, sized to the stage and clipped
+  with the CRT aperture's percentages written down by hand, which left no
+  room in it for anything outside the stage. Measuring the opening instead of
+  writing it down lets the photograph, its panel and the drawn chassis all be
+  bands of one window-sized sheet — and one sheet is the only thing that can
+  move as one object. The hard-coded aperture percentages and the shell's
+  authored-pixel camera deltas went with it.
+- **`--stage-k` is published to the document root.** Two places draw that
+  panel — the document at rest, the shell while it is travelling — and they
+  have to agree exactly or the handoff at each end of the drive is a change
+  of material. Publishing the one number they both derive the stage rectangle
+  from is cheaper than measuring it twice and safer than writing it down
+  twice. `--surround` and `--stage-recess` are then single definitions that
+  both wear.
+- **The panel itself was wallpaper and is now metal.** It was a flat sheet of
+  the faceplate's own colour with a screw head tiled every 48px along all
+  four edges: the same tone as the thing it was supposed to be setting off,
+  and an even grid of dots that repeated visibly across a wide screen. It is
+  darker than the faceplate now and lit the same way, so the photograph is
+  the lit object sitting in it; it falls off into shadow toward the window's
+  edges; the stage sits in a milled recess with a lip that catches the light;
+  and its fixings are placed at thirds of the stage's own edges rather than
+  tiled. That last point is geometry, not taste: the stage is fitted with a
+  `min()`, so it always meets the window exactly on one axis and there is
+  never a margin on all four sides — fixings at the stage's corners land off
+  the screen on every ordinary window, which is what the first attempt did.
+  Two per edge always puts a pair in whichever bands exist and lets the other
+  pair fall off the screen, at any window shape, with nothing repeating.
+- **A brushed finish was tried and reverted.** Any repeating gradient fine
+  enough to read as brushed is also fine enough to alias; on a 2x screen it
+  came out as corduroy. Broad uneven blotching cannot do that, and it is what
+  `--plate-wear` already does for the faceplate.
 - **What is still a cut.** The chamber's own bezel — its rounded outline, its
   etched name and its lamp — becomes plain plate inside the shell's 150ms
   cross-fade rather than travelling as itself. Reproducing it in the shell
