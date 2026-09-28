@@ -41,22 +41,93 @@ export function zoomOnto(rect: DOMRect, current: Zoom, overscan = OVERSCAN): Zoo
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  const sx = window.scrollX;
-  const sy = window.scrollY;
-  const ex = (rect.left + sx - current.tx) / current.k;
-  const ey = (rect.top + sy - current.ty) / current.k;
-  const ew = rect.width / current.k;
-  const eh = rect.height / current.k;
-  if (ew <= 0 || eh <= 0) return current;
+  const source = untransformedRect(rect, current);
+  if (source.w <= 0 || source.h <= 0) return current;
 
   // Cover, not contain: the chamber reaches every edge of the window, and
   // whichever axis has spare goes past it. Fitting instead would letterbox
   // the drive and leave the faceplate showing down one side.
-  const k = Math.max(vw / ew, vh / eh) * overscan;
+  const k = Math.max(vw / source.w, vh / source.h) * overscan;
+  return placeSource(
+    source,
+    k,
+    { x: vw / 2, y: vh / 2 },
+  );
+}
+
+/**
+ * The roll camera, rather than a generic rectangle zoom.
+ *
+ * Desktop keeps the original full-window drive. A stacked phone has a
+ * different composition: the fixed Score/Entropy instrument occupies the
+ * bottom of the screen, so the chamber is aimed into the usable field above
+ * it instead of being centred behind it. The actual rendered HUD height is
+ * supplied by App, which keeps this tied to the interface rather than to a
+ * guessed phone size.
+ */
+export function zoomForRoll(
+  rect: DOMRect,
+  current: Zoom,
+  hudHeight = 0,
+): Zoom {
+  if (!isStackedLayout()) return zoomOnto(rect, current);
+
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const source = untransformedRect(rect, current);
+  if (source.w <= 0 || source.h <= 0) return current;
+
+  // Leave a small visual seam above the HUD so the dice never appear to roll
+  // underneath the instrument that reports what the roll is doing to Score.
+  const seam = Math.max(12, Math.min(24, vh * 0.025));
+  const reserve = Math.min(vh * 0.38, Math.max(0, hudHeight) + seam);
+  const top = Math.max(6, Math.min(16, vh * 0.015));
+  const usableH = Math.max(1, vh - reserve - top);
+
+  // The chamber should become the roll world, not merely grow. Cover the
+  // usable field, accepting crop at the sides when a portrait screen is much
+  // taller than the chamber. The dice arena is centred in the glass, so that
+  // crop removes bezel/screen periphery before it removes the action.
+  const k = Math.max(vw / source.w, usableH / source.h) * OVERSCAN;
+
+  return placeSource(
+    source,
+    k,
+    { x: vw / 2, y: top + usableH / 2 },
+  );
+}
+
+interface SourceRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+function untransformedRect(rect: DOMRect, current: Zoom): SourceRect {
+  const sx = window.scrollX;
+  const sy = window.scrollY;
+  return {
+    x: (rect.left + sx - current.tx) / current.k,
+    y: (rect.top + sy - current.ty) / current.k,
+    w: rect.width / current.k,
+    h: rect.height / current.k,
+  };
+}
+
+function placeSource(
+  source: SourceRect,
+  k: number,
+  target: { x: number; y: number },
+): Zoom {
+  const sx = window.scrollX;
+  const sy = window.scrollY;
+  const cx = source.x + source.w / 2;
+  const cy = source.y + source.h / 2;
   return {
     k,
-    tx: (vw - ew * k) / 2 + sx - ex * k,
-    ty: (vh - eh * k) / 2 + sy - ey * k,
+    tx: target.x + sx - cx * k,
+    ty: target.y + sy - cy * k,
   };
 }
 
@@ -97,4 +168,13 @@ export const DRIVE_OUT_MS = 1400;
  */
 export function canDrive(): boolean {
   return typeof window !== 'undefined';
+}
+
+function isStackedLayout(): boolean {
+  return typeof window !== 'undefined'
+    && window.matchMedia(
+      '(max-width: 759px),'
+      + '(max-width: 900px) and (min-height: 521px),'
+      + '(max-width: 900px) and (orientation: portrait)',
+    ).matches;
 }
