@@ -287,6 +287,7 @@ export function App(): JSX.Element {
           <GamePanel
             s={s}
             sealed={phase === 'plan'}
+            immersed={phase === 'roll' || passage !== null}
             onSealed={enterRoll}
             resizeRef={trayResizeRef}
             glassRef={chamberRef}
@@ -919,10 +920,12 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
 /** Long enough for approach, impact, and either fade or shield ricochet. */
 const ENTROPY_ATTACK_MS = 3600;
 
-function GamePanel({ s, sealed, onSealed, resizeRef, glassRef }: {
+function GamePanel({ s, sealed, immersed, onSealed, resizeRef, glassRef }: {
   s: GameState;
   /** True in the Plan phase: the chamber is shut and a throw opens it. */
   sealed: boolean;
+  /** True while crossing or inside the screen; keeps CRT backdrop out through exit. */
+  immersed: boolean;
   onSealed: () => void;
   resizeRef: MutableRefObject<(() => void) | null>;
   /** What the drive fills the window with: the glass, not its bezel. */
@@ -950,6 +953,7 @@ function GamePanel({ s, sealed, onSealed, resizeRef, glassRef }: {
           resizeRef={resizeRef}
           glassRef={glassRef}
           sealed={sealed}
+          immersed={immersed}
           onSealed={onSealed}
         />
       </div>
