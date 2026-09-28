@@ -2612,23 +2612,35 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
    * not recreate its physics world.
    */
   .app[data-tab]:not([data-tab='roll']) .game-area { display: none; }
-  .app[data-tab='roll'] .game-area { display: flex; }
+  .app[data-tab='roll'] .game-area {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
   .app[data-tab='roll'] .panel-rail { display: none; }
   .app[data-tab='stats'] .panel-rail--right,
   .app[data-tab='log'] .panel-rail--right { display: none; }
 
-  /*
-   * Build reads top-to-bottom as intent then means: the active Goal first,
-   * followed by the tree used to reach it. DOM order remains untouched so
-   * desktop/photo placement is unchanged.
-   */
+  /* Build is tree-only on mobile. Goal belongs to Roll and is rendered
+     directly under the chamber/deck instead of inside this rail. */
   .app[data-tab='web'] .panel-rail--left {
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
-  .app[data-tab='web'] .fixed-panel--goal { order: 1; }
-  .app[data-tab='web'] .fixed-panel--tree { order: 2; }
+  .fixed-panel--goal-mobile {
+    flex: 0 0 auto;
+    width: 100%;
+    max-height: none;
+    transition:
+      transform 1400ms cubic-bezier(0.2, 0, 0.25, 1),
+      opacity 260ms ease;
+  }
+  .viewport--driven .fixed-panel--goal-mobile {
+    transform: translate3d(0, 16vh, 220px);
+    opacity: 0;
+    pointer-events: none;
+  }
   /* The chamber stops being an absolutely-placed panel here, so it needs a
      height of its own -- without one it collapses to its own bezel. */
   .game__arena { flex: 0 0 auto; height: min(52vh, 460px); min-height: 220px; }
