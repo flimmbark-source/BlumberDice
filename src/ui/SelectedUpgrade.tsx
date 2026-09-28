@@ -145,15 +145,20 @@ export function MobileSelectedUpgrade({ s, nodeId, onClose }: {
   const pinnable = canPin(s, node.id);
 
   return (
-    <aside className="mobile-upgrade" aria-label={`Selected upgrade: ${node.name}`}>
-      <div className="mobile-upgrade__head">
-        <NodeMark type={node.nodeType} region={node.region} size={34} glyph />
-        <div className="mobile-upgrade__identity">
-          <span className="mobile-upgrade__name">{node.name}</span>
-          <span className={`mobile-upgrade__state mobile-upgrade__state--${state}`}>
-            {STATE_LABEL[state]}
-          </span>
-        </div>
+    <>
+      <div className="fixed-panel__bar fixed-panel__bar--mobile-upgrade">
+        <span className="fixed-panel__title">Selected upgrade</span>
+        <span className={`mobile-upgrade__state mobile-upgrade__state--${state}`}>
+          {STATE_LABEL[state]}
+        </span>
+      </div>
+      <div className="fixed-panel__body">
+        <aside className="mobile-upgrade" aria-label={`Selected upgrade: ${node.name}`}>
+          <div className="mobile-upgrade__head">
+            <NodeMark type={node.nodeType} region={node.region} size={34} glyph />
+            <div className="mobile-upgrade__identity">
+              <span className="mobile-upgrade__name">{node.name}</span>
+            </div>
         {!owned && (
           <button
             type="button"
@@ -208,8 +213,10 @@ export function MobileSelectedUpgrade({ s, nodeId, onClose }: {
         {state === 'locked' && (
           <span className="mobile-upgrade__note">Connect an adjacent node first.</span>
         )}
+          </div>
+        </aside>
       </div>
-    </aside>
+    </>
   );
 }
 
