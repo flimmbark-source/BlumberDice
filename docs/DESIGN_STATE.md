@@ -1296,10 +1296,60 @@ Consequences worth naming:
   still inside the same hit area, so the label that says "click to stop" can
   itself be clicked. A label that looks pressable and is not would be worse
   than no label. The standing hint line it replaced is gone.
-- **Stacked layouts do not drive.** Below 901px the chamber is already the
-  widest thing on the page and the page itself scrolls; a transform on an
-  ancestor of a scrolling document is a trap. The phase still happens there —
-  shield off, readout up — and the view scrolls to the chamber instead.
+- **Stacked layouts do not drive.** Where the panels stack, the chamber is
+  already the widest thing on the page and the page itself scrolls; a
+  transform on an ancestor of a scrolling document is a trap. The phase still
+  happens there — shield off, readout up — and the view scrolls to the
+  chamber instead. See 39: "where the panels stack" is not the same as
+  "below 901px".
+
+---
+
+### 39. A phone held sideways gets the faceplate
+
+The small-screen rules used to be one width: below 901px, stack. That is the
+right call for a phone held upright and the wrong one for the same phone held
+sideways, where the viewport is 844x390. A stack spends width it has to buy
+height it does not have, and it pushes the Roll switch below the fold — the
+one control the game is played with.
+
+So the stacking condition is no longer a plain width. The machine stacks when
+the viewport is too narrow for three columns at all (under 760px), **or** when
+it is tall enough not to need them (521px and up), **or** when it is held
+upright. Equivalently: a wide, short, sideways screen keeps the faceplate.
+
+- **The condition is written out twice and must agree.** `styles.css` carries
+  it as a media list and `canDrive()` in `src/ui/phase.ts` mirrors it,
+  because the drive into the roll chamber belongs to the faceplate. There is
+  no way to share one definition between CSS and JS here, so both sites say
+  so in a comment.
+- **The letterbox rules were split.** What the head gives up when the screen
+  is short — the key glyphs, most of its padding, the two switch banks
+  sharing a row — is true of either layout and stays keyed to the letterbox
+  alone. What was stack-specific — standing the deck beside the chamber,
+  dropping the cast vents — moved under the narrow-stack width, because a
+  faceplate already stands them side by side.
+- **The panels had to give up their floor.** Each side panel wants 25.5% but
+  never less than 260px. On 844px that floor plus the 14px inset puts a
+  panel's inner edge past where the chamber starts, and the three columns
+  collide. Sideways they take a flat 27% with no floor and the chamber is
+  moved in to clear them.
+- **The face gives up its trim, not its content.** The footers, the cast
+  vents, the hazard block on each bezel and the object's own cream edge go,
+  because each is decoration; the panels, the tree, the goal and its bars all
+  stay. The one piece of *content* dropped is the "Next goal" legend on the
+  milestone card, where the head beside it already reads "Next milestone" —
+  it was the same sentence twice on 190px of glass. Where the row carries a
+  node's name instead, the legend stays and the name truncates.
+- **The goal plate is sized to its content, not scrolled.** Capped at 46% of
+  the rail it needed 120px and had 96, so it scrolled inside a 96px box. It
+  now takes 58% and is tightened to fit that, which is honest at a glance in
+  a way a hidden scrollbar is not. The tree yields, because the tree is the
+  elastic panel and the goal is a fixed block.
+
+Measured at 800x360, 844x390, 915x412 and 932x430: no page overflow in either
+axis, no panel outside the viewport, no clipped bezel title, no scrolling goal
+plate. The drive still covers the screen edge to edge and returns to identity.
 
 ---
 

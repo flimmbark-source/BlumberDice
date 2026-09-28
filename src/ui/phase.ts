@@ -79,6 +79,13 @@ export const DRIVE_MS = 900;
  * view just does not move.
  */
 export function canDrive(): boolean {
-  return typeof window !== 'undefined'
-    && window.matchMedia('(min-width: 901px)').matches;
+  if (typeof window === 'undefined') return false;
+  // The faceplate is showing exactly when the machine is not stacked, and
+  // the drive belongs to the faceplate. Mirrors the stacking condition in
+  // `styles.css`; the two must agree.
+  return !window.matchMedia(
+    '(max-width: 759px),'
+    + '(max-width: 900px) and (min-height: 521px),'
+    + '(max-width: 900px) and (orientation: portrait)',
+  ).matches;
 }
