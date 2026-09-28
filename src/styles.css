@@ -2888,15 +2888,20 @@ body:has(.app--photo)::before { display: none; }
 .app--photo .game-area             { left: 35.41%; top: 16.37%; width: 36.60%; height: 55.90%; }
 .app--photo .fixed-panel--upgrade  { left: 74.04%; top: 21.25%; width: 24.64%; height: 40.38%; }
 .app--photo .fixed-panel--chain    { left: 74.76%; top: 65.67%; width: 23.21%; height: 17.00%; }
-/* The switch sits on the cap the photograph already paints, so ours lands
-   exactly on top of it rather than beside it. The deck is nested inside the
-   chamber's box, so these are the stage percentages re-expressed against
-   that box -- the first real tax of mapping to fixed holes. */
+/*
+ * The switch is the cap the photograph paints, edge for edge.
+ *
+ * Measured off the art, lip included: the cap runs x 742..1058, y 736..868
+ * of the 1672x941 frame. Taking only the saturated face left the moulding's
+ * own shaded bottom edge showing under ours. The deck is nested inside the
+ * chamber's box, so those are re-expressed against it here, and the cap then
+ * fills this box exactly -- one set of numbers, not two that must agree.
+ */
 .app--photo .game__controls {
-  left: 21.56%;   /* (43.30 - 35.41) / 36.60 */
-  top: 108.35%;   /* (76.94 - 16.37) / 55.90 */
-  width: 58.17%;  /* 21.29 / 36.60 */
-  height: 32.33%; /* 18.07 / 55.90 */
+  left: 24.50%;   /* (44.378 - 35.41) / 36.60 */
+  top: 110.63%;   /* (78.214 - 16.37) / 55.90 */
+  width: 51.80%;  /* 18.959 / 36.60 */
+  height: 25.28%; /* 14.134 / 55.90 */
 }
 .app--photo .game-area { overflow: visible; }
 
@@ -3074,10 +3079,11 @@ body:has(.app--photo)::before { display: none; }
 .app--photo .game__controls::after { display: none; }
 .app--photo .rollbtn {
   position: absolute;
-  left: 4%; top: 12%; width: 92%; height: 76%;
+  inset: 0;
+  width: 100%; height: 100%;
   margin: 0;
   border: 0;
-  border-radius: 13px;
+  border-radius: 14px;
   box-shadow:
     inset 0 2px 0 rgba(255, 213, 185, 0.55),
     inset 0 -5px 10px rgba(120, 40, 10, 0.5);
@@ -3385,6 +3391,27 @@ body:has(.app--photo)::before { display: none; }
 /* The readout below the chamber gives the instruction once the view is in;
    the tray's own hint would sit underneath it. */
 .viewport--driven .tray__hint { display: none; }
+
+/* Driven in, the glass is the window. Its corner radius is magnified along
+   with everything else -- 18px becomes fifty-odd -- and would let the plate
+   behind show down both edges of a view that is meant to have reached them.
+   The viewfinder marks go the same way: they are framing for a screen you
+   are looking at, not one you are inside. */
+.viewport--driven .tray {
+  border-radius: 0;
+  /*
+   * Its own phosphor, not the photograph's.
+   *
+   * On the photo skin the glass is a transparent window onto the chassis
+   * image, and that image's CRT hole has rounded corners. Filled to the
+   * window, those corners put a sliver of enamel down both edges of a view
+   * that is meant to have reached them. The canvas draws over this either
+   * way, so it only ever shows where the canvas does not.
+   */
+  background: radial-gradient(
+    120% 130% at 50% 0%, var(--screen-hi), var(--screen) 45%, var(--screen-lo));
+}
+.viewport--driven .tray::before { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .viewport { transition: none; }

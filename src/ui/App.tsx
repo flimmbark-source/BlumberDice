@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState, type MutableRefObject } from 'react';
+import {
+  useEffect, useLayoutEffect, useRef, useState, type MutableRefObject,
+} from 'react';
 import {
   allocatedCost, canRefund, canRoll, canSwitchFramework, CONFIG, displayStats,
   effectiveDice, getBuild, type EntropyTick, type GameState,
@@ -54,11 +56,10 @@ export function App(): JSX.Element {
     const el = chamberRef.current;
     if (!el) return;
     playWhirr('in', DRIVE_MS);
-    if (canDrive()) {
-      setZoom((z) => zoomOnto(el.getBoundingClientRect(), z, 8));
-    } else {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    if (!canDrive()) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // The zoom is worked out once the phase has committed, not here: the
+    // phase changes what is on the deck, and measuring beforehand aims the
+    // drive at a layout that is about to move.
     setPhase('roll');
     if (s.scoreLocked) actions.toggleScoreLock();
   };
@@ -68,7 +69,6 @@ export function App(): JSX.Element {
   const endRoll = (): void => {
     if (phase !== 'roll') return;
     playWhirr('out', DRIVE_MS);
-    setZoom(NO_ZOOM);
     setPhase('plan');
     if (!s.scoreLocked) actions.toggleScoreLock();
   };
@@ -137,6 +137,15 @@ export function App(): JSX.Element {
     if (phase === 'plan' && !s.scoreLocked) actions.toggleScoreLock();
   }, [phase, s.scoreLocked]);
 
+  // Aim the drive at the committed layout. Measured from a layout effect the
+  // element is in its roll-phase shape and still untransformed, which is the
+  // only moment both are true.
+  useLayoutEffect(() => {
+    if (phase !== 'roll') { setZoom(NO_ZOOM); return; }
+    const el = chamberRef.current;
+    if (el && canDrive()) setZoom((z) => zoomOnto(el.getBoundingClientRect(), z));
+  }, [phase]);
+
   // A transform changes nothing about layout, so the tray has to be told the
   // drive has finished or it keeps the backing store it was sized for.
   useEffect(() => {
@@ -151,7 +160,7 @@ export function App(): JSX.Element {
     const onResize = (): void => {
       const el = chamberRef.current;
       if (!el) return;
-      setZoom((z) => (canDrive() ? zoomOnto(el.getBoundingClientRect(), z, 8) : NO_ZOOM));
+      setZoom((z) => (canDrive() ? zoomOnto(el.getBoundingClientRect(), z) : NO_ZOOM));
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
@@ -211,7 +220,7 @@ export function App(): JSX.Element {
             sealed={phase === 'plan'}
             onSealed={enterRoll}
             resizeRef={trayResizeRef}
-            chamberRef={chamberRef}
+            glassRef={chamberRef}
           />
         </section>
 
@@ -780,14 +789,14 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
 /** Long enough for approach, impact, and either fade or shield ricochet. */
 const ENTROPY_ATTACK_MS = 3600;
 
-function GamePanel({ s, sealed, onSealed, resizeRef, chamberRef }: {
+function GamePanel({ s, sealed, onSealed, resizeRef, glassRef }: {
   s: GameState;
   /** True in the Plan phase: the chamber is shut and a throw opens it. */
   sealed: boolean;
   onSealed: () => void;
   resizeRef: MutableRefObject<(() => void) | null>;
-  /** What the drive fills the window with. */
-  chamberRef: MutableRefObject<HTMLDivElement | null>;
+  /** What the drive fills the window with: the glass, not its bezel. */
+  glassRef: MutableRefObject<HTMLDivElement | null>;
 }): JSX.Element {
   const build = getBuild(s);
   const stats = displayStats(s, build);
@@ -798,7 +807,7 @@ function GamePanel({ s, sealed, onSealed, resizeRef, chamberRef }: {
 
   return (
     <section className="game game-area__panel">
-      <div className="game__arena" ref={chamberRef}>
+      <div className="game__arena">
         {/* The status lamp every other plate carries. It repeats what the
             telemetry line on the glass already says in words. */}
         <span className={`chamber__lamp${ready ? '' : ' chamber__lamp--busy'}`} aria-hidden />
@@ -806,6 +815,7 @@ function GamePanel({ s, sealed, onSealed, resizeRef, chamberRef }: {
           s={s}
           rollRef={rollRef}
           resizeRef={resizeRef}
+          glassRef={glassRef}
           sealed={sealed}
           onSealed={onSealed}
         />

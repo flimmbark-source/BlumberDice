@@ -45,7 +45,7 @@ function tumbleFor(backlog: number): number {
   return 300;
 }
 
-export function DiceTray({ s, rollRef, resizeRef, sealed, onSealed }: {
+export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: {
   s: GameState;
   /** Filled in by the tray so the Roll button throws the same dice a click does. */
   rollRef: MutableRefObject<(() => void) | null>;
@@ -57,6 +57,12 @@ export function DiceTray({ s, rollRef, resizeRef, sealed, onSealed }: {
    */
   resizeRef?: MutableRefObject<(() => void) | null>;
   /**
+   * The glass itself, for the view to drive into. The bezel around it
+   * belongs to the faceplate, not to the roll area, so filling the window
+   * with the arena leaves a sliver of plate down two edges.
+   */
+  glassRef?: MutableRefObject<HTMLDivElement | null>;
+  /**
    * True while the chamber is shut — the Plan phase. The dice are still
    * shown and still settle, but a throw is not the tray's to make.
    */
@@ -67,7 +73,7 @@ export function DiceTray({ s, rollRef, resizeRef, sealed, onSealed }: {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /** The chamber floor, on its own layer beneath the dice. */
   const groundRef = useRef<HTMLCanvasElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
   const worldRef = useRef<World>(createWorld());
   const cursorRef = useRef<number>(0);
   /** Bonus dice the engine had already destroyed when the tray last looked. */
@@ -415,7 +421,13 @@ export function DiceTray({ s, rollRef, resizeRef, sealed, onSealed }: {
   const touch = touchPrimary();
 
   return (
-    <div className="tray" ref={wrapRef}>
+    <div
+      className="tray"
+      ref={(el) => {
+        wrapRef.current = el;
+        if (glassRef) glassRef.current = el;
+      }}
+    >
       <canvas className="tray__canvas tray__canvas--ground" ref={groundRef} aria-hidden />
       <canvas className="tray__canvas tray__canvas--dice" ref={canvasRef} aria-hidden />
 

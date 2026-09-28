@@ -1267,6 +1267,25 @@ Consequences worth naming:
   no layout, so a magnified chamber would keep the resolution it was sized
   for and go soft. The tray now sizes its canvas by the on-screen scale as
   well as the device ratio, and the view tells it when the drive has landed.
+- **The switch is the painted cap, edge for edge.** Measured off the art with
+  its shaded lip included — x 742..1058, y 736..868 of the 1672x941 frame.
+  Taking only the saturated face left the moulding's own bottom edge showing
+  under ours. The deck box is set to exactly that and the cap fills it, so
+  there is one set of numbers rather than two that have to agree.
+- **The drive covers rather than fits.** `max` of the two ratios, not `min`:
+  the glass reaches every edge and whichever axis has spare goes past it.
+  Three things had to follow. It aims at the glass, not the arena, since the
+  bezel belongs to the faceplate and filling with the arena leaves a sliver
+  of plate down two edges. The glass squares its corners, because an 18px
+  radius magnified threefold is a visible notch of enamel at each end. And it
+  takes its own phosphor: on the photo skin the glass is a transparent window
+  onto the chassis image, whose CRT hole is itself rounded, so the canvas
+  alone does not cover the corners.
+- **It is aimed after the phase commits, and overscanned.** The deck changes
+  shape between the phases — the switch is labelled differently on each side
+  — so a box measured beforehand is a box about to move. Measuring from a
+  layout effect fixes most of it; the last few pixels are covered by filling
+  1.5% past the edges rather than chasing a reflow.
 - **Stacked layouts do not drive.** Below 901px the chamber is already the
   widest thing on the page and the page itself scrolls; a transform on an
   ancestor of a scrolling document is a trap. The phase still happens there —

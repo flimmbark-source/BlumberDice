@@ -27,14 +27,14 @@ export function zoomStyle(z: Zoom): string {
 }
 
 /**
- * The transform that lays `rect` over the whole window.
+ * The transform that fills the whole window with `rect`.
  *
  * `current` is the transform already applied to the element that was
  * measured, so the measurement is taken back to untransformed space before
  * the new one is worked out. That is what lets this be called again while
  * already zoomed — on a window resize — without compounding.
  */
-export function zoomOnto(rect: DOMRect, current: Zoom, margin = 0): Zoom {
+export function zoomOnto(rect: DOMRect, current: Zoom, overscan = OVERSCAN): Zoom {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
@@ -44,13 +44,27 @@ export function zoomOnto(rect: DOMRect, current: Zoom, margin = 0): Zoom {
   const eh = rect.height / current.k;
   if (ew <= 0 || eh <= 0) return current;
 
-  const k = Math.min((vw - margin * 2) / ew, (vh - margin * 2) / eh);
+  // Cover, not contain: the chamber reaches every edge of the window, and
+  // whichever axis has spare goes past it. Fitting instead would letterbox
+  // the drive and leave the faceplate showing down one side.
+  const k = Math.max(vw / ew, vh / eh) * overscan;
   return {
     k,
     tx: (vw - ew * k) / 2 - ex * k,
     ty: (vh - eh * k) / 2 - ey * k,
   };
 }
+
+/**
+ * A little more than exactly full.
+ *
+ * The deck changes shape between the phases — the switch is labelled
+ * differently on each side — so the box the drive was aimed at can settle a
+ * few pixels after it was measured. At this scale that is under a percent,
+ * and covering by a percent and a half costs nothing while guaranteeing the
+ * glass never comes up short of an edge.
+ */
+const OVERSCAN = 1.015;
 
 /** How long the drive in and out takes. Shared by the CSS and the sound. */
 export const DRIVE_MS = 900;
