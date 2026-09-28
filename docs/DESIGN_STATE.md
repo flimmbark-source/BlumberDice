@@ -1240,11 +1240,14 @@ was already there:
 
 **The view says which half you are in.** Pressing the switch, clicking the
 chamber, pressing Space or taking the shield off the head's readout all do
-the same thing: the drive whirrs and the view moves in until the chamber
-fills the window. Inside, a click on the dice is the throw. A readout rises
-from the bottom of the screen, unshielded, and engaging its shield is what
-drives the view back out. Escape does the same, so the way out never depends
-on reaching one control.
+the same thing: the machine whirrs and the player appears to pass through the
+rolling chamber's glass. The surrounding UI falls away in depth, but the dice
+surface itself does **not** zoom. Its existing rendered rectangle is translated
+to the centre of the screen at the same size on both desktop and mobile.
+Inside, a click on the dice is the throw. A compact Score/Entropy readout rises
+from the bottom of the screen, unshielded, and engaging its shield reverses the
+passage. Escape does the same, so the way out never depends on reaching one
+control.
 
 Consequences worth naming:
 
@@ -1258,52 +1261,41 @@ Consequences worth naming:
 - **`deleteScore` stays shielded**, so it is unreachable in Plan. That one is
   destructive and the shield protecting it reads as correct; it is noted
   rather than changed.
-- **The drive composes rather than replaces.** It lives on a wrapper outside
-  the faceplate's own transform, so the photo skin's stage scale and the
-  drive multiply instead of fighting. `zoomOnto` takes the measurement back
-  through the transform already applied, which is what lets it be recomputed
-  on a resize without compounding.
-- **The chamber's backing store follows the drive.** A CSS transform changes
-  no layout, so a magnified chamber would keep the resolution it was sized
-  for and go soft. The tray now sizes its canvas by the on-screen scale as
-  well as the device ratio, and the view tells it when the drive has landed.
+- **The dice tray is the invariant.** Roll never scales it. `centreRollView`
+  only applies the remaining screen-space translation needed to put the
+  tray's current visual centre at the viewport centre. The photo skin's stage
+  scale therefore remains whatever it already was; Roll does not multiply it.
+- **Depth belongs to the machine around the tray.** The chamber threshold is
+  a separate layer that expands past the viewer only during entry/exit, while
+  the top bar, side panels and control deck move outward in perspective and
+  fade. The threshold is absent in settled Plan and settled Roll, so it does
+  not add a permanent bezel.
+- **Desktop and mobile use the same roll composition.** Stacking changes the
+  Plan layout only. Roll always ends with the unchanged-size tray centred on
+  screen; mobile is no longer a special camera case.
+- **The tray stays mounted.** Its physics world is not recreated when the
+  phase changes. Translation also does not demand a larger canvas backing
+  store, which avoids the fill-rate cost of the old magnifying drive.
+- **React Three Fiber is not used for this transition.** Nothing here requires
+  a second WebGL scene: CSS perspective transforms can move the existing DOM
+  machine around the already-rendered canvas using compositor-friendly
+  transform/opacity properties. Adding R3F would add bundle, GPU and memory
+  cost without supplying a capability the transition needs.
 - **The switch is the painted cap, edge for edge.** Measured off the art with
   its shaded lip included — x 742..1058, y 736..868 of the 1672x941 frame.
   Taking only the saturated face left the moulding's own bottom edge showing
   under ours. The deck box is set to exactly that and the cap fills it, so
   there is one set of numbers rather than two that have to agree.
-- **The drive covers rather than fits.** `max` of the two ratios, not `min`:
-  the glass reaches every edge and whichever axis has spare goes past it.
-  Three things had to follow. It aims at the glass, not the arena, since the
-  bezel belongs to the faceplate and filling with the arena leaves a sliver
-  of plate down two edges. The glass squares its corners, because an 18px
-  radius magnified threefold is a visible notch of enamel at each end. And it
-  takes its own phosphor: on the photo skin the glass is a transparent window
-  onto the chassis image, whose CRT hole is itself rounded, so the canvas
-  alone does not cover the corners.
-- **It is aimed after the phase commits, and overscanned.** The deck changes
-  shape between the phases — the switch is labelled differently on each side
-  — so a box measured beforehand is a box about to move. Measuring from a
-  layout effect fixes most of it; the last few pixels are covered by filling
-  1.5% past the edges rather than chasing a reflow.
 - **The readout rumbles with the pressure.** `--rumble` is the Entropy meter
   behind the glass as 0..1, and the shake widens *and* quickens with it —
   amplitude alone reads as a drift rather than a machine under load. At zero
   the amplitude is zero, so it sits still without the animation needing to be
   switched off.
-- **A tab springs out of its side** stamped with what pressing does. It is a
-  child of the readout rather than a sibling: positioned past the edge it is
-  still inside the same hit area, so the label that says "click to stop" can
-  itself be clicked. A label that looks pressable and is not would be worse
-  than no label. The standing hint line it replaced is gone.
-- **Stacked mobile now drives with a different composition.** The old stacked
-  exception is stale: the roll phase must still feel like entering the dice
-  chamber on a phone. The mobile camera is not the desktop's generic
-  full-window cover. It measures the live bottom Score/Entropy HUD, reserves
-  that region, and drives the chamber into the remaining field above it. The
-  page's scroll offset is part of the transform calculation, so the drive
-  starts and returns correctly from wherever the player was in the stacked
-  document. Desktop keeps the original full-window chamber drive.
+- **The Roll readout is deliberately smaller than the head readout.** Its
+  Score glass is capped at 184px and its attached stop tab is compacted. The
+  tab's width is reserved in the HUD layout, so the entire Score-plus-tab
+  control is centred and remains inside narrow phone screens. The tab says
+  "Tap to stop" for a coarse pointer and "Click to stop" otherwise.
 
 ---
 
@@ -1320,11 +1312,9 @@ the viewport is too narrow for three columns at all (under 760px), **or** when
 it is tall enough not to need them (521px and up), **or** when it is held
 upright. Equivalently: a wide, short, sideways screen keeps the faceplate.
 
-- **The condition is written out twice and must agree.** `styles.css` carries
-  it as a media list and `canDrive()` in `src/ui/phase.ts` mirrors it,
-  because the drive into the roll chamber belongs to the faceplate. There is
-  no way to share one definition between CSS and JS here, so both sites say
-  so in a comment.
+- **The stacking condition is layout-only.** `styles.css` owns it. Roll no
+  longer mirrors this breakpoint in TypeScript because desktop and mobile use
+  the same centred fixed-size tray composition.
 - **The letterbox rules were split.** What the head gives up when the screen
   is short — the key glyphs, most of its padding, the two switch banks
   sharing a row — is true of either layout and stays keyed to the letterbox
