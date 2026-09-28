@@ -8,6 +8,7 @@ import {
 import { clearStorage, loadFromStorage, saveToStorage } from '../engine/save.ts';
 import type { Face } from '../engine/types.ts';
 import { setGoal } from '../engine/goal.ts';
+import { touchPrimary } from './pointer.ts';
 
 /**
  * Holds the single mutable GameState and drives it with real time. React reads
@@ -27,6 +28,9 @@ class GameStore {
   private raf: number | null = null;
   private lastFrame = 0;
   private lastSave = 0;
+  /** Mobile does not need a full React-tree publish for every simulation frame. */
+  private readonly uiPublishInterval = touchPrimary() ? 1000 / 30 : 0;
+  private lastUiPublish = 0;
 
   constructor() {
     this.state = loadFromStorage() ?? createGame(Math.floor(Math.random() * 0xffffffff));
@@ -84,7 +88,25 @@ class GameStore {
       || s.entropyDir !== 0;
     if (live) {
       tick(s, dt);
-      this.notify();
+
+      // Keep the engine on rAF so timers and resolution preserve their real-time
+      // behaviour, but do not make the entire React tree render at display
+      // refresh rate on a phone. Direct actions still notify immediately.
+      const stillLive = s.pending.length > 0
+        || s.cooldownRemaining > 0
+        || s.bonusDice.length > 0
+        || s.score !== 0
+        || s.entropyLevel > 0
+        || s.scoreLocked
+        || s.entropyDir !== 0;
+      if (
+        this.uiPublishInterval === 0
+        || now - this.lastUiPublish >= this.uiPublishInterval
+        || !stillLive
+      ) {
+        this.lastUiPublish = now;
+        this.notify();
+      }
     }
     if (now - this.lastSave > 4000) {
       this.lastSave = now;
