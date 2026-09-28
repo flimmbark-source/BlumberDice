@@ -3757,19 +3757,22 @@ body:has(.viewport--exiting .app--photo) {
 }
 
 .photo-passage-shell {
-  position: absolute;
+  position: fixed;
   left: 50%;
   top: 50%;
   z-index: 110000;
   pointer-events: none;
-  transform-origin: 53.71% 44.32%;
+  /* This transform does one job only: reproduce the resting photo stage
+     exactly. The passage scale belongs to the clipped pieces below. */
   transform: translate(-50%, -50%) scale(var(--stage-k, 1));
-  will-change: transform, opacity;
+  transform-origin: center center;
 }
 .photo-passage-shell__piece {
   position: absolute;
   inset: 0;
   background: var(--chassis) center / 100% 100% no-repeat;
+  transform-origin: 53.71% 44.32%;
+  will-change: transform, opacity;
 }
 .photo-passage-shell__piece--top {
   clip-path: polygon(0 0, 100% 0, 100% 16.37%, 0 16.37%);
@@ -3784,21 +3787,21 @@ body:has(.viewport--exiting .app--photo) {
   clip-path: polygon(0 72.27%, 100% 72.27%, 100% 100%, 0 100%);
 }
 
-.photo-passage-shell--in {
+.photo-passage-shell--in .photo-passage-shell__piece {
   animation: photoPassThroughIn 2200ms cubic-bezier(0.55, 0, 0.2, 1) both;
 }
-.photo-passage-shell--out {
+.photo-passage-shell--out .photo-passage-shell__piece {
   animation: photoPassThroughOut 1400ms cubic-bezier(0.2, 0, 0.25, 1) both;
 }
 @keyframes photoPassThroughIn {
-  0%   { opacity: 1; transform: translate(-50%, -50%) scale(var(--stage-k, 1)) scale(1); }
+  0%   { opacity: 1; transform: scale(1); }
   64%  { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(var(--stage-k, 1)) scale(5); }
+  100% { opacity: 0; transform: scale(5); }
 }
 @keyframes photoPassThroughOut {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(var(--stage-k, 1)) scale(5); }
+  0%   { opacity: 0; transform: scale(5); }
   28%  { opacity: 1; }
-  100% { opacity: 1; transform: translate(-50%, -50%) scale(var(--stage-k, 1)) scale(1); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* In the photo skin the rail wrappers are display:contents, so transforms on
@@ -3858,10 +3861,10 @@ body:has(.viewport--exiting .app--photo) {
   }
   .viewport--entering .chamber__threshold,
   .viewport--exiting .chamber__threshold,
-  .photo-passage-shell {
+  .photo-passage-shell__piece {
     animation: none !important;
-    display: none;
   }
+  .photo-passage-shell { display: none; }
 }
 
 /* The Roll world is a viewport-level field, not the old CRT rectangle. It
