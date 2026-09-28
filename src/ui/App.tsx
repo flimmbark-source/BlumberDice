@@ -21,7 +21,7 @@ import chassisUrl from './chassis.webp';
 import { playChannelClick, playWhirr } from './sound.ts';
 import {
   canDrive, DRIVE_IN_MS, DRIVE_OUT_MS, NO_ZOOM, type Phase,
-  zoomOnto, zoomStyle, type Zoom,
+  zoomForRoll, zoomStyle, type Zoom,
 } from './phase.ts';
 
 const TREE_UNLOCK_SCORE = 20;
@@ -45,6 +45,7 @@ export function App(): JSX.Element {
   const [phase, setPhase] = useState<Phase>('plan');
   const [zoom, setZoom] = useState<Zoom>(NO_ZOOM);
   const chamberRef = useRef<HTMLDivElement>(null);
+  const rollHudRef = useRef<HTMLDivElement>(null);
   const trayResizeRef = useRef<(() => void) | null>(null);
 
   /**
@@ -148,7 +149,10 @@ export function App(): JSX.Element {
   useLayoutEffect(() => {
     if (phase !== 'roll') { setZoom(NO_ZOOM); return; }
     const el = chamberRef.current;
-    if (el && canDrive()) setZoom((z) => zoomOnto(el.getBoundingClientRect(), z));
+    if (el && canDrive()) {
+      const hudHeight = rollHudRef.current?.getBoundingClientRect().height ?? 0;
+      setZoom((z) => zoomForRoll(el.getBoundingClientRect(), z, hudHeight));
+    }
   }, [phase, skin, stageScale]);
 
   // A transform changes nothing about layout, so the tray has to be told the
@@ -166,7 +170,10 @@ export function App(): JSX.Element {
     const onResize = (): void => {
       const el = chamberRef.current;
       if (!el) return;
-      setZoom((z) => (canDrive() ? zoomOnto(el.getBoundingClientRect(), z) : NO_ZOOM));
+      const hudHeight = rollHudRef.current?.getBoundingClientRect().height ?? 0;
+      setZoom((z) => (
+        canDrive() ? zoomForRoll(el.getBoundingClientRect(), z, hudHeight) : NO_ZOOM
+      ));
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
@@ -340,7 +347,7 @@ export function App(): JSX.Element {
         rises into the player's view when the chamber opens, and engaging its
         shield is what closes it again. */}
     {phase === 'roll' && (
-      <div className="rollhud">
+      <div className="rollhud" ref={rollHudRef}>
         <div className="rollhud__inner">
           {/* The readout shakes harder the fuller the pressure meter behind
               it gets, so the thing you are about to lose is the thing that
