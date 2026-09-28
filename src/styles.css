@@ -2952,7 +2952,7 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   /* SVG drop-shadows force expensive offscreen filtering on many nodes at
      once. Shape/stroke/fill already encode every state, so phones keep the
      information while dropping the GPU-heavy glow layer. */
-  .tree { contain: layout paint; }
+  .tree:not(.tree--expanded) { contain: layout paint; }
   .tree .node__shape { transition: none; }
   .tree .node--available .node__shape,
   .tree .node--allocated .node__shape,
