@@ -20,7 +20,8 @@ import { STAGE_H, STAGE_W, useSkin, useStageScale } from './skin.ts';
 import chassisUrl from './chassis.webp';
 import { playChannelClick, playWhirr } from './sound.ts';
 import {
-  canDrive, DRIVE_MS, NO_ZOOM, type Phase, zoomOnto, zoomStyle, type Zoom,
+  canDrive, DRIVE_IN_MS, DRIVE_OUT_MS, NO_ZOOM, type Phase,
+  zoomOnto, zoomStyle, type Zoom,
 } from './phase.ts';
 
 const TREE_UNLOCK_SCORE = 20;
@@ -55,7 +56,7 @@ export function App(): JSX.Element {
     if (phase === 'roll') return;
     const el = chamberRef.current;
     if (!el) return;
-    playWhirr('in', DRIVE_MS);
+    playWhirr('in', DRIVE_IN_MS);
     if (!canDrive()) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     // The zoom is worked out once the phase has committed, not here: the
     // phase changes what is on the deck, and measuring beforehand aims the
@@ -68,7 +69,7 @@ export function App(): JSX.Element {
   const endRollRef = useRef<(() => void) | null>(null);
   const endRoll = (): void => {
     if (phase !== 'roll') return;
-    playWhirr('out', DRIVE_MS);
+    playWhirr('out', DRIVE_OUT_MS);
     setPhase('plan');
     if (!s.scoreLocked) actions.toggleScoreLock();
   };
@@ -153,9 +154,10 @@ export function App(): JSX.Element {
   // A transform changes nothing about layout, so the tray has to be told the
   // drive has finished or it keeps the backing store it was sized for.
   useEffect(() => {
-    const t = window.setTimeout(() => trayResizeRef.current?.(), DRIVE_MS + 40);
+    const ms = (phase === 'roll' ? DRIVE_IN_MS : DRIVE_OUT_MS) + 40;
+    const t = window.setTimeout(() => trayResizeRef.current?.(), ms);
     return () => window.clearTimeout(t);
-  }, [zoom]);
+  }, [zoom, phase]);
 
   // The window changing shape while driven in would otherwise leave the
   // chamber off-centre until the phase ended.

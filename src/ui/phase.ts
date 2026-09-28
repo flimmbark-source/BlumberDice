@@ -66,8 +66,22 @@ export function zoomOnto(rect: DOMRect, current: Zoom, overscan = OVERSCAN): Zoo
  */
 const OVERSCAN = 1.015;
 
-/** How long the drive in and out takes. Shared by the CSS and the sound. */
-export const DRIVE_MS = 900;
+/**
+ * How long the drive takes, in each direction. Shared by the CSS and the
+ * sound, so the motor runs exactly as long as the view moves.
+ *
+ * The push in is deliberately slow. It is a dolly being wound forward by a
+ * machine, not a camera whip: the weight has to be felt, and at 900ms it was
+ * over before it read as anything. The timing functions in `styles.css` carry
+ * the rest of that character -- see the note there, which also explains why
+ * the curve is not the shape it looks like it should be.
+ *
+ * The retraction is quicker. It is the same dolly on the same rails, so it
+ * keeps the character, but the player is on their way back to work rather
+ * than being shown something, and a slow exit is only a slow exit.
+ */
+export const DRIVE_IN_MS = 2200;
+export const DRIVE_OUT_MS = 1400;
 
 /**
  * Whether there is anywhere to drive to.

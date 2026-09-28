@@ -1412,6 +1412,63 @@ changes: no pad is generated and the tool keys stay as drawn.
 
 ---
 
+### 41. The drive is a dolly, not a whip
+
+At 900ms on a smooth ease the push into the chamber was a camera move. It was
+asked to be a machine winding a dolly forward on rails instead, which is three
+separate properties, and only the first is obvious.
+
+**It is slow.** 2.2s in. Weight is mostly duration.
+
+**It travels at a steady speed through the middle.** This is the actual tell.
+An eased curve is accelerating or braking at every moment; a driven rail is
+doing neither. So the middle of the move is flat in speed, and the ease lives
+only at the two ends.
+
+**And the curve that produces a steady speed is not a straight line.** What
+the eye reads as speed in a zoom is how fast the view magnifies -- the rate of
+change of the scale over the scale itself -- so a scale climbing evenly from 1
+to 3.3 looks quick at the start and crawls at the end. Even *perceived* speed
+needs the scale to grow by a constant factor per second, which in the numbers
+CSS interpolates is a curve biased hard toward the end: a quarter of the way
+through the move it is about a sixth of the way through the numbers. Written
+down the stops look wrong. Measured on screen they are the only ones that look
+right.
+
+`linear()` is what makes any of this expressible; a cubic bezier has four
+numbers and cannot hold a flat middle, two hesitations and a settle. Each
+declaration is preceded by a bezier that approximates it, because an unknown
+timing function invalidates the whole shorthand -- the fallback is a merely
+smooth drive rather than no drive at all.
+
+Over that shape sit the mechanical details:
+
+- **Two catches**, near a third and two thirds along, where the drive chain
+  takes up and gives. Measured, perceived speed drops from about 0.50 to 0.21
+  at the first and from 0.59 to 0.15 at the second, then recovers. They are
+  slower movement, never a jump, which is what separates a mechanism from a
+  dropped frame.
+- **A settle.** It ends a few thousandths past its mark and comes back: peak
+  scale 2.7798 against a resting 2.7733, the way a carriage meets its stop.
+- **A tick on each catch**, at a third the level of the end detents, so the
+  sound is of the thing the eye is watching rather than beside it.
+
+**The retraction is the same curve read backwards** -- same rails, same
+catches -- with a moment of load before it releases (it moves a few
+thousandths further *in* first). It runs 1400ms rather than 2200. It is not a
+lesser move; the player is on their way back to work rather than being shown
+something, and a slow exit is only a slow exit.
+
+Both directions are cut entirely under `prefers-reduced-motion`. A 2.2s
+magnification of the whole screen is the most vestibular thing this game does.
+
+Measured at 1100x620, 1280x720, 1440x900 and 1672x941: the settled drive still
+covers the window on every axis and the glass reaches the left edge. The
+durations land at 2200ms and 1400ms, and `linear()` is what the browser
+applies rather than the fallback.
+
+---
+
 ## Unresolved — deliberately not implemented
 
 - **Trauma.** No trauma stat, no damaged dice, no corrupted probability, no

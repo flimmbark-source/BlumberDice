@@ -25,7 +25,7 @@ function audio(): AudioContext | null {
 }
 
 /** Short burst of filtered noise: the contact, not the cabinet. */
-function contact(c: AudioContext, at: number): void {
+function contact(c: AudioContext, at: number, level = 1): void {
   const frames = Math.floor(c.sampleRate * 0.045);
   const buf = c.createBuffer(1, frames, c.sampleRate);
   const data = buf.getChannelData(0);
@@ -44,7 +44,7 @@ function contact(c: AudioContext, at: number): void {
 
   const g = c.createGain();
   g.gain.setValueAtTime(0.0001, at);
-  g.gain.exponentialRampToValueAtTime(0.16, at + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.16 * level, at + 0.004);
   g.gain.exponentialRampToValueAtTime(0.0001, at + 0.05);
 
   src.connect(band).connect(g).connect(c.destination);
@@ -134,6 +134,13 @@ export function playWhirr(direction: 'in' | 'out', ms: number): void {
     body(c, at);
     contact(c, at + dur * 0.92);
     body(c, at + dur * 0.92);
+
+    // And two along the way, where the drive chain catches and gives. They
+    // are placed on the flat spots in the timing function in `styles.css`,
+    // so the sound is of the thing the eye is watching rather than beside
+    // it, and they are quiet: a catch, not an arrival.
+    const catches = inward ? [0.32, 0.62] : [0.38, 0.68];
+    for (const t of catches) contact(c, at + dur * t, 0.34);
   } catch {
     // Sound is decoration; never let it interrupt a phase change.
   }

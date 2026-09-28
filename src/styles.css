@@ -3497,13 +3497,65 @@ body:has(.app--photo)::before { display: none; }
  * shield comes off and Score is live. Engaging it again drives back out.
  */
 
+/*
+ * The drive, and why the curve is not the shape it looks like it should be.
+ *
+ * This is meant to read as a machine winding a dolly forward on rails, so
+ * three things have to be true of it, and only the first is obvious.
+ *
+ *   1. It is slow. 2.2s in. A dolly has weight.
+ *
+ *   2. It travels at a steady speed through the middle. That is the whole
+ *      tell of a machine as against a camera move: an eased curve is always
+ *      accelerating or braking, and a driven rail is neither.
+ *
+ *   3. And the curve that gives a steady speed is NOT a straight line. What
+ *      the eye reads as speed here is how fast the view magnifies, which
+ *      goes as the RATE OF CHANGE of the scale over the scale itself -- so a
+ *      scale climbing evenly from 1 to 3.3 looks quick at the start and
+ *      crawls at the end. Even speed needs the scale to grow by a constant
+ *      factor per second instead, which in the numbers CSS interpolates is a
+ *      curve biased hard toward the end: a quarter of the way through the
+ *      move, it is a sixth of the way through the numbers. That is what the
+ *      stops below are, and it is why they look wrong written down.
+ *
+ * Over that shape sit two small flat spots, near a third and two thirds of
+ * the way along, where the drive chain catches and gives; the sound puts a
+ * contact tick on each. It ends a few thousandths past its mark and settles
+ * back, the way a carriage does against its stop.
+ *
+ * The retraction is the same curve read backwards -- same rails, same
+ * catches -- with a moment of load before it releases, and it is quicker,
+ * because a slow exit is only a slow exit.
+ *
+ * `linear()` is what makes this expressible at all. The bezier above each
+ * one is a fallback for anything that cannot parse it: the shorthand is
+ * dropped whole when the function is unknown, so the earlier declaration
+ * stands and the drive is merely smooth rather than absent.
+ */
 .viewport {
   position: relative;
   width: 100%;
   height: 100%;
   transform-origin: 0 0;
   will-change: transform;
-  transition: transform 900ms cubic-bezier(0.62, 0.02, 0.2, 1);
+  /* Out: released, steady, arriving gently. */
+  transition: transform 1400ms cubic-bezier(0.2, 0, 0.25, 1);
+  transition: transform 1400ms linear(
+    0, -0.004 3%, 0.033 7%, 0.143 15%,
+    0.389 30%, 0.425 32%, 0.503 36%, 0.517 40%,
+    0.645 50%, 0.775 62%, 0.825 66%, 0.839 70%,
+    0.952 85%, 1
+  );
+}
+/* In: heavy off the mark, steady through the middle, and it arrives. */
+.viewport--driven {
+  transition: transform 2200ms cubic-bezier(0.85, 0, 0.35, 1);
+  transition: transform 2200ms linear(
+    0, 0.048 15%, 0.161 30%, 0.175 34%, 0.225 38%,
+    0.355 50%, 0.483 60%, 0.497 64%, 0.575 68%, 0.611 70%,
+    0.857 85%, 0.967 93%, 1.004 97%, 1
+  );
 }
 /* Driven in, the faceplate around the chamber is scenery: it is off-screen
    or magnified past reading, and clicking it would be an accident. */
@@ -3538,7 +3590,10 @@ body:has(.app--photo)::before { display: none; }
 .viewport--driven .tray::before { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .viewport { transition: none; }
+  /* Both directions. A 2.2s magnification of the whole screen is the single
+     most vestibular thing this game does; the phase still happens, the view
+     is simply already there. */
+  .viewport, .viewport--driven { transition: none; }
 }
 /* Stacked, the page itself scrolls, and a transform on an ancestor of a
    scrolling document is a trap. The phase still happens here; the view just
