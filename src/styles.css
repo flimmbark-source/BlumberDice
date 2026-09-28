@@ -1426,11 +1426,8 @@ button:disabled { cursor: default; }
   pointer-events: none;
   transform-origin: 50% 50%;
   transform: translateZ(0) scale(1);
-  opacity: 1;
+  opacity: 0;
   will-change: transform, opacity;
-  transition:
-    transform 1400ms cubic-bezier(0.2, 0, 0.25, 1),
-    opacity 220ms ease;
 }
 
 .chamber__lamp {
@@ -2535,9 +2532,9 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
  * is tall enough not to need them, OR when it is held upright. Equivalently:
  * keep the faceplate on a wide, short, sideways screen.
  *
- * The chamber drive is independent of this stacking decision. The wrapper
- * transform can target the chamber in either layout; `zoomOnto()` accounts
- * for the document scroll used here.
+ * The roll passage is independent of this stacking decision. The outer view
+ * only translates the already-rendered tray to screen centre, so the same
+ * composition works in either layout without changing tray size.
  */
 
 @media (max-width: 759px),
@@ -3644,15 +3641,25 @@ body:has(.app--photo)::before { display: none; }
   pointer-events: none;
 }
 
-/* The threshold is the actual crossing. It races beyond the edges while the
-   tray beneath it remains at scale(1). On the return trip the same lip comes
-   back in from outside and reseats around the glass. */
-.viewport--driven .chamber__threshold {
-  transform: translateZ(360px) scale(5.5);
-  opacity: 0;
-  transition:
-    transform 2200ms cubic-bezier(0.55, 0, 0.2, 1),
-    opacity 360ms ease 760ms;
+/* The threshold is visible only while crossing it. The settled Plan UI gets
+   no extra bezel, and settled Roll contains only the original tray. */
+.viewport--entering .chamber__threshold {
+  animation: chamberPassIn 2200ms cubic-bezier(0.55, 0, 0.2, 1) both;
+}
+.viewport--exiting .chamber__threshold {
+  animation: chamberPassOut 1400ms cubic-bezier(0.2, 0, 0.25, 1) both;
+}
+@keyframes chamberPassIn {
+  0%   { opacity: 0; transform: translateZ(0) scale(1); }
+  8%   { opacity: 1; }
+  58%  { opacity: 1; }
+  100% { opacity: 0; transform: translateZ(360px) scale(5.5); }
+}
+@keyframes chamberPassOut {
+  0%   { opacity: 0; transform: translateZ(360px) scale(5.5); }
+  28%  { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { opacity: 0; transform: translateZ(0) scale(1); }
 }
 
 /* Once through, remove the physical bezel but not the tray. The threshold
@@ -3699,8 +3706,18 @@ body:has(.app--photo)::before { display: none; }
   .chamber__threshold {
     transition: none !important;
   }
-  .viewport--driven .chamber__threshold { display: none; }
+  .viewport--entering .chamber__threshold,
+  .viewport--exiting .chamber__threshold {
+    animation: none !important;
+    display: none;
+  }
 }
+
+body:has(.viewport--driven) {
+  background: var(--screen-lo);
+  overflow: hidden;
+}
+body:has(.viewport--driven)::before { opacity: 0; }
 
 /* Stacked layouts still need document height in Plan. Roll locks pan gestures
    but otherwise uses exactly the same centred fixed-size tray composition as
