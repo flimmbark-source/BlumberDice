@@ -1498,9 +1498,17 @@ export function allocatedCost(s: GameState): { score: number; meta: number } {
   return { score, meta };
 }
 
+/**
+ * The shield does not block a refund.
+ *
+ * It freezes what a roll can earn or lose, not what the player deliberately
+ * moves: allocation already writes Score directly through it, and a refund is
+ * the same write in the other direction. The rule matters now that planning
+ * is always shielded — guarding it here would make a full respec reachable
+ * only while rolling, which is the one moment nobody wants to be doing it.
+ */
 export function canRefund(s: GameState): boolean {
-  return !s.scoreLocked
-    && s.allocated.some((id) => id !== 'start')
+  return s.allocated.some((id) => id !== 'start')
     && s.decision === null
     && s.pending.length === 0;
 }

@@ -70,6 +70,76 @@ function body(c: AudioContext, at: number): void {
 }
 
 /**
+ * The drive gear taking the view into the chamber, or letting it back out.
+ *
+ * A servo rather than a switch: a filtered saw sweeping up or down under a
+ * band of mechanism rumble, bracketed by the detent at each end. It runs the
+ * length of the drive so the picture and the noise finish together.
+ */
+export function playWhirr(direction: 'in' | 'out', ms: number): void {
+  const c = audio();
+  if (!c) return;
+  try {
+    if (c.state === 'suspended') void c.resume();
+    const at = c.currentTime + 0.001;
+    const dur = ms / 1000;
+    const inward = direction === 'in';
+
+    // The motor.
+    const osc = c.createOscillator();
+    osc.type = 'sawtooth';
+    const f0 = inward ? 58 : 150;
+    const f1 = inward ? 150 : 58;
+    osc.frequency.setValueAtTime(f0, at);
+    osc.frequency.exponentialRampToValueAtTime(f1, at + dur * 0.82);
+
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(inward ? 320 : 900, at);
+    lp.frequency.exponentialRampToValueAtTime(inward ? 900 : 320, at + dur * 0.82);
+    lp.Q.value = 3.2;
+
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(0.075, at + 0.07);
+    g.gain.setValueAtTime(0.075, at + dur * 0.78);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    osc.connect(lp).connect(g).connect(c.destination);
+    osc.start(at);
+    osc.stop(at + dur + 0.02);
+
+    // The mechanism it is driving.
+    const frames = Math.max(1, Math.floor(c.sampleRate * dur));
+    const buf = c.createBuffer(1, frames, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < frames; i++) data[i] = (Math.random() * 2 - 1) * 0.6;
+    const noise = c.createBufferSource();
+    noise.buffer = buf;
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(inward ? 700 : 1500, at);
+    bp.frequency.exponentialRampToValueAtTime(inward ? 1500 : 700, at + dur * 0.82);
+    bp.Q.value = 1.1;
+    const ng = c.createGain();
+    ng.gain.setValueAtTime(0.0001, at);
+    ng.gain.exponentialRampToValueAtTime(0.03, at + 0.09);
+    ng.gain.setValueAtTime(0.03, at + dur * 0.75);
+    ng.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    noise.connect(bp).connect(ng).connect(c.destination);
+    noise.start(at);
+    noise.stop(at + dur + 0.02);
+
+    // The detent at each end: it starts moving, and it arrives.
+    contact(c, at);
+    body(c, at);
+    contact(c, at + dur * 0.92);
+    body(c, at + dur * 0.92);
+  } catch {
+    // Sound is decoration; never let it interrupt a phase change.
+  }
+}
+
+/**
  * The channel selector moving one position. Call it from the click that
  * changed the channel: the gesture is what lets the context start.
  */

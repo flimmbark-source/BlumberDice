@@ -45,10 +45,24 @@ function tumbleFor(backlog: number): number {
   return 300;
 }
 
-export function DiceTray({ s, rollRef }: {
+export function DiceTray({ s, rollRef, resizeRef, sealed, onSealed }: {
   s: GameState;
   /** Filled in by the tray so the Roll button throws the same dice a click does. */
   rollRef: MutableRefObject<(() => void) | null>;
+  /**
+   * Filled in by the tray so the view can ask it to re-measure. A CSS
+   * transform on an ancestor changes nothing about layout, so a scaled-up
+   * chamber would keep its old backing store and go soft; nothing else can
+   * tell the tray that has happened.
+   */
+  resizeRef?: MutableRefObject<(() => void) | null>;
+  /**
+   * True while the chamber is shut — the Plan phase. The dice are still
+   * shown and still settle, but a throw is not the tray's to make.
+   */
+  sealed?: boolean;
+  /** What a throw means instead, while sealed. */
+  onSealed?: () => void;
 }): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /** The chamber floor, on its own layer beneath the dice. */
@@ -60,6 +74,10 @@ export function DiceTray({ s, rollRef }: {
   const lapseRef = useRef<number>(0);
   const stateRef = useRef(s);
   stateRef.current = s;
+  const sealedRef = useRef(false);
+  sealedRef.current = Boolean(sealed);
+  const onSealedRef = useRef<(() => void) | undefined>(undefined);
+  onSealedRef.current = onSealed;
   /** Current surface width, so the frame loop can spot when it must change. */
   const sideRef = useRef(0);
 
@@ -106,7 +124,11 @@ export function DiceTray({ s, rollRef }: {
       // set here, and it stays correct under any transform.
       const w = wrap.clientWidth;
       const h = wrap.clientHeight;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // How much an ancestor is scaling this element on screen. Driving into
+      // the chamber magnifies it several times over, and a backing store
+      // sized for the layout box alone would be that many times too coarse.
+      const view = w > 0 ? wrap.getBoundingClientRect().width / w : 1;
+      const dpr = Math.min((window.devicePixelRatio || 1) * view, 3);
       for (const el of [canvas, ground]) {
         el.width = Math.max(1, Math.round(w * dpr));
         el.height = Math.max(1, Math.round(h * dpr));
@@ -156,6 +178,7 @@ export function DiceTray({ s, rollRef }: {
       }
     };
     resize();
+    if (resizeRef) resizeRef.current = resize;
     const ro = new ResizeObserver(resize);
     ro.observe(wrap);
 
@@ -346,9 +369,13 @@ export function DiceTray({ s, rollRef }: {
       actions.roll();
     };
 
-    rollRef.current = () => doRoll(null);
+    rollRef.current = () => {
+      if (sealedRef.current) { onSealedRef.current?.(); return; }
+      doRoll(null);
+    };
 
     const onDown = (e: PointerEvent): void => {
+      if (sealedRef.current) { onSealedRef.current?.(); return; }
       const p = toWorldScreen(e.clientX, e.clientY);
       doRoll(dieAt(world, p.x, p.y));
     };
@@ -361,6 +388,7 @@ export function DiceTray({ s, rollRef }: {
         'input,button,select,textarea,[role="button"],[tabindex]',
       )) return;
       e.preventDefault();
+      if (sealedRef.current) { onSealedRef.current?.(); return; }
       doRoll(null);
     };
 
@@ -406,11 +434,16 @@ export function DiceTray({ s, rollRef }: {
         </span>
       </div>
 
-      <div className={`tray__hint${ready && s.totalRolls < 6 ? ' tray__hint--show' : ''}`}>
-        {touch
-          ? (dice > 1 ? `tap to throw ${dice} dice` : 'tap the die to roll')
-          : (dice > 1 ? `click to throw ${dice} dice` : 'click the die to roll')}
-        {!touch && <span className="tray__hintKey"> · or press Space</span>}
+      {/* While the chamber is shut a throw is not what a click does, so the
+          hint does not claim otherwise. Driven in, the readout below the
+          chamber carries the instruction and this one would sit under it. */}
+      <div className={`tray__hint${(sealed || (ready && s.totalRolls < 6)) ? ' tray__hint--show' : ''}`}>
+        {sealed
+          ? (touch ? 'tap to open the chamber' : 'click to open the chamber')
+          : touch
+            ? (dice > 1 ? `tap to throw ${dice} dice` : 'tap the die to roll')
+            : (dice > 1 ? `click to throw ${dice} dice` : 'click the die to roll')}
+        {!sealed && !touch && <span className="tray__hintKey"> · or press Space</span>}
       </div>
       {resolving && s.pending.length > 3 && (
         <div className="tray__queue">{s.pending.length} rolls resolving</div>

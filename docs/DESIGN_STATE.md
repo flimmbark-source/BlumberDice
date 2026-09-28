@@ -1222,6 +1222,56 @@ goal's state and added a count label. None of that was asked for and all of
 it is reverted. The button is the tour it always was and says what it always
 said.
 
+### 38. The turn has two halves
+
+A mechanics change, not a dressing one. The turn splits into a Plan phase and
+a Roll phase, and the Score shield is what divides them.
+
+**The shield already did this.** It is not Entropy protection — `grantScore`
+returns early while locked, and so does Framework B's loss. It freezes Score
+outright. Spending is untouched, because `allocate` writes Score directly
+rather than through the grant path. So the phases fell out of a mechanic that
+was already there:
+
+- **Plan.** Shielded. Nothing is earned, nothing is lost, Entropy bounces off.
+  The build tree and the inspector are usable and spending is open, which is
+  what the phase is for.
+- **Roll.** Unshielded. Score is live — earned, lost, and under attack.
+
+**The view says which half you are in.** Pressing the switch, clicking the
+chamber, pressing Space or taking the shield off the head's readout all do
+the same thing: the drive whirrs and the view moves in until the chamber
+fills the window. Inside, a click on the dice is the throw. A readout rises
+from the bottom of the screen, unshielded, and engaging its shield is what
+drives the view back out. Escape does the same, so the way out never depends
+on reaching one control.
+
+Consequences worth naming:
+
+- **The phase is not saved.** A reload comes back in Plan, shielded, rather
+  than resuming mid-throw with Score exposed.
+- **A refund no longer requires an unlocked Score.** `canRefund` guarded on
+  it, and with planning always shielded that would have made a full respec
+  reachable only while rolling — the one moment nobody wants to do it. The
+  guard was policy, not mechanism: `refundAll` writes Score directly, exactly
+  as `allocate` does. Pinned by a test.
+- **`deleteScore` stays shielded**, so it is unreachable in Plan. That one is
+  destructive and the shield protecting it reads as correct; it is noted
+  rather than changed.
+- **The drive composes rather than replaces.** It lives on a wrapper outside
+  the faceplate's own transform, so the photo skin's stage scale and the
+  drive multiply instead of fighting. `zoomOnto` takes the measurement back
+  through the transform already applied, which is what lets it be recomputed
+  on a resize without compounding.
+- **The chamber's backing store follows the drive.** A CSS transform changes
+  no layout, so a magnified chamber would keep the resolution it was sized
+  for and go soft. The tray now sizes its canvas by the on-screen scale as
+  well as the device ratio, and the view tells it when the drive has landed.
+- **Stacked layouts do not drive.** Below 901px the chamber is already the
+  widest thing on the page and the page itself scrolls; a transform on an
+  ancestor of a scrolling document is a trap. The phase still happens there —
+  shield off, readout up — and the view scrolls to the chamber instead.
+
 ---
 
 ## Unresolved — deliberately not implemented

@@ -371,6 +371,17 @@ describe('refunding the web', () => {
     expect(refundAll(s)).toBeNull();
   });
 
+  it('is allowed while Score is shielded, since planning is always shielded', () => {
+    const s = createGame(1);
+    s.score = 5000;
+    allocate(s, 'vl_quick');
+    s.scoreLocked = true;
+    expect(canRefund(s)).toBe(true);
+    const back = refundAll(s);
+    expect(back).not.toBeNull();
+    expect(s.allocated).toEqual(['start']);
+  });
+
   it('refuses mid-cascade, when a roll is still resolving', () => {
     const s = createGame(1);
     s.score = 5000;

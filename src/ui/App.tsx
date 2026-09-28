@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import {
   allocatedCost, canRefund, canRoll, canSwitchFramework, CONFIG, displayStats,
   effectiveDice, getBuild, type EntropyTick, type GameState,
@@ -16,7 +16,10 @@ import { StatsPanel } from './StatsPanel.tsx';
 import { touchPrimary } from './pointer.ts';
 import { STAGE_H, STAGE_W, useSkin, useStageScale } from './skin.ts';
 import chassisUrl from './chassis.webp';
-import { playChannelClick } from './sound.ts';
+import { playChannelClick, playWhirr } from './sound.ts';
+import {
+  canDrive, DRIVE_MS, NO_ZOOM, type Phase, zoomOnto, zoomStyle, type Zoom,
+} from './phase.ts';
 
 const TREE_UNLOCK_SCORE = 20;
 type Tab = 'web' | 'stats' | 'log';
@@ -30,6 +33,46 @@ export function App(): JSX.Element {
   // Bumped on every channel change. It keys the flicker overlay, so the
   // animation restarts even when the same channel is picked twice.
   const [channel, setChannel] = useState(0);
+
+  /**
+   * Which half of the turn this is. It is deliberately not saved: a reload
+   * comes back in Plan, with the shield on, rather than resuming mid-throw
+   * with Score exposed.
+   */
+  const [phase, setPhase] = useState<Phase>('plan');
+  const [zoom, setZoom] = useState<Zoom>(NO_ZOOM);
+  const chamberRef = useRef<HTMLDivElement>(null);
+  const trayResizeRef = useRef<(() => void) | null>(null);
+
+  /**
+   * Drive into the chamber. The shield comes off as the view arrives, which
+   * is the whole point of the phase: Score is frozen while planning and live
+   * while rolling.
+   */
+  const enterRoll = (): void => {
+    if (phase === 'roll') return;
+    const el = chamberRef.current;
+    if (!el) return;
+    playWhirr('in', DRIVE_MS);
+    if (canDrive()) {
+      setZoom((z) => zoomOnto(el.getBoundingClientRect(), z, 8));
+    } else {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    setPhase('roll');
+    if (s.scoreLocked) actions.toggleScoreLock();
+  };
+
+  /** Engage the shield and let the view back out. */
+  const endRollRef = useRef<(() => void) | null>(null);
+  const endRoll = (): void => {
+    if (phase !== 'roll') return;
+    playWhirr('out', DRIVE_MS);
+    setZoom(NO_ZOOM);
+    setPhase('plan');
+    if (!s.scoreLocked) actions.toggleScoreLock();
+  };
+  endRollRef.current = phase === 'roll' ? endRoll : null;
 
   const changeChannel = (next: Tab): void => {
     setTab(next);
@@ -88,9 +131,36 @@ export function App(): JSX.Element {
     if (treeUnlocked && tab === 'stats') actions.seenStats();
   }, [treeUnlocked, tab]);
 
+  // Planning is shielded, always. This is what holds that true across a
+  // reload, a refund, or anything else that reaches the lock directly.
+  useEffect(() => {
+    if (phase === 'plan' && !s.scoreLocked) actions.toggleScoreLock();
+  }, [phase, s.scoreLocked]);
+
+  // A transform changes nothing about layout, so the tray has to be told the
+  // drive has finished or it keeps the backing store it was sized for.
+  useEffect(() => {
+    const t = window.setTimeout(() => trayResizeRef.current?.(), DRIVE_MS + 40);
+    return () => window.clearTimeout(t);
+  }, [zoom]);
+
+  // The window changing shape while driven in would otherwise leave the
+  // chamber off-centre until the phase ended.
+  useEffect(() => {
+    if (phase !== 'roll') return;
+    const onResize = (): void => {
+      const el = chamberRef.current;
+      if (!el) return;
+      setZoom((z) => (canDrive() ? zoomOnto(el.getBoundingClientRect(), z, 8) : NO_ZOOM));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [phase]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === '`') store.toggleDebug();
+      if (e.key === 'Escape') endRollRef.current?.();
     };
     window.addEventListener('keydown', onKey);
     const onHide = (): void => store.save();
@@ -104,6 +174,11 @@ export function App(): JSX.Element {
   }, []);
 
   return (
+    <>
+    {/* The drive lives on a wrapper, outside the faceplate's own transform,
+        so the two compose instead of fighting. */}
+    <div className={`viewport${phase === 'roll' ? ' viewport--driven' : ''}`}
+      style={{ transform: zoomStyle(zoom) }}>
     <div
       className={`app${photo ? ' app--photo' : ''}`}
       style={photo ? {
@@ -122,6 +197,7 @@ export function App(): JSX.Element {
         treeUnlocked={treeUnlocked}
         tab={tab}
         setTab={changeChannel}
+        onUnshield={enterRoll}
       />
 
       <main className="desktop" aria-label="Roll Reactor workspace">
@@ -130,7 +206,13 @@ export function App(): JSX.Element {
         {treeUnlocked && <div className="face-vent" aria-hidden />}
 
         <section className="game-area" aria-label="Game area">
-          <GamePanel s={s} />
+          <GamePanel
+            s={s}
+            sealed={phase === 'plan'}
+            onSealed={enterRoll}
+            resizeRef={trayResizeRef}
+            chamberRef={chamberRef}
+          />
         </section>
 
         {treeUnlocked && (
@@ -237,6 +319,29 @@ export function App(): JSX.Element {
 
       {store.debug && <DebugPanel s={s} />}
     </div>
+    </div>
+
+    {/* Outside the drive, so it stays put while the view moves. The readout
+        rises into the player's view when the chamber opens, and engaging its
+        shield is what closes it again. */}
+    {phase === 'roll' && (
+      <div className="rollhud">
+        <div className="rollhud__inner">
+          <Currency
+            label="Score"
+            value={s.score}
+            entropy={s.entropyLog}
+            entropyLevel={s.entropyLevel}
+            scoreLocked={s.scoreLocked}
+            onToggleLock={endRoll}
+          />
+          <p className="rollhud__hint">
+            Click the dice to roll · lock Score to stop
+          </p>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -307,9 +412,11 @@ function OrbitMark(): JSX.Element {
 
 function TopBar({
   s, knowsB, canRefund: mayRefund, refundScore, refundMeta,
-  treeUnlocked, tab, setTab,
+  treeUnlocked, tab, setTab, onUnshield,
 }: {
   s: GameState;
+  /** Taking the shield off is what opens the chamber. */
+  onUnshield: () => void;
   knowsB: boolean;
   canRefund: boolean;
   refundScore: number;
@@ -367,7 +474,7 @@ function TopBar({
             entropy={s.entropyLog}
             entropyLevel={s.entropyLevel}
             scoreLocked={s.scoreLocked}
-            onToggleLock={actions.toggleScoreLock}
+            onToggleLock={onUnshield}
           />
           {knowsB && <Currency label="Meta" value={s.meta} alt />}
           <span className="currencies__stamp" aria-hidden>
@@ -673,7 +780,15 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
 /** Long enough for approach, impact, and either fade or shield ricochet. */
 const ENTROPY_ATTACK_MS = 3600;
 
-function GamePanel({ s }: { s: GameState }): JSX.Element {
+function GamePanel({ s, sealed, onSealed, resizeRef, chamberRef }: {
+  s: GameState;
+  /** True in the Plan phase: the chamber is shut and a throw opens it. */
+  sealed: boolean;
+  onSealed: () => void;
+  resizeRef: MutableRefObject<(() => void) | null>;
+  /** What the drive fills the window with. */
+  chamberRef: MutableRefObject<HTMLDivElement | null>;
+}): JSX.Element {
   const build = getBuild(s);
   const stats = displayStats(s, build);
   const cd = CONFIG.baseCooldownMs * stats.cooldownMult;
@@ -683,19 +798,25 @@ function GamePanel({ s }: { s: GameState }): JSX.Element {
 
   return (
     <section className="game game-area__panel">
-      <div className="game__arena">
+      <div className="game__arena" ref={chamberRef}>
         {/* The status lamp every other plate carries. It repeats what the
             telemetry line on the glass already says in words. */}
         <span className={`chamber__lamp${ready ? '' : ' chamber__lamp--busy'}`} aria-hidden />
-        <DiceTray s={s} rollRef={rollRef} />
+        <DiceTray
+          s={s}
+          rollRef={rollRef}
+          resizeRef={resizeRef}
+          sealed={sealed}
+          onSealed={onSealed}
+        />
       </div>
 
       <div className="game__controls">
         <button
           type="button"
           className={`rollbtn${ready ? '' : ' rollbtn--wait'}`}
-          onClick={() => rollRef.current?.()}
-          disabled={!ready}
+          onClick={() => (sealed ? onSealed() : rollRef.current?.())}
+          disabled={!sealed && !ready}
         >
           <span className="rollbtn__pip" aria-hidden>
             <svg width={22} height={22} viewBox="-16 -16 32 32">
@@ -706,7 +827,9 @@ function GamePanel({ s }: { s: GameState }): JSX.Element {
           </span>
           <span className="rollbtn__label">{dice > 1 ? `Roll ${dice} dice` : 'Roll'}</span>
           <span className="rollbtn__time">
-            {ready ? (touchPrimary() ? 'Tap to roll' : 'Press space') : `${(s.cooldownRemaining / 1000).toFixed(2)}s`}
+            {sealed ? 'Open the chamber'
+              : ready ? (touchPrimary() ? 'Tap to roll' : 'Press space')
+              : `${(s.cooldownRemaining / 1000).toFixed(2)}s`}
           </span>
           <span className="rollbtn__fill"
             style={{ width: `${cd > 0 ? (1 - Math.min(1, s.cooldownRemaining / cd)) * 100 : 100}%` }} />
