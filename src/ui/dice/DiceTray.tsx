@@ -349,11 +349,11 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, on
       // multiple pending rolls while we wait.
       if (queuedRoll && canRoll(game)) {
         const dice = effectiveDice(game);
-        const { reuse } = planThrow(world, dice, MAX_DICE);
-        if (reuse.length >= dice || !hasBusyPhysicalDie()) {
-          const hit = queuedRoll.hitKey === null
+        if (availableForNextRoll(dice) >= dice || !hasPreviousRollInMotion()) {
+          const hitKey = queuedRoll.hitKey;
+          const hit = hitKey === null
             ? null
-            : world.dice.find((die) => die.key === queuedRoll!.hitKey) ?? null;
+            : world.dice.find((die) => die.key === hitKey) ?? null;
           queuedRoll = null;
           performRoll(hit);
         }
@@ -423,21 +423,44 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, on
       for (const die of world.dice) die.hover = false;
     };
 
-    const hasBusyPhysicalDie = (): boolean => world.dice.some(
+    const primedDice = (): DieBody[] => world.dice.filter(
       (die) => !die.retiring && die.zapAt === null
-        && die.state !== 'rest' && die.state !== 'idle',
+        && die.state === 'tumbling' && die.result === null,
     );
+
+    const hasPreviousRollInMotion = (): boolean => world.dice.some(
+      (die) => !die.retiring && die.zapAt === null
+        && (
+          die.state === 'aligning'
+          || (die.state === 'tumbling' && die.result !== null)
+        ),
+    );
+
+    const availableForNextRoll = (dice: number): number => {
+      const primed = primedDice().length;
+      const neededToThrow = Math.max(0, dice - primed);
+      return primed + planThrow(world, neededToThrow, MAX_DICE).reuse.length;
+    };
 
     const performRoll = (hit: DieBody | null): void => {
       const game = stateRef.current;
       const dice = effectiveDice(game);
-      const { reuse, retire } = planThrow(world, dice, MAX_DICE);
+
+      // Bonus/capacity dice can already be tumbling with no result, waiting
+      // for this engine roll. They count toward the requested dice but must
+      // not be thrown again or replaced.
+      const primed = primedDice();
+      const neededToThrow = Math.max(0, dice - primed.length);
+      const { reuse, retire } = planThrow(world, neededToThrow, MAX_DICE);
       for (const die of retire) retireDie(die);
 
       const throwing = [...reuse];
-      while (throwing.length < dice) throwing.push(spawnDie(world, { dropped: true }));
+      while (throwing.length < neededToThrow) {
+        throwing.push(spawnDie(world, { dropped: true }));
+      }
 
-      // The die under the cursor leads, so a click reads as launching that one.
+      // The die under the cursor leads among dice that actually need a fresh
+      // throw. A primed die is already in flight and simply receives a result.
       if (hit && throwing.includes(hit)) {
         throwing.splice(throwing.indexOf(hit), 1);
         throwing.unshift(hit);
@@ -464,12 +487,12 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, on
       if (queuedRoll) return;
 
       const dice = effectiveDice(game);
-      const { reuse } = planThrow(world, dice, MAX_DICE);
 
-      // If a physical die already exists but is only finishing its previous
-      // tumble/alignment, wait for it. Spawning here is the intermittent
-      // "second die" misfire: the mechanical roll count has not changed.
-      if (reuse.length < dice && hasBusyPhysicalDie()) {
+      // A result-null tumbling die is not a misfire: it is a legitimate
+      // capacity/bonus die already primed for this roll. Queue only when the
+      // missing physical availability belongs to a previous result that is
+      // still finishing its tumble/alignment.
+      if (availableForNextRoll(dice) < dice && hasPreviousRollInMotion()) {
         queuedRoll = { hitKey: hit?.key ?? null };
         return;
       }
