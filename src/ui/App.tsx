@@ -44,8 +44,19 @@ export function App(): JSX.Element {
    */
   const [phase, setPhase] = useState<Phase>('plan');
   const [view, setView] = useState<ViewTransform>(NO_VIEW_TRANSFORM);
+  const [passage, setPassage] = useState<'in' | 'out' | null>(null);
   const chamberRef = useRef<HTMLDivElement>(null);
   const trayResizeRef = useRef<(() => void) | null>(null);
+  const passageTimerRef = useRef<number | null>(null);
+
+  const runPassage = (direction: 'in' | 'out', duration: number): void => {
+    if (passageTimerRef.current !== null) window.clearTimeout(passageTimerRef.current);
+    setPassage(direction);
+    passageTimerRef.current = window.setTimeout(() => {
+      setPassage(null);
+      passageTimerRef.current = null;
+    }, duration);
+  };
 
   /**
    * Pass through the chamber glass. The tray itself never scales: after the
@@ -56,6 +67,7 @@ export function App(): JSX.Element {
     if (phase === 'roll') return;
     if (!chamberRef.current) return;
     playWhirr('in', DRIVE_IN_MS);
+    runPassage('in', DRIVE_IN_MS);
     setPhase('roll');
     if (s.scoreLocked) actions.toggleScoreLock();
   };
@@ -65,6 +77,7 @@ export function App(): JSX.Element {
   const endRoll = (): void => {
     if (phase !== 'roll') return;
     playWhirr('out', DRIVE_OUT_MS);
+    runPassage('out', DRIVE_OUT_MS);
     setPhase('plan');
     if (!s.scoreLocked) actions.toggleScoreLock();
   };
@@ -165,6 +178,10 @@ export function App(): JSX.Element {
     return () => window.removeEventListener('resize', onResize);
   }, [phase]);
 
+  useEffect(() => () => {
+    if (passageTimerRef.current !== null) window.clearTimeout(passageTimerRef.current);
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === '`') store.toggleDebug();
@@ -185,8 +202,14 @@ export function App(): JSX.Element {
     <>
     {/* The outer view only translates. Depth comes from the machine layers
         moving around the stable dice tray, not from scaling the tray itself. */}
-    <div className={`viewport${phase === 'roll' ? ' viewport--driven' : ''}`}
-      style={{ transform: viewTransformStyle(view) }}>
+    <div
+      className={
+        `viewport${phase === 'roll' ? ' viewport--driven' : ''}`
+        + (passage === 'in' ? ' viewport--entering' : '')
+        + (passage === 'out' ? ' viewport--exiting' : '')
+      }
+      style={{ transform: viewTransformStyle(view) }}
+    >
     <div
       className={`app${photo ? ' app--photo' : ''}`}
       style={photo ? {
