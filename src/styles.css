@@ -1405,6 +1405,34 @@ button:disabled { cursor: default; }
     inset 0 -2px 4px rgba(103, 88, 62, 0.22),
     0 6px 16px rgba(70, 58, 38, 0.3);
 }
+/*
+ * The lip of the chamber glass.
+ *
+ * This is the thing the player passes through. It is deliberately separate
+ * from .tray: the threshold can rush toward and past the camera while the
+ * actual dice surface never changes size.
+ */
+.chamber__threshold {
+  position: absolute;
+  inset: 30px 7px 7px;
+  z-index: 9;
+  border: 7px solid var(--plate-lo);
+  border-radius: 22px;
+  box-shadow:
+    0 0 0 1px var(--plate-edge),
+    0 0 0 2px rgba(255, 253, 247, 0.45),
+    0 7px 20px rgba(30, 23, 13, 0.42),
+    inset 0 0 0 1px rgba(15, 20, 16, 0.9);
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  transform: translateZ(0) scale(1);
+  opacity: 1;
+  will-change: transform, opacity;
+  transition:
+    transform 1400ms cubic-bezier(0.2, 0, 0.25, 1),
+    opacity 220ms ease;
+}
+
 .chamber__lamp {
   position: absolute; left: 17px; top: 13px; z-index: 2;
   width: 9px; height: 9px;
@@ -3539,8 +3567,10 @@ body:has(.app--photo)::before { display: none; }
   width: 100%;
   height: 100%;
   transform-origin: 0 0;
+  perspective: 900px;
+  transform-style: preserve-3d;
   will-change: transform;
-  /* Out: released, steady, arriving gently. */
+  /* Returning to Plan: the stable tray travels back to its place in the UI. */
   transition: transform 1400ms cubic-bezier(0.2, 0, 0.25, 1);
   transition: transform 1400ms linear(
     0, -0.004 3%, 0.033 7%, 0.143 15%,
@@ -3549,7 +3579,15 @@ body:has(.app--photo)::before { display: none; }
     0.952 85%, 1
   );
 }
-/* In: heavy off the mark, steady through the middle, and it arrives. */
+
+/*
+ * Roll is a passage through the chamber, not a zoom of the application.
+ *
+ * The viewport transform is translation-only. Depth comes from the machine
+ * pieces moving around the tray: the glass threshold crosses the viewer,
+ * peripheral panels peel outward, and the fixed-size dice screen is left
+ * centred against the dark machine interior.
+ */
 .viewport--driven {
   transition: transform 2200ms cubic-bezier(0.85, 0, 0.35, 1);
   transition: transform 2200ms linear(
@@ -3557,53 +3595,120 @@ body:has(.app--photo)::before { display: none; }
     0.355 50%, 0.483 60%, 0.497 64%, 0.575 68%, 0.611 70%,
     0.857 85%, 0.967 93%, 1.004 97%, 1
   );
+  background: var(--screen-lo);
+  touch-action: none;
 }
-/* Driven in, the faceplate around the chamber is scenery: it is off-screen
-   or magnified past reading, and clicking it would be an accident. */
+
+/* The elements that are not part of rolling move past the player rather than
+   being scaled together with the dice surface. Transform + opacity stays on
+   compositor-friendly properties for phones. */
+.viewport .topbar,
+.viewport .panel-rail,
+.viewport .face-vent,
+.viewport .standby,
+.viewport .game__controls {
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  transition:
+    transform 1400ms cubic-bezier(0.2, 0, 0.25, 1),
+    opacity 260ms ease 220ms;
+}
+.viewport--driven .topbar {
+  transform: translate3d(0, -18vh, 220px);
+  opacity: 0;
+}
+.viewport--driven .panel-rail--left {
+  transform: translate3d(-18vw, 0, 220px);
+  opacity: 0;
+}
+.viewport--driven .panel-rail--right {
+  transform: translate3d(18vw, 0, 220px);
+  opacity: 0;
+}
+.viewport--driven .face-vent,
+.viewport--driven .standby {
+  transform: translate3d(0, 0, 180px);
+  opacity: 0;
+}
+.viewport--driven .game__controls {
+  transform: translate3d(0, 16vh, 220px);
+  opacity: 0;
+}
 .viewport--driven .topbar,
 .viewport--driven .fixed-panel,
 .viewport--driven .face-vent,
 .viewport--driven .standby,
-.viewport--driven .game__controls { pointer-events: none; }
-/* The readout below the chamber gives the instruction once the view is in;
-   the tray's own hint would sit underneath it. */
+.viewport--driven .game__controls {
+  pointer-events: none;
+}
+
+/* The threshold is the actual crossing. It races beyond the edges while the
+   tray beneath it remains at scale(1). On the return trip the same lip comes
+   back in from outside and reseats around the glass. */
+.viewport--driven .chamber__threshold {
+  transform: translateZ(360px) scale(5.5);
+  opacity: 0;
+  transition:
+    transform 2200ms cubic-bezier(0.55, 0, 0.2, 1),
+    opacity 360ms ease 760ms;
+}
+
+/* Once through, remove the physical bezel but not the tray. The threshold
+   carries the visual handoff, so the background can become the dark roll
+   space without changing the dice area's geometry. */
+.viewport--driven .game__arena {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.viewport--driven .game__arena::before,
+.viewport--driven .game__arena::after,
+.viewport--driven .chamber__lamp {
+  opacity: 0;
+}
+.game__arena::before,
+.game__arena::after,
+.chamber__lamp {
+  transition: opacity 260ms ease;
+}
+.viewport--driven .app {
+  background: transparent;
+  box-shadow: none;
+}
+.viewport--driven .app::before,
+.viewport--driven .app::after {
+  opacity: 0;
+}
+.viewport--driven .app--photo {
+  background-image: none;
+}
+
+/* The tray is the invariant of the transition: same box, same rounded CRT,
+   same canvas resolution policy. Only its outer viewport translation changes. */
 .viewport--driven .tray__hint { display: none; }
 
-/* Driven in, the glass is the window. Its corner radius is magnified along
-   with everything else -- 18px becomes fifty-odd -- and would let the plate
-   behind show down both edges of a view that is meant to have reached them.
-   The viewfinder marks go the same way: they are framing for a screen you
-   are looking at, not one you are inside. */
-.viewport--driven .tray {
-  border-radius: 0;
-  /*
-   * Its own phosphor, not the photograph's.
-   *
-   * On the photo skin the glass is a transparent window onto the chassis
-   * image, and that image's CRT hole has rounded corners. Filled to the
-   * window, those corners put a sliver of enamel down both edges of a view
-   * that is meant to have reached them. The canvas draws over this either
-   * way, so it only ever shows where the canvas does not.
-   */
-  background: radial-gradient(
-    120% 130% at 50% 0%, var(--screen-hi), var(--screen) 45%, var(--screen-lo));
-}
-.viewport--driven .tray::before { display: none; }
-
 @media (prefers-reduced-motion: reduce) {
-  /* Both directions. A 2.2s magnification of the whole screen is the single
-     most vestibular thing this game does; the phase still happens, the view
-     is simply already there. */
-  .viewport, .viewport--driven { transition: none; }
+  .viewport, .viewport--driven,
+  .viewport .topbar,
+  .viewport .panel-rail,
+  .viewport .face-vent,
+  .viewport .standby,
+  .viewport .game__controls,
+  .chamber__threshold {
+    transition: none !important;
+  }
+  .viewport--driven .chamber__threshold { display: none; }
 }
-/* Stacked mobile keeps its document height, but no longer disables the drive.
-   While driven, suppress pan gestures so the scrolling page cannot move under
-   the transform; taps on the dice still work normally. */
+
+/* Stacked layouts still need document height in Plan. Roll locks pan gestures
+   but otherwise uses exactly the same centred fixed-size tray composition as
+   desktop. */
 @media (max-width: 759px),
        (max-width: 900px) and (min-height: 521px),
        (max-width: 900px) and (orientation: portrait) {
   .viewport { height: auto; }
-  .viewport--driven { touch-action: none; }
 }
 
 /* --- the readout that rises with the chamber --------------------------- */
@@ -3614,7 +3719,7 @@ body:has(.app--photo)::before { display: none; }
   z-index: 120000;
   display: flex;
   justify-content: center;
-  padding: 0 16px 22px;
+  padding: 0 10px max(14px, env(safe-area-inset-bottom));
   pointer-events: none;
 }
 .rollhud__inner {
@@ -3635,10 +3740,11 @@ body:has(.app--photo)::before { display: none; }
 
 /* The same instrument as the head's, given a housing of its own. */
 .rollhud .currency {
-  min-width: 232px;
-  padding: 13px 20px 11px;
+  width: clamp(154px, 48vw, 184px);
+  min-width: 0;
+  padding: 10px 12px 8px;
   border: 1px solid #1b150e;
-  border-radius: 9px;
+  border-radius: 8px;
   box-shadow:
     inset 0 3px 11px rgba(0, 0, 0, 0.9),
     0 0 0 5px var(--plate-lo),
@@ -3646,8 +3752,8 @@ body:has(.app--photo)::before { display: none; }
     0 0 0 7px rgba(255, 253, 247, 0.7),
     0 10px 28px rgba(0, 0, 0, 0.6);
 }
-.rollhud .currency__value { font-size: 40px; }
-.rollhud .currency__label { top: 6px; left: 12px; color: #8a7f68; }
+.rollhud .currency__value { font-size: clamp(27px, 7vw, 32px); }
+.rollhud .currency__label { top: 5px; left: 10px; color: #8a7f68; }
 
 /*
  * The rumble.
@@ -3661,6 +3767,9 @@ body:has(.app--photo)::before { display: none; }
  */
 .rollhud__unit {
   position: relative;
+  /* The tab lives outside the Score glass. Reserve its width in layout so the
+     whole attached control, not just the glass, is centred on the screen. */
+  margin-right: min(86px, 24vw);
   animation: rollhudRumble calc(120ms - var(--rumble, 0) * 55ms) linear infinite;
 }
 @keyframes rollhudRumble {
@@ -3709,6 +3818,13 @@ body:has(.app--photo)::before { display: none; }
   transform-origin: left center;
   animation: currencyTabOut 260ms cubic-bezier(0.2, 1.3, 0.4, 1) 420ms both;
 }
+.rollhud .currency__tab {
+  padding: 4px 7px 4px 8px;
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  border-radius: 0 5px 5px 0;
+}
+
 @keyframes currencyTabOut {
   from { opacity: 0; transform: translateY(-50%) scaleX(0.1); }
   to   { opacity: 1; transform: translateY(-50%) scaleX(1); }
