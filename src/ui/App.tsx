@@ -541,10 +541,10 @@ function TopBar({
         <span className="brand__word"><b>Roll</b><i> Reactor</i></span>
       </div>
 
+      {/* Desktop keeps its three information channels. Stacked/mobile adds
+          Roll as a real surface alongside them. Before the tree unlocks,
+          Roll is the only mobile tab because it is the only surface. */}
       {(treeUnlocked || mobileSurfaces) ? (
-        /* Desktop keeps its three information channels. Stacked/mobile adds
-            Roll as a real surface alongside them. Before the tree unlocks,
-            Roll is the only mobile tab because it is the only surface. */}
         <nav className="tabsx" role="tablist" aria-label="Game view">
           <TabBtn id="roll" tab={tab} set={setTab} label="Roll" icon={<RollIcon />} />
           {treeUnlocked && (
