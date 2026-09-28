@@ -859,13 +859,23 @@ game area or the embedded goal.
 
 ### 31. One mechanical die stays one physical die
 
-A fast repeat roll no longer spawns a second physical cube merely because the
-first cube's result label is still fading. The existing physical die is reused.
-Its previous number is detached into a display-only result ghost at the landing
-position, so readability is preserved without visually implying an extra die.
+A normal repeat roll never manufactures a second physical cube just because
+the first cube is still finishing its previous visual lifecycle.
 
-This is a presentation fix only. The engine's mechanical `bonusDice` system,
-its duration, cap and upgrade behavior are unchanged in this pass.
+There are two distinct cases and they must not be confused:
+
+- A settled die may still be showing its previous result. It is reused
+  immediately; `throwDie` detaches that old result into a display-only ghost
+  so readability survives without implying another physical die.
+- The engine cooldown can finish a few frames before the same die has completed
+  its tumble/alignment. In that narrow gap the new player roll is queued until
+  the existing cube becomes reusable instead of spawning a replacement.
+
+A die already tumbling with `result === null` is different: that is a
+legitimate primed capacity/bonus die waiting to receive an upcoming roll
+result. It counts toward the next throw and is neither queued away nor
+re-thrown. The engine's mechanical `bonusDice` system, its duration, cap and
+upgrade behavior remain unchanged.
 
 ---
 
@@ -1269,11 +1279,15 @@ Consequences worth naming:
   past the viewer while the tray stays at scale 1. The implementation is
   deliberately different for the two Plan UIs: the drawn/CSS skin uses a
   separate DOM threshold around the glass; the photo skin cannot do that
-  because its CRT surround is baked into one chassis bitmap, so a temporary
-  copy of that photograph becomes the moving shell with its transform origin
-  pinned to the photographed chamber centre. In the photo skin the rail
-  wrappers are `display: contents`, so the actual fixed panels are faded and
-  moved directly rather than trying to transform a box that does not exist.
+  because its CRT surround is baked into one chassis bitmap. Desktop therefore
+  mounts a fixed, viewport-level four-piece copy of the chassis with the CRT
+  aperture clipped out. The outer shell exactly reproduces the resting stage
+  fit, while the clipped pieces scale around the photographed chamber centre.
+  Keeping that shell outside the translated `.viewport` is essential: the
+  camera move must not also move the object that visually defines the passage.
+  In the photo skin the rail wrappers are `display: contents`, so the actual
+  fixed panels are faded and moved directly rather than trying to transform a
+  box that does not exist.
 - **Desktop and mobile use the same roll composition, not the same Plan
   implementation.** Both finish with the unchanged-size tray centred on
   screen, but each enters that state through the physical structure its UI
@@ -1286,10 +1300,10 @@ Consequences worth naming:
   renderer remains, because that belongs to the roll rather than to the TV
   interface.
 - **The phosphor field continues beyond the old glass.** The tray/canvas does
-  not enlarge. Instead the page and viewport behind it take on the same dark
-  screen gradient for the duration of the passage and Roll, so the unchanged
-  dice area sits inside one continuous full-screen field rather than inside a
-  visible CRT rectangle.
+  not enlarge. A fixed `.rollfield` fills the viewport behind it for entry,
+  Roll and exit. While immersed, the tray stops drawing its own rectangular
+  CRT backdrop and draws only the arena/dice over that field, so there is no
+  visible seam where the old television ended.
 - **The tray stays mounted.** Its physics world is not recreated when the
   phase changes. Translation also does not demand a larger canvas backing
   store, which avoids the fill-rate cost of the old magnifying drive.
@@ -1312,7 +1326,9 @@ Consequences worth naming:
   Score glass is capped at 184px and its attached stop tab is compacted. The
   tab's width is reserved in the HUD layout, so the entire Score-plus-tab
   control is centred and remains inside narrow phone screens. The tab says
-  "Tap to stop" for a coarse pointer and "Click to stop" otherwise.
+  "Tap to stop" for a coarse pointer and "Click to stop" otherwise. On the
+  stacked/mobile layout the redundant "Score" legend above this Roll readout
+  is hidden.
 
 ---
 
@@ -1332,6 +1348,15 @@ upright. Equivalently: a wide, short, sideways screen keeps the faceplate.
 - **The stacking condition is layout-only.** `styles.css` owns it. Roll no
   longer mirrors this breakpoint in TypeScript because desktop and mobile use
   the same centred fixed-size tray composition.
+- **Stacked/mobile uses surface navigation.** Its top key bank has a
+  mobile-only **Roll** tab. Roll shows the chamber/deck; Build, Stats and Log
+  hide that surface and show the information panel instead. Selecting the
+  Score control from another mobile surface switches to Roll before entering
+  the mechanical Roll phase. The tray remains mounted while hidden, so
+  navigation does not reset physics.
+- **Build is intent before mechanism on mobile.** Within the Build surface the
+  Goal plate is visually ordered above the Build tree. The DOM order is left
+  intact so desktop/photo placement does not change.
 - **The letterbox rules were split.** What the head gives up when the screen
   is short — the key glyphs, most of its padding, the two switch banks
   sharing a row — is true of either layout and stays keyed to the letterbox
