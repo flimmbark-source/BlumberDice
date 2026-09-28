@@ -1265,14 +1265,31 @@ Consequences worth naming:
   only applies the remaining screen-space translation needed to put the
   tray's current visual centre at the viewport centre. The photo skin's stage
   scale therefore remains whatever it already was; Roll does not multiply it.
-- **Depth belongs to the machine around the tray.** The chamber threshold is
-  a separate layer that expands past the viewer only during entry/exit, while
-  the top bar, side panels and control deck move outward in perspective and
-  fade. The threshold is absent in settled Plan and settled Roll, so it does
-  not add a permanent bezel.
-- **Desktop and mobile use the same roll composition.** Stacking changes the
-  Plan layout only. Roll always ends with the unchanged-size tray centred on
-  screen; mobile is no longer a special camera case.
+- **Depth belongs to the machine around the tray.** The chamber shell moves
+  past the viewer while the tray stays at scale 1. The implementation is
+  deliberately different for the two Plan UIs: the drawn/CSS skin uses a
+  separate DOM threshold around the glass; the photo skin cannot do that
+  because its CRT surround is baked into one chassis bitmap, so a temporary
+  copy of that photograph becomes the moving shell with its transform origin
+  pinned to the photographed chamber centre. In the photo skin the rail
+  wrappers are `display: contents`, so the actual fixed panels are faded and
+  moved directly rather than trying to transform a box that does not exist.
+- **Desktop and mobile use the same roll composition, not the same Plan
+  implementation.** Both finish with the unchanged-size tray centred on
+  screen, but each enters that state through the physical structure its UI
+  actually has. This is why the desktop/photo passage and mobile/drawn passage
+  have separate CSS paths.
+- **Crossing the screen removes the television.** During entry, settled Roll
+  and exit, the tray loses its CRT glass/scanline overlay, viewfinder marks,
+  white enamel rings and rounded TV edge. The tray telemetry, hint and queue
+  text are hidden as well. Gameplay result/proc text painted by the dice
+  renderer remains, because that belongs to the roll rather than to the TV
+  interface.
+- **The phosphor field continues beyond the old glass.** The tray/canvas does
+  not enlarge. Instead the page and viewport behind it take on the same dark
+  screen gradient for the duration of the passage and Roll, so the unchanged
+  dice area sits inside one continuous full-screen field rather than inside a
+  visible CRT rectangle.
 - **The tray stays mounted.** Its physics world is not recreated when the
   phase changes. Translation also does not demand a larger canvas backing
   store, which avoids the fill-rate cost of the old magnifying drive.
