@@ -45,7 +45,7 @@ function tumbleFor(backlog: number): number {
   return 300;
 }
 
-export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: {
+export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, onSealed }: {
   s: GameState;
   /** Filled in by the tray so the Roll button throws the same dice a click does. */
   rollRef: MutableRefObject<(() => void) | null>;
@@ -67,6 +67,8 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
    * shown and still settle, but a throw is not the tray's to make.
    */
   sealed?: boolean;
+  /** True while crossing or inside the screen; removes the tray-local CRT backdrop. */
+  immersed?: boolean;
   /** What a throw means instead, while sealed. */
   onSealed?: () => void;
 }): JSX.Element {
@@ -82,6 +84,8 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
   stateRef.current = s;
   const sealedRef = useRef(false);
   sealedRef.current = Boolean(sealed);
+  const immersedRef = useRef(false);
+  immersedRef.current = Boolean(immersed);
   const onSealedRef = useRef<(() => void) | undefined>(undefined);
   onSealedRef.current = onSealed;
   /** Current surface width, so the frame loop can spot when it must change. */
@@ -102,7 +106,7 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
     let groundDirty = true;
     let groundFramework: 'A' | 'B' | null = null;
     let groundWasShaking = false;
-    let groundSealed: boolean | null = null;
+    let groundImmersed: boolean | null = null;
 
     // A normal player roll must reuse the physical dice already on the
     // surface. The engine cooldown can finish a few frames before a die's
@@ -370,19 +374,19 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
       // During shake they still redraw in lockstep with the dice, followed by
       // one clean unshifted frame when the shake ends.
       const shaking = shake > 0.01;
-      const sealedNow = sealedRef.current;
+      const immersedNow = immersedRef.current;
       if (
         groundDirty
         || groundFramework !== game.framework
-        || groundSealed !== sealedNow
+        || groundImmersed !== immersedNow
         || shaking
         || groundWasShaking
       ) {
         gctx.clearRect(0, 0, viewW, viewH);
-        // Closed, the tray is a CRT with its own phosphor backdrop. Open, the
-        // full-screen Roll field supplies that backdrop so there is no visible
-        // rectangular seam around the unchanged-size dice surface.
-        if (sealedNow) drawBackdrop(gctx, viewW, viewH, theme);
+        // Outside the passage, the tray is a CRT with its own phosphor
+        // backdrop. While crossing or inside it, the viewport-level Roll field
+        // supplies that backdrop so no rectangle reappears during the return.
+        if (!immersedNow) drawBackdrop(gctx, viewW, viewH, theme);
         gctx.save();
         gctx.translate(originX + shakeX, originY + shakeY);
         gctx.scale(zoom, zoom);
@@ -390,7 +394,7 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
         gctx.restore();
         groundDirty = false;
         groundFramework = game.framework;
-        groundSealed = sealedNow;
+        groundImmersed = immersedNow;
         groundWasShaking = shaking;
       }
 
