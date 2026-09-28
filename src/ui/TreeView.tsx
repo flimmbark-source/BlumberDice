@@ -131,7 +131,8 @@ export const TreeView = memo(function TreeView({
   const svgRef = useRef<SVGSVGElement>(null);
   const graphRef = useRef<SVGGElement>(null);
   const pendingDragView = useRef<{ x: number; y: number; zoom: number } | null>(null);
-  const touchVisual = useRef<{ dx: number; dy: number } | null>(null);
+  const touchFrame = useRef<number | null>(null);
+  const touchLastPaint = useRef(0);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -150,6 +151,10 @@ export const TreeView = memo(function TreeView({
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => () => {
+    if (touchFrame.current !== null) cancelAnimationFrame(touchFrame.current);
   }, []);
 
   const statuses = useMemo(() => {
@@ -252,13 +257,23 @@ export const TreeView = memo(function TreeView({
     };
 
     if (d.direct) {
-      // Keep the exact original SVG size/zoom. During a finger drag, move the
-      // already-rendered SVG as one compositor layer instead of repainting the
-      // entire graph. Commit the real graph position only once on release.
+      // Preserve the exact original graph geometry. Touch events can arrive
+      // much faster than the phone can repaint this SVG, so keep only the
+      // latest requested view and paint it at ~30 FPS.
       pendingDragView.current = next;
-      touchVisual.current = { dx, dy };
-      const svg = svgRef.current;
-      if (svg) svg.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      if (touchFrame.current === null) {
+        touchFrame.current = requestAnimationFrame((now) => {
+          touchFrame.current = null;
+          if (now - touchLastPaint.current < 30) return;
+          touchLastPaint.current = now;
+          const latest = pendingDragView.current;
+          if (!latest) return;
+          graphRef.current?.setAttribute(
+            'transform',
+            `scale(${latest.zoom}) translate(${latest.x} ${latest.y})`,
+          );
+        });
+      }
       return;
     }
 
@@ -275,15 +290,15 @@ export const TreeView = memo(function TreeView({
     if (d?.direct && pendingDragView.current) {
       const finalView = pendingDragView.current;
       pendingDragView.current = null;
-      touchVisual.current = null;
-      const svg = svgRef.current;
-      if (svg) svg.style.transform = '';
+      if (touchFrame.current !== null) {
+        cancelAnimationFrame(touchFrame.current);
+        touchFrame.current = null;
+      }
+      graphRef.current?.setAttribute(
+        'transform',
+        `scale(${finalView.zoom}) translate(${finalView.x} ${finalView.y})`,
+      );
       setView(finalView);
-    }
-    if (d?.direct && !pendingDragView.current) {
-      touchVisual.current = null;
-      const svg = svgRef.current;
-      if (svg) svg.style.transform = '';
     }
     // A press on empty canvas that was not a pan puts the popup away.
     if (d && !d.moved && !d.onNode) setInspected(null);
