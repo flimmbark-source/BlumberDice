@@ -1357,11 +1357,11 @@ upright. Equivalently: a wide, short, sideways screen keeps the faceplate.
 - **Build is tree-first on mobile.** Goal no longer lives in Build; it belongs
   to the Roll surface beneath the chamber/deck. The Build surface is therefore
   the tree plus node inspection, without a second vertical Goal block.
-- **Mobile node inspection does not become page navigation.** Selecting a node
-  opens a fixed bottom inspector over the Build surface. It always shows the
-  node's complete authored mechanical effect, exact cost/state, Goal control
-  and Allocate action. Space is saved by omitting duplicate notation, chips
-  and Leads To from this phone sheet, not by truncating the effect. Desktop
+- **Mobile node inspection sits directly below the tree.** Selecting a node
+  adds a second Build plate immediately beneath the tech tree in normal flow.
+  The phone view keeps the detailed symbolic notation and the node's complete
+  authored mechanical effect, exact cost/state, Goal control and Allocate
+  action. The desktop-only Leads To plate remains omitted on phone. Desktop
   keeps the full side inspector and separate Leads To plate.
 - **The mobile tree sleeps when it can.** TreeView receives stable callback
   props so its memoization survives unrelated store publishes. Touch/pen pans
@@ -1374,6 +1374,9 @@ upright. Equivalently: a wide, short, sideways screen keeps the faceplate.
   driven state, keeping the tree, panels, controls and other Plan chrome
   hidden. Only after the return passage completes are those elements restored
   in one frame; they must not slide back in while the camera is still moving.
+  On desktop, data-bearing screen contents then run a short stepped phosphor
+  restrike/flicker while the chassis stays still, so the information appears
+  to come back online like an old computer screen.
 - **The letterbox rules were split.** What the head gives up when the screen
   is short — the key glyphs, most of its padding, the two switch banks
   sharing a row — is true of either layout and stays keyed to the letterbox
