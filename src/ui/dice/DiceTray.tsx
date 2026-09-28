@@ -102,6 +102,13 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
     let groundDirty = true;
     let groundFramework: 'A' | 'B' | null = null;
     let groundWasShaking = false;
+    let groundSealed: boolean | null = null;
+
+    // A normal player roll must reuse the physical dice already on the
+    // surface. The engine cooldown can finish a few frames before a die's
+    // visual settle does; during that gap we queue the click instead of
+    // manufacturing a replacement cube.
+    let queuedRoll: { hitKey: number | null } | null = null;
     // Screen-space placement and zoom of the projected surface.
     let originX = 0;
     let originY = 0;
@@ -324,13 +331,30 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
         let live = 0;
         for (const die of world.dice) if (!die.retiring && die.zapAt === null) live++;
         while (live < want && world.dice.length < MAX_DICE) {
-          // Thrown, not just placed: the physics only integrates a tumbling
-          // die, so one spawned above the surface and left alone would hang
-          // in the air. It arrives the way every other die does.
+          // This is capacity maintenance, not a player roll: a genuinely
+          // granted extra die should appear. A normal click never comes
+          // through this path merely because its existing die is still busy.
           throwDie(world, spawnDie(world, { dropped: true }), { minTumbleMs: 260 });
           live++;
         }
       }
+
+      // Finish a queued player roll on the same physical dice as soon as the
+      // previous visual settle is done. The engine action is intentionally
+      // delayed with the visual throw, preventing double clicks from creating
+      // multiple pending rolls while we wait.
+      if (queuedRoll && canRoll(game)) {
+        const dice = effectiveDice(game);
+        const { reuse } = planThrow(world, dice, MAX_DICE);
+        if (reuse.length >= dice || !hasBusyPhysicalDie()) {
+          const hit = queuedRoll.hitKey === null
+            ? null
+            : world.dice.find((die) => die.key === queuedRoll!.hitKey) ?? null;
+          queuedRoll = null;
+          performRoll(hit);
+        }
+      }
+
       // The HUD counts a roll only once its number has faded off the die.
       store.heldBack = releaseFadedGhosts(world);
 
@@ -346,14 +370,19 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
       // During shake they still redraw in lockstep with the dice, followed by
       // one clean unshifted frame when the shake ends.
       const shaking = shake > 0.01;
+      const sealedNow = sealedRef.current;
       if (
         groundDirty
         || groundFramework !== game.framework
+        || groundSealed !== sealedNow
         || shaking
         || groundWasShaking
       ) {
         gctx.clearRect(0, 0, viewW, viewH);
-        drawBackdrop(gctx, viewW, viewH, theme);
+        // Closed, the tray is a CRT with its own phosphor backdrop. Open, the
+        // full-screen Roll field supplies that backdrop so there is no visible
+        // rectangular seam around the unchanged-size dice surface.
+        if (sealedNow) drawBackdrop(gctx, viewW, viewH, theme);
         gctx.save();
         gctx.translate(originX + shakeX, originY + shakeY);
         gctx.scale(zoom, zoom);
@@ -361,6 +390,7 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
         gctx.restore();
         groundDirty = false;
         groundFramework = game.framework;
+        groundSealed = sealedNow;
         groundWasShaking = shaking;
       }
 
@@ -389,22 +419,20 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
       for (const die of world.dice) die.hover = false;
     };
 
-    const doRoll = (hit: DieBody | null): void => {
-      const game = stateRef.current;
-      if (!canRoll(game)) {
-        // Not ready: the dice are still toys.
-        if (hit) nudgeDie(hit);
-        return;
-      }
+    const hasBusyPhysicalDie = (): boolean => world.dice.some(
+      (die) => !die.retiring && die.zapAt === null
+        && die.state !== 'rest' && die.state !== 'idle',
+    );
 
+    const performRoll = (hit: DieBody | null): void => {
+      const game = stateRef.current;
       const dice = effectiveDice(game);
-      // Dice still showing a number are left where they are: a bonus roll
-      // that has just landed should not be swept away by the next click.
       const { reuse, retire } = planThrow(world, dice, MAX_DICE);
       for (const die of retire) retireDie(die);
 
       const throwing = [...reuse];
       while (throwing.length < dice) throwing.push(spawnDie(world, { dropped: true }));
+
       // The die under the cursor leads, so a click reads as launching that one.
       if (hit && throwing.includes(hit)) {
         throwing.splice(throwing.indexOf(hit), 1);
@@ -413,8 +441,6 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
       const calm = prefersReducedMotion();
       throwing.forEach((die, i) => {
         throwDie(world, die, {
-          // Reduced motion keeps the throw but drops the long tumble: the die
-          // is steered onto its face as soon as the physics allows.
           minTumbleMs: calm ? 0 : 300 + i * 70,
           fromClick: i === 0,
           power: calm ? 0.45 : i === 0 ? 1.05 : 1,
@@ -422,6 +448,29 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, onSealed }: 
       });
 
       actions.roll();
+    };
+
+    const doRoll = (hit: DieBody | null): void => {
+      const game = stateRef.current;
+      if (!canRoll(game)) {
+        // Not ready: the dice are still toys.
+        if (hit) nudgeDie(hit);
+        return;
+      }
+      if (queuedRoll) return;
+
+      const dice = effectiveDice(game);
+      const { reuse } = planThrow(world, dice, MAX_DICE);
+
+      // If a physical die already exists but is only finishing its previous
+      // tumble/alignment, wait for it. Spawning here is the intermittent
+      // "second die" misfire: the mechanical roll count has not changed.
+      if (reuse.length < dice && hasBusyPhysicalDie()) {
+        queuedRoll = { hitKey: hit?.key ?? null };
+        return;
+      }
+
+      performRoll(hit);
     };
 
     rollRef.current = () => {
