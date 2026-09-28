@@ -100,6 +100,20 @@ export const TreeView = memo(function TreeView({
 
   const [size, setSize] = useState({ w: 0, h: 0 });
 
+  // Native mobile scrolling should preserve the tree's old apparent scale.
+  // This is exactly the same fit + minimum-small-node calculation previously
+  // used by the transformed SVG, converted into a physical scroll surface.
+  const nativeSurface = useMemo(() => {
+    if (!nativePan || size.w <= 0 || size.h <= 0) return null;
+    const fit = Math.min(size.w / VB.w, size.h / VB.h);
+    const drawn = NODE_RADIUS.small * 2 * fit;
+    const z = drawn >= MIN_NODE_PX ? 1 : Math.min(3, MIN_NODE_PX / drawn);
+    return {
+      w: Math.max(size.w, VB.w * fit * z),
+      h: Math.max(size.h, VB.h * fit * z),
+    };
+  }, [nativePan, size.w, size.h]);
+
   /**
    * A node that was just bought, for the spark that marks the purchase.
    * Driven off `allocatedKey` so it fires wherever the buy came from — the
@@ -342,6 +356,12 @@ export const TreeView = memo(function TreeView({
         ref={svgRef}
         className={`tree__svg${dragging ? ' tree__svg--dragging' : ''}`}
         viewBox={VIEWBOX}
+        style={nativeSurface ? {
+          width: `${nativeSurface.w}px`,
+          height: `${nativeSurface.h}px`,
+          maxWidth: 'none',
+          maxHeight: 'none',
+        } : undefined}
         onWheel={onWheel}
         onPointerDown={onDown}
         onPointerMove={onMove}
