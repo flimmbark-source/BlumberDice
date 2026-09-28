@@ -2957,39 +2957,20 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
    room to be hit. Keyed to the pointer, not the width, because a tablet is
    wide and still touched. */
 @media (pointer: coarse) {
-  /* Mobile/tablet uses the browser's native scroll compositor instead of a
-     JavaScript/SVG pan loop. The tree is rendered once onto an oversized
-     surface; the finger scrolls that surface directly. */
-  .tree[data-native-pan='true'] {
-    overflow: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y;
-    scrollbar-width: thin;
-  }
-  .tree[data-native-pan='true'] .tree__svg {
-    display: block;
-    touch-action: pan-x pan-y;
-    cursor: default;
-  }
-
   /* SVG drop-shadows force expensive offscreen filtering on many nodes at
      once. Shape/stroke/fill already encode every state, so phones keep the
      information while dropping the GPU-heavy glow layer. */
-  .tree:not(.tree--expanded):not([data-native-pan='true']) { contain: layout paint; }
+  .tree:not(.tree--expanded) { contain: layout paint; }
+  .tree__svg {
+    will-change: transform;
+    backface-visibility: hidden;
+  }
   .tree .node__shape { transition: none; }
   .tree .node--available .node__shape,
   .tree .node--allocated .node__shape,
   .tree .node--pinned .node__shape,
   .tree .node:focus-visible .node__shape {
     filter: none;
-  }
-
-  /* Text remains readable, but the expensive stroked paint-order around every
-     notable/keystone label is unnecessary on the already-large mobile surface. */
-  .tree[data-native-pan='true'] .node__name {
-    paint-order: normal;
-    stroke: none;
   }
 
   .iconbtn { width: 38px; height: 38px; }
@@ -3002,6 +2983,9 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   .statrow--button { padding: 7px 6px; }
   .goal__unpin { padding: 5px 10px; }
   .minidie { padding: 3px; }
+  /* The web is panned and pinched rather than hovered, so the gesture
+     belongs to it rather than to the page. */
+  .tree__svg { touch-action: none; }
 }
 
 /* Phones with a notch or a home bar, once the viewport is told to cover
