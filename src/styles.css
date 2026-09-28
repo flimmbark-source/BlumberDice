@@ -2960,6 +2960,15 @@ body:has(.app--photo) {
 }
 body:has(.app--photo)::before { display: none; }
 
+/* Photo Plan owns the page background, but Roll owns it more specifically:
+   once through the glass the phosphor field continues to every screen edge. */
+body:has(.viewport--entering .app--photo),
+body:has(.viewport--driven .app--photo),
+body:has(.viewport--exiting .app--photo) {
+  background:
+    radial-gradient(120% 130% at 50% 42%, var(--screen-hi), var(--screen) 45%, var(--screen-lo));
+}
+
 /* --- the two containers become transparent coordinate spaces ----------- */
 
 .app--photo .topbar,
@@ -3187,6 +3196,20 @@ body:has(.app--photo)::before { display: none; }
 }
 .app--photo .tray__readout { inset: 15px 26px auto 26px; }
 .app--photo .tray__hint { bottom: 26px; }
+
+/* The photograph already contains the real CRT lip. Do not lay the drawn
+   synthetic threshold over it: desktop passes through the temporary photo
+   shell instead. */
+.app--photo .chamber__threshold { display: none; }
+
+/* Roll has crossed the television, so the photographed tray becomes the same
+   edge-free opening as the drawn/mobile tray. Keep these after the photo skin
+   rules so the skin cannot restore its 10px CRT radius. */
+:is(.viewport--entering, .viewport--driven, .viewport--exiting) .app--photo .tray {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
 
 /* --- the switch -------------------------------------------------------- */
 
