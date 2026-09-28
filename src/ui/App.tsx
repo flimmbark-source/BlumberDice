@@ -93,7 +93,7 @@ export function App(): JSX.Element {
         restoreTimerRef.current = window.setTimeout(() => {
           setRestoreSnap(false);
           restoreTimerRef.current = null;
-        }, 50);
+        }, 460);
       }
       setPassage(null);
       passageTimerRef.current = null;
@@ -368,6 +368,21 @@ export function App(): JSX.Element {
             <PanelFoot text={tab === 'web' ? 'Expand the machine. Every roll builds a bigger tomorrow.' : undefined} />
           </section>
 
+          {mobileSurfaces && tab === 'web' && inspected && (
+            <section className="fixed-panel fixed-panel--upgrade-mobile">
+              <div className="fixed-panel__bar">
+                <span className="fixed-panel__title">Selected upgrade</span>
+              </div>
+              <div className="fixed-panel__body">
+                <MobileSelectedUpgrade
+                  s={s}
+                  nodeId={inspected}
+                  onClose={() => setInspected(null)}
+                />
+              </div>
+            </section>
+          )}
+
           {showGoalPanel && (
             <section className="fixed-panel fixed-panel--goal">
               {/* This plate prints its legend inside the screen, beside the
@@ -423,15 +438,6 @@ export function App(): JSX.Element {
           </div>
         )}
 
-        {treeUnlocked && inspected && mobileSurfaces && tab === 'web' && (
-          <div className="mobile-upgrade-sheet">
-            <MobileSelectedUpgrade
-              s={s}
-              nodeId={inspected}
-              onClose={() => setInspected(null)}
-            />
-          </div>
-        )}
       </main>
 
       {store.debug && <DebugPanel s={s} />}
