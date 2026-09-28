@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { prefersReducedMotion } from './motion.ts';
+import { touchPrimary } from './pointer.ts';
 
 /** Time constant for the approach, in seconds. */
 const TAU = 0.16;
@@ -31,16 +32,24 @@ export function useCountUp(
   // step with the fading ghost is only there to match an animation we are no
   // longer playing. Under the setting, the number is simply the number.
   const calm = prefersReducedMotion();
+  const mobile = touchPrimary();
 
   useEffect(() => {
     if (calm) return;
     let raf = 0;
     let last = performance.now();
+    const minFrameMs = mobile ? 1000 / 30 : 0;
 
     const frame = (now: number): void => {
+      if (minFrameMs > 0 && now - last < minFrameMs) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+
       const dt = Math.min(now - last, 100) / 1000;
       last = now;
-      const revealed = goal.current - (hold.current?.() ?? 0);
+      const held = hold.current?.() ?? 0;
+      const revealed = goal.current - held;
       const diff = revealed - current.current;
       if (Math.abs(diff) < SNAP) {
         if (current.current !== revealed) {
@@ -51,11 +60,21 @@ export function useCountUp(
         current.current += diff * (1 - Math.exp(-dt / TAU));
         setShown(current.current);
       }
+
+      // Once both the counter and its withheld dice payout are settled there
+      // is nothing left to poll. A later target change restarts this effect.
+      const settled = Math.abs(revealed - current.current) < SNAP && held === 0;
+      if (settled) {
+        raf = 0;
+        return;
+      }
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
-  }, [calm]);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [calm, mobile, target]);
 
   if (calm) return { value: target, moving: false };
 
