@@ -2613,6 +2613,13 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
    * panel. The dice tray stays mounted while hidden, so switching tabs does
    * not recreate its physics world.
    */
+  .viewport--restore-snap .fixed-panel__body > *,
+  .viewport--restore-snap .currency__screen > *,
+  .viewport--restore-snap .currency__entropy-meter > *,
+  .viewport--restore-snap .tray__readout {
+    animation: none;
+  }
+
   .app[data-tab]:not([data-tab='roll']) .game-area { display: none; }
   .app[data-tab='roll'] .game-area {
     display: flex;
@@ -2624,27 +2631,19 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   .app[data-tab='log'] .panel-rail--right { display: none; }
 
   /*
-   * Node inspection is a viewport sheet, not another panel in the page flow.
-   * The complete authored effect is shown; height is saved by removing the
-   * duplicate notation/chips/chain and putting cost + Allocate on one row.
+   * Mobile Build is one vertical reading order: tree first, selected ability
+   * directly beneath it. The ability keeps the detailed notation and complete
+   * effect; only the desktop-only Leads To plate is omitted.
    */
-  .mobile-upgrade-sheet {
-    display: block;
-    position: fixed;
-    left: max(10px, env(safe-area-inset-left));
-    right: max(10px, env(safe-area-inset-right));
-    bottom: max(10px, env(safe-area-inset-bottom));
-    z-index: 95000;
-    max-height: calc(100dvh - 150px);
-    overflow: auto;
-    overscroll-behavior: contain;
-    border: 1px solid var(--plate-edge);
-    border-radius: 12px;
-    background: linear-gradient(180deg, rgba(18, 32, 23, 0.985), rgba(9, 19, 13, 0.99));
-    box-shadow:
-      0 0 0 4px var(--plate-lo),
-      0 0 0 5px var(--plate-edge),
-      0 16px 44px rgba(0, 0, 0, 0.68);
+  .fixed-panel--upgrade-mobile {
+    flex: 0 0 auto;
+    width: 100%;
+    max-height: none;
+  }
+  .fixed-panel--upgrade-mobile .fixed-panel__body {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
   }
   .mobile-upgrade {
     display: flex;
@@ -2696,16 +2695,17 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
     padding: 4px;
     line-height: 1;
   }
-  .mobile-upgrade__goal {
-    color: #d4a72c;
-    font-size: 24px;
-  }
+  .mobile-upgrade__goal { color: #d4a72c; font-size: 24px; }
   .mobile-upgrade__goal--on { color: #f2b72f; }
   .mobile-upgrade__goal:disabled { color: #655f50; opacity: 0.45; }
-  .mobile-upgrade__close {
-    color: var(--muted);
-    font-size: 24px;
+  .mobile-upgrade__close { color: var(--muted); font-size: 24px; }
+
+  /* Keep the full symbol grammar; tighten only the whitespace around it. */
+  .mobile-upgrade__notation .nt {
+    margin: 0;
+    gap: 4px;
   }
+  .mobile-upgrade__notation .nt__row { min-height: 24px; }
   .mobile-upgrade__effect .upg__desc {
     margin: 0;
     font-size: 12.5px;
@@ -3869,6 +3869,28 @@ body:has(.viewport--exiting .app--photo) {
   transition: none !important;
 }
 
+/* Once the desktop camera is fully home, the data screens restrike like an
+   old phosphor terminal. The machine/chassis does not blink: only information
+   painted on or inside a screen does. */
+.viewport--restore-snap .fixed-panel__body > *,
+.viewport--restore-snap .currency__screen > *,
+.viewport--restore-snap .currency__entropy-meter > *,
+.viewport--restore-snap .tray__readout {
+  animation: planScreenRestrike 430ms steps(1, end) both;
+  transform-origin: center center;
+}
+@keyframes planScreenRestrike {
+  0%   { opacity: 0; filter: brightness(0.35); transform: scaleY(0.04); }
+  8%   { opacity: 0.85; filter: brightness(2.8); transform: scaleY(0.06); }
+  15%  { opacity: 0.08; filter: brightness(0.6); transform: scaleY(0.03); }
+  23%  { opacity: 1; filter: brightness(2.15); transform: scaleY(0.92); }
+  34%  { opacity: 0.34; filter: brightness(0.8); transform: scaleY(1.02); }
+  45%  { opacity: 1; filter: brightness(1.45); transform: scaleY(1); }
+  58%  { opacity: 0.62; filter: brightness(0.92); transform: scaleY(1); }
+  72%  { opacity: 1; filter: brightness(1.1); transform: scaleY(1); }
+  100% { opacity: 1; filter: none; transform: scaleY(1); }
+}
+
 /* The threshold is visible only while crossing it. The settled Plan UI gets
    no extra bezel, and settled Roll contains only the original tray. */
 .viewport--entering .chamber__threshold {
@@ -4073,6 +4095,12 @@ body:has(.viewport--exiting .app--photo) {
     animation: none !important;
   }
   .photo-passage-shell { display: none; }
+  .viewport--restore-snap .fixed-panel__body > *,
+  .viewport--restore-snap .currency__screen > *,
+  .viewport--restore-snap .currency__entropy-meter > *,
+  .viewport--restore-snap .tray__readout {
+    animation: none !important;
+  }
 }
 
 /* The Roll world is a viewport-level field, not the old CRT rectangle. It
