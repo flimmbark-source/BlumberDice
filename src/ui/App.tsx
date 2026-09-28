@@ -131,9 +131,9 @@ export function App(): JSX.Element {
   const knowsB = s.discovered.includes('frameworkB');
   const spent = allocatedCost(s);
   const hasGoalDisplay = treeUnlocked && currentGoal(s).kind !== 'none';
-  // The goal gets its own plate under the tree, so it exists only while the
-  // Build view is the one on screen.
-  const showGoalPanel = hasGoalDisplay && tab === 'web';
+  // Desktop keeps Goal in the left rail. Stacked/mobile moves the same Goal
+  // plate onto the Roll surface beneath the chamber/deck.
+  const showGoalPanel = hasGoalDisplay && tab === 'web' && !mobileSurfaces;
   const photo = skin === 'photo';
   const showChain = treeUnlocked && Boolean(inspected) && hasLeadsTo(inspected);
 
@@ -292,6 +292,15 @@ export function App(): JSX.Element {
             resizeRef={trayResizeRef}
             glassRef={chamberRef}
           />
+
+          {mobileSurfaces && tab === 'roll' && hasGoalDisplay && (
+            <section className="fixed-panel fixed-panel--goal fixed-panel--goal-mobile">
+              <div className="fixed-panel__bar" />
+              <div className="fixed-panel__body">
+                <GoalBar s={s} onOpenTree={openGoalInTree} />
+              </div>
+            </section>
+          )}
         </section>
 
         {treeUnlocked && (
