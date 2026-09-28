@@ -244,6 +244,7 @@ export function App(): JSX.Element {
 
   return (
     <>
+    {(phase === 'roll' || passage !== null) && <div className="rollfield" aria-hidden />}
     {/* The outer view only translates. Depth comes from the machine layers
         moving around the stable dice tray, not from scaling the tray itself. */}
     <div
@@ -396,6 +397,24 @@ export function App(): JSX.Element {
 
       {store.debug && <DebugPanel s={s} />}
     </div>
+
+    {photo && passage !== null && (
+      <div
+        className={`photo-passage-shell photo-passage-shell--${passage}`}
+        style={{
+          ['--chassis' as string]: `url(${chassisUrl})`,
+          ['--stage-k' as string]: String(stageScale),
+          width: STAGE_W,
+          height: STAGE_H,
+        }}
+        aria-hidden
+      >
+        <span className="photo-passage-shell__piece photo-passage-shell__piece--top" />
+        <span className="photo-passage-shell__piece photo-passage-shell__piece--left" />
+        <span className="photo-passage-shell__piece photo-passage-shell__piece--right" />
+        <span className="photo-passage-shell__piece photo-passage-shell__piece--bottom" />
+      </div>
+    )}
     </div>
 
     {/* Outside the drive, so it stays put while the view moves. The readout
