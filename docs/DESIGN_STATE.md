@@ -1658,6 +1658,22 @@ Consequences worth naming:
   enough to read as brushed is also fine enough to alias; on a 2x screen it
   came out as corduroy. Broad uneven blotching cannot do that, and it is what
   `--plate-wear` already does for the faceplate.
+- **The dice are allowed out of the tray, upward.** A die is thrown to about
+  two and a half of its own heights and a die dropped in for a bonus or a
+  cascade starts at six and is thrown from there, both above the top of a tray
+  sized to hold the floor. Measured: an ordinary throw put 6-17px of die above
+  the tray's top edge, and a drop-in put 118-130px of it there — on a phone
+  whose tray is 341px tall. All of it was cut off at a line that, once the
+  passage has taken the glass and the rings away, nobody can see: dice
+  vanished into it and appeared out of it. The dice canvas now reaches the
+  rest of the window upward (`diceHeadroom`) and every clip between it and the
+  window is switched off — but only inside `.viewport--covered`, the same
+  window in which there is no machine to clip against. In Plan the chamber is
+  a box, the bezel is its lid, a die above the glass has gone behind it, and
+  the cut is correct; the lift is zero there and the backing store is the size
+  it always was. The floor never moves either way: the lift is added to the
+  dice layer's origin alone, so it changes what can be seen and nothing about
+  where anything is.
 - **What is still a cut.** The chamber's own bezel — its rounded outline, its
   etched name and its lamp — becomes plain plate inside the shell's 150ms
   cross-fade rather than travelling as itself. Reproducing it in the shell

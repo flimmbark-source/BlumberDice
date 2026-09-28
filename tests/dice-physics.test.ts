@@ -7,6 +7,7 @@ import {
 import {
   dot, project, qRandom, qRotate, v3, VIEW_DIR, add, len,
 } from '../src/ui/dice/math3d.ts';
+import { diceHeadroom } from '../src/ui/dice/DiceTray.tsx';
 import type { Face } from '../src/engine/types.ts';
 
 const FACES: Face[] = [1, 2, 3, 4, 5, 6];
@@ -615,5 +616,50 @@ describe('the surface clears itself between rolls', () => {
     world.t = 1400 + 300;
     sweepSpent(world, 1, 700);
     expect(dice.every((d) => !d.retiring)).toBe(true);
+  });
+});
+
+/**
+ * The headroom over the tray.
+ *
+ * Its job is to be the distance to the top of the screen once the chamber has
+ * no walls, so a die can be watched falling in rather than arriving out of an
+ * invisible line. The numbers below are the tray sizes the five real layouts
+ * produce, and what matters about each is the same thing: the canvas top ends
+ * up at or above the top of the window.
+ */
+describe('the dice layer reaches the top of the window', () => {
+  /** Where the canvas top lands on screen, given a centred tray. */
+  const canvasTop = (trayH: number, windowH: number, scale = 1): number => {
+    const trayTop = (windowH - trayH * scale) / 2;
+    return trayTop - diceHeadroom(trayH, windowH, scale) * scale;
+  };
+
+  it('clears the top of the window in every layout', () => {
+    for (const [trayH, windowH, scale] of [
+      [341, 844, 1],        // phone, drawn chassis
+      [526, 900, 0.861],    // 1440x900, photographed stage
+      [526, 900, 0.956],    // 1920x900, photographed stage
+      [526, 390, 0.414],    // phone held sideways, photographed stage
+      [238, 500, 1],        // short wide window, drawn chassis
+    ] as const) {
+      expect(canvasTop(trayH, windowH, scale)).toBeLessThanOrEqual(0);
+    }
+  });
+
+  it('leaves room above the screen for a die to fall in from', () => {
+    // A sixth of the tray beyond the screen edge, so the fall starts off it.
+    expect(canvasTop(341, 844)).toBeLessThanOrEqual(-341 / 6 + 1);
+  });
+
+  it('gives a tray taller than the window headroom but never a negative one', () => {
+    const tall = diceHeadroom(1200, 600, 1);
+    expect(tall).toBeGreaterThan(0);
+    expect(tall).toBe(Math.ceil(1200 / 6));
+  });
+
+  it('is nothing at all for a tray that has not been laid out yet', () => {
+    expect(diceHeadroom(0, 844, 1)).toBe(0);
+    expect(diceHeadroom(341, 844, 0)).toBe(0);
   });
 });

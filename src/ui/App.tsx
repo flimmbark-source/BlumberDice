@@ -464,6 +464,7 @@ export function App(): JSX.Element {
             s={s}
             sealed={phase === 'plan'}
             immersed={phase === 'roll' || passage === 'in' || passage === 'out'}
+            unwalled={covered}
             onSealed={enterRoll}
             resizeRef={trayResizeRef}
             glassRef={chamberRef}
@@ -1191,12 +1192,14 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
 /** Long enough for approach, impact, and either fade or shield ricochet. */
 const ENTROPY_ATTACK_MS = 3600;
 
-function GamePanel({ s, sealed, immersed, onSealed, resizeRef, glassRef }: {
+function GamePanel({ s, sealed, immersed, unwalled, onSealed, resizeRef, glassRef }: {
   s: GameState;
   /** True in the Plan phase: the chamber is shut and a throw opens it. */
   sealed: boolean;
   /** True while crossing or inside the screen; keeps CRT backdrop out through exit. */
   immersed: boolean;
+  /** True while the chamber has no walls, so the dice may be seen above it. */
+  unwalled: boolean;
   onSealed: () => void;
   resizeRef: MutableRefObject<(() => void) | null>;
   /** What the drive fills the window with: the glass, not its bezel. */
@@ -1222,6 +1225,7 @@ function GamePanel({ s, sealed, immersed, onSealed, resizeRef, glassRef }: {
           glassRef={glassRef}
           sealed={sealed}
           immersed={immersed}
+          unwalled={unwalled}
           onSealed={onSealed}
         />
       </div>

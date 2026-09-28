@@ -4243,6 +4243,32 @@ body:has(.app--photo)::before { display: none; }
  * the opening is therefore continuous for the whole passage -- it is never
  * a rectangle punched in a plate.
  */
+/*
+ * And once it has no glass it has no lid either.
+ *
+ * A die is thrown to about two and a half of its own heights, and a bonus die
+ * drops in from six, both of which are above the top of a tray sized to hold
+ * the floor. In Plan that is right: the chamber is a box, the bezel is its
+ * lid, and a die that goes above the glass has gone behind it. Here the box
+ * is gone, so the same cut is a die vanishing at a line nobody can see and
+ * reappearing out of it.
+ *
+ * Every one of these clips has a job in Plan -- the machine is a rounded
+ * object with a rounded hole in it and panels that must stay in their
+ * windows -- and every one of them is switched off for the same window in
+ * which there is no machine to clip against. The dice canvas takes the rest
+ * of the screen upward while this is true (see `lift` in `DiceTray.tsx`); it
+ * is the only thing in here that reaches past its box, and it only reaches
+ * up.
+ */
+.viewport--covered .app,
+.viewport--covered .desktop,
+.viewport--covered .game-area,
+.viewport--covered .game__arena,
+.viewport--covered .tray {
+  overflow: visible;
+}
+
 .viewport--covered .tray {
   border-radius: 0;
   background: transparent;
