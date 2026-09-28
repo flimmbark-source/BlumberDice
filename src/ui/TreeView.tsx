@@ -118,7 +118,9 @@ export const TreeView = memo(function TreeView({
     setView({ x: z === 1 ? 0 : cx / z, y: z === 1 ? 0 : cy / z, zoom: z });
   }, [size.w, size.h]);
   const drag = useRef<{
-    x: number; y: number; vx: number; vy: number;
+    x: number; y: number; vx: number; vy: number; vz: number;
+    /** Touch/pen pans update the SVG directly and commit React state on release. */
+    direct: boolean;
     /** Set once the pointer travels far enough to count as a pan. */
     moved: boolean;
     /** Whether the press landed on a node rather than empty canvas. */
@@ -127,6 +129,8 @@ export const TreeView = memo(function TreeView({
   const suppressNodeClick = useRef(false);
   const [dragging, setDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
+  const graphRef = useRef<SVGGElement>(null);
+  const pendingDragView = useRef<{ x: number; y: number; zoom: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -211,6 +215,8 @@ export const TreeView = memo(function TreeView({
       y: e.clientY,
       vx: view.x,
       vy: view.y,
+      vz: view.zoom,
+      direct: e.pointerType === 'touch' || e.pointerType === 'pen',
       moved: false,
       onNode: (e.target as Element).closest?.('.node') != null,
     };
@@ -227,32 +233,48 @@ export const TreeView = memo(function TreeView({
     if (!d.moved && (Math.abs(dx) > DRAG_SLOP || Math.abs(dy) > DRAG_SLOP)) {
       d.moved = true;
       suppressNodeClick.current = true;
-      setDragging(true);
+      // A cursor benefits from the grabbing affordance. A finger does not,
+      // and avoiding this state update keeps the full SVG asleep while panning.
+      if (!d.direct) setDragging(true);
     }
 
     // view.x/y are SVG user units, not CSS pixels. Convert the pointer delta
     // through the fitted viewBox scale first; otherwise panning in this narrow
-    // tech window feels several times slower than the mouse.
-    //
-    // The delta arrives in visual pixels while `fit` is in layout ones, so on
-    // a scaled stage the stage's own scale has to come out first or the tree
-    // pans faster than the pointer.
+    // tech window feels several times slower than the pointer.
     const fit = size.w > 0 && size.h > 0 ? Math.min(size.w / VB.w, size.h / VB.h) : 1;
     const el = e.currentTarget;
     const k = el.clientWidth > 0 ? el.getBoundingClientRect().width / el.clientWidth : 1;
-    setView((v) => ({
-      ...v,
-      x: d.vx + dx / (k * fit * v.zoom),
-      y: d.vy + dy / (k * fit * v.zoom),
-    }));
+    const next = {
+      zoom: d.vz,
+      x: d.vx + dx / (k * fit * d.vz),
+      y: d.vy + dy / (k * fit * d.vz),
+    };
+
+    if (d.direct) {
+      // Touch/pen: transform only the graph group. React state is committed
+      // once on release instead of rebuilding every edge/node per pointermove.
+      pendingDragView.current = next;
+      graphRef.current?.setAttribute(
+        'transform',
+        `scale(${next.zoom}) translate(${next.x} ${next.y})`,
+      );
+      return;
+    }
+
+    setView(next);
   };
 
   const onUp = (e: React.PointerEvent<SVGSVGElement>): void => {
     const d = drag.current;
     drag.current = null;
-    setDragging(false);
+    if (!d?.direct) setDragging(false);
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    if (d?.direct && pendingDragView.current) {
+      const finalView = pendingDragView.current;
+      pendingDragView.current = null;
+      setView(finalView);
     }
     // A press on empty canvas that was not a pan puts the popup away.
     if (d && !d.moved && !d.onNode) setInspected(null);
@@ -271,7 +293,7 @@ export const TreeView = memo(function TreeView({
         onPointerUp={onUp}
         onPointerCancel={onUp}
       >
-        <g transform={`scale(${view.zoom}) translate(${view.x} ${view.y})`}>
+        <g ref={graphRef} transform={`scale(${view.zoom}) translate(${view.x} ${view.y})`}>
           {EDGES.map(([a, b]) => {
             const na = NODES_BY_ID.get(a)!;
             const nb = NODES_BY_ID.get(b)!;
