@@ -1287,7 +1287,10 @@ Consequences worth naming:
   camera move must not also move the object that visually defines the passage.
   In the photo skin the rail wrappers are `display: contents`, so the actual
   fixed panels are faded and moved directly rather than trying to transform a
-  box that does not exist.
+  box that does not exist. *(Half superseded by §42: the drawn skin's DOM
+  threshold and the sideways-peeling panels are gone, and both skins now pass
+  the same kind of four-piece shell. The rest — the invariant tray, the shell
+  living outside the camera, `display: contents` — still holds.)*
 - **Desktop and mobile use the same roll composition, not the same Plan
   implementation.** Both finish with the unchanged-size tray centred on
   screen, but each enters that state through the physical structure its UI
@@ -1308,10 +1311,13 @@ Consequences worth naming:
   phase changes. Translation also does not demand a larger canvas backing
   store, which avoids the fill-rate cost of the old magnifying drive.
 - **React Three Fiber is not used for this transition.** Nothing here requires
-  a second WebGL scene: CSS perspective transforms can move the existing DOM
-  machine around the already-rendered canvas using compositor-friendly
+  a second WebGL scene: CSS transforms can move the existing DOM machine
+  around the already-rendered canvas using compositor-friendly
   transform/opacity properties. Adding R3F would add bundle, GPU and memory
-  cost without supplying a capability the transition needs.
+  cost without supplying a capability the transition needs. *(This originally
+  said "CSS perspective transforms". There was a `perspective` on `.viewport`
+  and a `translateZ` on every peripheral panel, and none of it did anything —
+  see §42.)*
 - **The switch is the painted cap, edge for edge.** Measured off the art with
   its shaded lip included — x 742..1058, y 736..868 of the 1672x941 frame.
   Taking only the saturated face left the moulding's own bottom edge showing
@@ -1520,6 +1526,108 @@ Measured at 1100x620, 1280x720, 1440x900 and 1672x941: the settled drive still
 covers the window on every axis and the glass reaches the left edge. The
 durations land at 2200ms and 1400ms, and `linear()` is what the browser
 applies rather than the fallback.
+
+### 42. The passage has three beats
+
+The drive of §41 was right about its own curve and wrong about everything
+around it. Every state change the passage needed was hung on the first frame
+of the drive — the one frame in the whole two seconds where the machine is
+sitting perfectly still in front of the player — so the enamel went flat, the
+chamber lost its bezel, the tray lost its rings and its glass, and four
+riveted panels started sliding sideways off a faceplate they are bolted to,
+all before anything had moved. This is what that is instead.
+
+**Beat one: arm.** 260ms in which nothing travels. The information screens
+collapse to a line and go out, using the same CRT vocabulary the channel
+switch already had, and a phone uses the beat to bring the Roll surface on
+screen and return the page to the top. It exists because a machine does not
+start moving in the same instant its screens go dark — and because the
+faceplate that covers those screens a moment later must not be the thing that
+hides them going out. It has its own sound: a falling blip and two ticks.
+
+**Beat two: drive.** As §41, with one change of subject. What passes the
+camera is the faceplate, in one piece, with the chamber cut out of it. Both
+skins now do this the same way: four full-window layers of the same material,
+each clipped to one band around the opening so the enamel runs continuously
+across the seams, scaled about the opening's centre. The photograph's bands
+are written down, because it is one bitmap at one known size. The drawn
+chassis reflows, so its bands are cut from the tray's measured rectangle at
+the moment the drive engages (`passageGeometry`, `passageClipPaths`) and the
+same measurement is kept for the return. A rim carrying the tray's own enamel
+rings is drawn on the opening, so the tray can give its rings up in the same
+frame the shell puts identical ones back in the same place: the edge of the
+opening is continuous for the entire passage rather than a rectangle punched
+in a plate.
+
+**Beat three: land.** Unchanged in shape — camera first, screens second — but
+the faceplate is now solid again before the camera arrives, and the tubes
+strike after it. The strike gained a sound.
+
+Consequences worth naming:
+
+- **One class decides what the live machine gives up.** `.viewport--covered`
+  is true only while the shell is opaque over the whole window, and every rule
+  that strips the enamel, the chamber bezel, the tray's glass and the panels
+  hangs off it. The timer that sets it sits 8% inside the shell's own
+  cross-fade at each end, and that margin is not decoration: a timer starts
+  counting when React schedules the work, while the animation it is racing
+  does not start until the shell is committed and painted. Line them up
+  exactly and a slow frame shows the roll field through a machine that has
+  already taken itself apart.
+- **The peripheral panels no longer travel.** They faded over 260ms of a
+  1400ms move, so they were invisible for four fifths of a journey they
+  completed where nobody could see it — and while they *were* visible they
+  were plates sliding off the faceplate they are riveted to. They now cross-
+  fade out under the shell in a seventh of a second, plate against plate,
+  with their screens already dark.
+- **The 220px Z push on each of them did nothing.** `perspective` applies to
+  its own element's children, and `.app` sat between `.viewport` and every one
+  of those panels without preserving 3D, so the pushes were flattened away
+  before they were ever composited. The `perspective`, the `preserve-3d` and
+  the Z values are gone rather than made to work: the faceplate shell supplies
+  the depth, and it does it with scale, which composites the same everywhere.
+- **The roll field fades rather than switching on.** At full opacity from the
+  first frame it announced the whole move before the machine had begun it. It
+  comes up under the shell and goes back down under it. The body no longer
+  repaints to the screen colour on frame one either; that was what turned the
+  crossing frames into a dark green wash.
+- **The instrument arrives when the camera does.** The Score readout used to
+  leave on the press, putting it on screen four fifths of a second into a
+  two-second drive, and then vanish outright on the way back — the one thing a
+  physical object in a physical machine cannot do. It now waits out the drive
+  (`hudDelay`, shared with the servo booked in `sound.ts`), latches as the
+  drive takes its last detent, and is stowed down its rail in the 380ms before
+  the returning faceplate has faded up at all, so the two are never in frame
+  together.
+- **A stacked layout runs a shorter drive.** The length of a drive should be
+  the length of the thing it drives past. On the faceplate the chamber is
+  about a third of the width and the plate has two thirds of a screen to clear
+  on each side; stacked, it is nearly the whole width, the faceplate is off
+  the edges a quarter of the way in, and the rest was an empty green field
+  with a die drifting through it. Same curve, same weight, less distance:
+  1500/1000 against 2200/1400. The number lives in `phase.ts` and in a
+  `--drive-in`/`--drive-out` custom property keyed to the same breakpoint.
+- **Reduced motion cuts the timers too, not just the animations.** The phase
+  timers ran the full 2.2s with the animations switched off, so the machine
+  sat blank for two seconds with nothing happening in them, under two seconds
+  of motor noise driving nothing. `driveTimings(reduced)` shortens the clock
+  and `playWhirr` drops its motor below 400ms, keeping the detent — a switch
+  that was pressed should still sound like one.
+- **The shield is derived from the phase, not set alongside it.** Both halves
+  used to set the lock themselves, with an effect catching Plan when it
+  drifted. That worked while the whole phase change happened inside one click
+  handler. It does not when the drive is armed first and commits a beat later
+  from a timer: a store notification arriving between the two was enough for
+  that effect to see Plan and an unlocked Score together and put the shield
+  straight back on, so the chamber opened with Score frozen and the roll could
+  neither earn nor lose. One effect now sets the lock from the phase.
+- **What is still a cut.** The chamber's own bezel — its rounded outline, its
+  etched name and its lamp — becomes plain plate inside the shell's 150ms
+  cross-fade rather than travelling as itself. Reproducing it in the shell
+  would mean a second source of truth for the chamber's asymmetric frame,
+  its two labels and its lamp, and that will rot. It is plate dissolving into
+  plate of the same colour, at the one moment the whole face is already
+  moving, and it is left as a known cost.
 
 ---
 
