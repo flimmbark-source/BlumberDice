@@ -2933,8 +2933,25 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   background: var(--chassis) center / 100% 100% no-repeat;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
 }
-/* The drawn chassis' own grime, rim and speckle are all in the photograph. */
-.app--photo::before,
+/* The photograph normally supplies its own grime, rim and speckle.
+   ::before is reserved as a temporary copy of the chassis during the Roll
+   passage. Unlike the app background, that copy can move in depth without
+   scaling the live dice tray. */
+.app--photo::before {
+  display: block;
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 0;
+  background: var(--chassis) center / 100% 100% no-repeat;
+  mix-blend-mode: normal;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: 53.71% 44.32%;
+  transform: translateZ(0) scale(1);
+  will-change: transform, opacity;
+}
 .app--photo::after { display: none; }
 body:has(.app--photo) {
   padding: 0;
@@ -3688,13 +3705,75 @@ body:has(.app--photo)::before { display: none; }
 .viewport--driven .app::after {
   opacity: 0;
 }
-.viewport--driven .app--photo {
+/* The desktop/photo machine is one bitmap, so it needs its own passage
+   layer. The static background is suppressed only while the duplicate shell
+   is crossing the viewer or while Roll is fully open. */
+.viewport--entering .app--photo,
+.viewport--driven .app--photo,
+.viewport--exiting .app--photo {
   background-image: none;
 }
+.viewport--entering .app--photo::before {
+  animation: photoChassisPassIn 2200ms cubic-bezier(0.55, 0, 0.2, 1) both;
+}
+.viewport--exiting .app--photo::before {
+  animation: photoChassisPassOut 1400ms cubic-bezier(0.2, 0, 0.25, 1) both;
+}
+@keyframes photoChassisPassIn {
+  0%   { opacity: 1; transform: translateZ(0) scale(1); }
+  62%  { opacity: 1; }
+  100% { opacity: 0; transform: translateZ(380px) scale(4.8); }
+}
+@keyframes photoChassisPassOut {
+  0%   { opacity: 0; transform: translateZ(380px) scale(4.8); }
+  30%  { opacity: 1; }
+  100% { opacity: 1; transform: translateZ(0) scale(1); }
+}
 
-/* The tray is the invariant of the transition: same box, same rounded CRT,
-   same canvas resolution policy. Only its outer viewport translation changes. */
-.viewport--driven .tray__hint { display: none; }
+/* In the photo skin the rail wrappers are display:contents, so transforms on
+   them cannot move anything. Move/fade the actual live screen contents while
+   the chassis bitmap supplies the physical shell passing the viewer. */
+.viewport .app--photo .fixed-panel {
+  transition:
+    transform 1400ms cubic-bezier(0.2, 0, 0.25, 1),
+    opacity 240ms ease;
+  will-change: transform, opacity;
+}
+.viewport--driven .app--photo .fixed-panel--tree,
+.viewport--driven .app--photo .fixed-panel--goal {
+  transform: translate3d(-18vw, 0, 220px);
+  opacity: 0;
+}
+.viewport--driven .app--photo .fixed-panel--upgrade,
+.viewport--driven .app--photo .fixed-panel--chain {
+  transform: translate3d(18vw, 0, 220px);
+  opacity: 0;
+}
+
+/*
+ * The dice area is the invariant, not the television.
+ *
+ * During entry, Roll and exit the old CRT presentation disappears: no glass
+ * bloom/scanline filter, no viewfinder marks, no white enamel rings, no
+ * rounded TV edge and no telemetry printed on the glass. The canvas itself
+ * keeps exactly the same dimensions and is merely translated to screen centre.
+ */
+:is(.viewport--entering, .viewport--driven, .viewport--exiting) .tray {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:is(.viewport--entering, .viewport--driven, .viewport--exiting) .tray::before,
+:is(.viewport--entering, .viewport--driven, .viewport--exiting) .tray::after {
+  opacity: 0;
+}
+:is(.viewport--entering, .viewport--driven, .viewport--exiting) .tray__readout,
+:is(.viewport--entering, .viewport--driven, .viewport--exiting) .tray__hint,
+:is(.viewport--entering, .viewport--driven, .viewport--exiting) .tray__queue {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .viewport, .viewport--driven,
@@ -3707,17 +3786,34 @@ body:has(.app--photo)::before { display: none; }
     transition: none !important;
   }
   .viewport--entering .chamber__threshold,
-  .viewport--exiting .chamber__threshold {
+  .viewport--exiting .chamber__threshold,
+  .viewport--entering .app--photo::before,
+  .viewport--exiting .app--photo::before {
     animation: none !important;
     display: none;
   }
 }
 
-body:has(.viewport--driven) {
-  background: var(--screen-lo);
+/* Once the player crosses the CRT, its phosphor world continues beyond the
+   old glass rectangle. The dice canvas remains its original size; only the
+   passive background fills the rest of the viewport. Keep it through the
+   return passage as well so the TV edge cannot pop back in mid-flight. */
+body:has(.viewport--entering),
+body:has(.viewport--driven),
+body:has(.viewport--exiting) {
+  background:
+    radial-gradient(120% 130% at 50% 42%, var(--screen-hi), var(--screen) 45%, var(--screen-lo));
   overflow: hidden;
 }
-body:has(.viewport--driven)::before { opacity: 0; }
+body:has(.viewport--entering)::before,
+body:has(.viewport--driven)::before,
+body:has(.viewport--exiting)::before {
+  opacity: 0;
+}
+.viewport--driven {
+  background:
+    radial-gradient(120% 130% at 50% 42%, var(--screen-hi), var(--screen) 45%, var(--screen-lo));
+}
 
 /* Stacked layouts still need document height in Plan. Roll locks pan gestures
    but otherwise uses exactly the same centred fixed-size tray composition as
