@@ -2969,9 +2969,6 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   }
   .tree[data-native-pan='true'] .tree__svg {
     display: block;
-    width: max(980px, 225vw);
-    height: auto;
-    min-height: 720px;
     touch-action: pan-x pan-y;
     cursor: default;
   }
