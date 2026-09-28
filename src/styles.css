@@ -3779,6 +3779,41 @@ body:has(.viewport--exiting .app--photo) {
   transform: translate(-50%, -50%) scale(var(--stage-k, 1));
   transform-origin: center center;
 }
+.photo-passage-shell__camera {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+/* The photographed CRT centre is x 53.71%, y 44.32% of the 1672x941 stage.
+   The live chamber is translated until that point reaches the viewport
+   centre. Because this camera group lives inside the stage-fit transform,
+   these authored-pixel deltas are scaled by --stage-k exactly as the live
+   photo stage is. */
+.photo-passage-shell--in .photo-passage-shell__camera {
+  animation: photoCameraIn 2200ms linear(
+    0, 0.048 15%, 0.161 30%, 0.175 34%, 0.225 38%,
+    0.355 50%, 0.483 60%, 0.497 64%, 0.575 68%, 0.611 70%,
+    0.857 85%, 0.967 93%, 1.004 97%, 1
+  ) both;
+}
+.photo-passage-shell--out .photo-passage-shell__camera {
+  animation: photoCameraOut 1400ms linear(
+    0, -0.004 3%, 0.033 7%, 0.143 15%,
+    0.389 30%, 0.425 32%, 0.503 36%, 0.517 40%,
+    0.645 50%, 0.775 62%, 0.825 66%, 0.839 70%,
+    0.952 85%, 1
+  ) both;
+}
+@keyframes photoCameraIn {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-62.03px, 53.45px, 0); }
+}
+@keyframes photoCameraOut {
+  from { transform: translate3d(-62.03px, 53.45px, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
 .photo-passage-shell__piece {
   position: absolute;
   inset: 0;
@@ -3873,6 +3908,7 @@ body:has(.viewport--exiting .app--photo) {
   }
   .viewport--entering .chamber__threshold,
   .viewport--exiting .chamber__threshold,
+  .photo-passage-shell__camera,
   .photo-passage-shell__piece {
     animation: none !important;
   }
