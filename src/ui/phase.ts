@@ -30,16 +30,21 @@ export function zoomStyle(z: Zoom): string {
  * The transform that fills the whole window with `rect`.
  *
  * `current` is the transform already applied to the element that was
- * measured, so the measurement is taken back to untransformed space before
- * the new one is worked out. That is what lets this be called again while
- * already zoomed — on a window resize — without compounding.
+ * measured, so the measurement is taken back to untransformed document space
+ * before the new one is worked out. Scroll offsets matter here: the stacked
+ * mobile layout is a scrolling document, and a viewport-relative DOMRect
+ * otherwise points the drive at the wrong place whenever the page is scrolled.
+ * This also lets the function be called again while already zoomed — on a
+ * window resize — without compounding.
  */
 export function zoomOnto(rect: DOMRect, current: Zoom, overscan = OVERSCAN): Zoom {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  const ex = (rect.left - current.tx) / current.k;
-  const ey = (rect.top - current.ty) / current.k;
+  const sx = window.scrollX;
+  const sy = window.scrollY;
+  const ex = (rect.left + sx - current.tx) / current.k;
+  const ey = (rect.top + sy - current.ty) / current.k;
   const ew = rect.width / current.k;
   const eh = rect.height / current.k;
   if (ew <= 0 || eh <= 0) return current;
@@ -50,8 +55,8 @@ export function zoomOnto(rect: DOMRect, current: Zoom, overscan = OVERSCAN): Zoo
   const k = Math.max(vw / ew, vh / eh) * overscan;
   return {
     k,
-    tx: (vw - ew * k) / 2 - ex * k,
-    ty: (vh - eh * k) / 2 - ey * k,
+    tx: (vw - ew * k) / 2 + sx - ex * k,
+    ty: (vh - eh * k) / 2 + sy - ey * k,
   };
 }
 
@@ -84,22 +89,12 @@ export const DRIVE_IN_MS = 2200;
 export const DRIVE_OUT_MS = 1400;
 
 /**
- * Whether there is anywhere to drive to.
+ * Whether the chamber drive can run in this environment.
  *
- * On a stacked phone layout the chamber is already the widest thing on the
- * page and the page itself scrolls; magnifying it would gain nothing and a
- * transform on an ancestor of a scrolling document causes more trouble than
- * it is worth. There the phase still happens — shield off, readout up — the
- * view just does not move.
+ * The drive now works on both the fixed faceplate and the stacked mobile
+ * layout. Mobile used to opt out because the page scrolls, but `zoomOnto`
+ * now accounts for scroll offsets explicitly, so that restriction is stale.
  */
 export function canDrive(): boolean {
-  if (typeof window === 'undefined') return false;
-  // The faceplate is showing exactly when the machine is not stacked, and
-  // the drive belongs to the faceplate. Mirrors the stacking condition in
-  // `styles.css`; the two must agree.
-  return !window.matchMedia(
-    '(max-width: 759px),'
-    + '(max-width: 900px) and (min-height: 521px),'
-    + '(max-width: 900px) and (orientation: portrait)',
-  ).matches;
+  return typeof window !== 'undefined';
 }
