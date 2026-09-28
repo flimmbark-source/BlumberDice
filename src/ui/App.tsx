@@ -420,10 +420,12 @@ export function App(): JSX.Element {
         }}
         aria-hidden
       >
-        <span className="photo-passage-shell__piece photo-passage-shell__piece--top" />
-        <span className="photo-passage-shell__piece photo-passage-shell__piece--left" />
-        <span className="photo-passage-shell__piece photo-passage-shell__piece--right" />
-        <span className="photo-passage-shell__piece photo-passage-shell__piece--bottom" />
+        <div className="photo-passage-shell__camera">
+          <span className="photo-passage-shell__piece photo-passage-shell__piece--top" />
+          <span className="photo-passage-shell__piece photo-passage-shell__piece--left" />
+          <span className="photo-passage-shell__piece photo-passage-shell__piece--right" />
+          <span className="photo-passage-shell__piece photo-passage-shell__piece--bottom" />
+        </div>
       </div>
     )}
 
