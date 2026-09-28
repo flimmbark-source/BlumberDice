@@ -2507,8 +2507,9 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
  * is tall enough not to need them, OR when it is held upright. Equivalently:
  * keep the faceplate on a wide, short, sideways screen.
  *
- * `canDrive()` in `src/ui/phase.ts` mirrors this list, because the drive into
- * the roll chamber belongs to the faceplate. Change one, change the other.
+ * The chamber drive is independent of this stacking decision. The wrapper
+ * transform can target the chamber in either layout; `zoomOnto()` accounts
+ * for the document scroll used here.
  */
 
 @media (max-width: 759px),
@@ -3595,13 +3596,14 @@ body:has(.app--photo)::before { display: none; }
      is simply already there. */
   .viewport, .viewport--driven { transition: none; }
 }
-/* Stacked, the page itself scrolls, and a transform on an ancestor of a
-   scrolling document is a trap. The phase still happens here; the view just
-   scrolls to the chamber instead of driving into it. */
+/* Stacked mobile keeps its document height, but no longer disables the drive.
+   While driven, suppress pan gestures so the scrolling page cannot move under
+   the transform; taps on the dice still work normally. */
 @media (max-width: 759px),
        (max-width: 900px) and (min-height: 521px),
        (max-width: 900px) and (orientation: portrait) {
-  .viewport { height: auto; transform: none !important; transition: none; }
+  .viewport { height: auto; }
+  .viewport--driven { touch-action: none; }
 }
 
 /* --- the readout that rises with the chamber --------------------------- */
