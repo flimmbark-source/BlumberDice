@@ -170,8 +170,20 @@ export function MobileSelectedUpgrade({ s, nodeId, onClose }: {
         </button>
       </div>
 
-      {/* The full authored effect stays visible on phone. We save height by
-          dropping the duplicate notation/chips/chain, not by truncating it. */}
+      {/* Keep the game's detailed symbolic notation on phone as well as the
+          full authored prose. Space is saved through tighter layout and by
+          omitting only secondary navigation such as Leads To. */}
+      {node.notation && (
+        <div className="mobile-upgrade__notation">
+          <NotationView
+            notation={node.notation}
+            framework={s.framework}
+            game={s}
+            nodeId={node.id}
+          />
+        </div>
+      )}
+
       <div className="mobile-upgrade__effect">
         <Prose text={describeNode(node, s.framework)} />
       </div>
