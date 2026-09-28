@@ -336,17 +336,27 @@ export function App(): JSX.Element {
     {phase === 'roll' && (
       <div className="rollhud">
         <div className="rollhud__inner">
-          <Currency
-            label="Score"
-            value={s.score}
-            entropy={s.entropyLog}
-            entropyLevel={s.entropyLevel}
-            scoreLocked={s.scoreLocked}
-            onToggleLock={endRoll}
-          />
-          <p className="rollhud__hint">
-            Click the dice to roll · lock Score to stop
-          </p>
+          {/* The readout shakes harder the fuller the pressure meter behind
+              it gets, so the thing you are about to lose is the thing that
+              tells you how close it is. */}
+          <div
+            className="rollhud__unit"
+            style={{
+              ['--rumble' as string]: String(
+                Math.max(0, Math.min(1, s.entropyLevel / CONFIG.entropyMax)),
+              ),
+            }}
+          >
+            <Currency
+              label="Score"
+              value={s.score}
+              entropy={s.entropyLog}
+              entropyLevel={s.entropyLevel}
+              scoreLocked={s.scoreLocked}
+              onToggleLock={endRoll}
+              tab="Click to stop"
+            />
+          </div>
         </div>
       </div>
     )}
@@ -596,7 +606,10 @@ function GearMark(): JSX.Element {
   );
 }
 
-function Currency({ label, value, alt = false, entropy, entropyLevel = 0, scoreLocked = false, onToggleLock }: {
+function Currency({
+  label, value, alt = false, entropy, entropyLevel = 0, scoreLocked = false,
+  onToggleLock, tab,
+}: {
   label: string;
   value: number;
   alt?: boolean;
@@ -607,6 +620,13 @@ function Currency({ label, value, alt = false, entropy, entropyLevel = 0, scoreL
   /** True while the player has frozen Score at its current value. */
   scoreLocked?: boolean;
   onToggleLock?: () => void;
+  /**
+   * A tab stamped with what pressing this does, sprung out of its side.
+   * It is a child of the readout rather than a sibling, so it sits outside
+   * the box and still belongs to the same hit area — a label you can press
+   * is better than one that looks pressable and is not.
+   */
+  tab?: string;
 }): JSX.Element {
   const { value: shown, moving } = useCountUp(
     value,
@@ -647,6 +667,7 @@ function Currency({ label, value, alt = false, entropy, entropyLevel = 0, scoreL
         </>
       )}
       {scoreLocked && <span className="currency__forcefield" aria-hidden />}
+      {tab && <span className="currency__tab" aria-hidden>{tab}</span>}
       <span className={`currency__value${state}${scoreLocked ? ' currency__value--score-lock' : ''}`}>
         {Math.floor(shown).toLocaleString()}
       </span>

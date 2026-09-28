@@ -1286,6 +1286,16 @@ Consequences worth naming:
   — so a box measured beforehand is a box about to move. Measuring from a
   layout effect fixes most of it; the last few pixels are covered by filling
   1.5% past the edges rather than chasing a reflow.
+- **The readout rumbles with the pressure.** `--rumble` is the Entropy meter
+  behind the glass as 0..1, and the shake widens *and* quickens with it —
+  amplitude alone reads as a drift rather than a machine under load. At zero
+  the amplitude is zero, so it sits still without the animation needing to be
+  switched off.
+- **A tab springs out of its side** stamped with what pressing does. It is a
+  child of the readout rather than a sibling: positioned past the edge it is
+  still inside the same hit area, so the label that says "click to stop" can
+  itself be clicked. A label that looks pressable and is not would be worse
+  than no label. The standing hint line it replaced is gone.
 - **Stacked layouts do not drive.** Below 901px the chamber is already the
   widest thing on the page and the page itself scrolls; a transform on an
   ancestor of a scrolling document is a trap. The phase still happens there —
