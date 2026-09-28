@@ -1354,9 +1354,26 @@ upright. Equivalently: a wide, short, sideways screen keeps the faceplate.
   Score control from another mobile surface switches to Roll before entering
   the mechanical Roll phase. The tray remains mounted while hidden, so
   navigation does not reset physics.
-- **Build is intent before mechanism on mobile.** Within the Build surface the
-  Goal plate is visually ordered above the Build tree. The DOM order is left
-  intact so desktop/photo placement does not change.
+- **Build is tree-first on mobile.** Goal no longer lives in Build; it belongs
+  to the Roll surface beneath the chamber/deck. The Build surface is therefore
+  the tree plus node inspection, without a second vertical Goal block.
+- **Mobile node inspection does not become page navigation.** Selecting a node
+  opens a fixed bottom inspector over the Build surface. It always shows the
+  node's complete authored mechanical effect, exact cost/state, Goal control
+  and Allocate action. Space is saved by omitting duplicate notation, chips
+  and Leads To from this phone sheet, not by truncating the effect. Desktop
+  keeps the full side inspector and separate Leads To plate.
+- **The mobile tree sleeps when it can.** TreeView receives stable callback
+  props so its memoization survives unrelated store publishes. Touch/pen pans
+  mutate only the SVG graph transform during the gesture and commit React
+  state once on release instead of rerendering every node and edge on every
+  pointermove. Coarse-pointer rendering also drops node glow filters while
+  preserving state through shape, stroke and fill.
+- **Return sequencing is camera first, Plan UI second.** During exit the
+  viewport uses the 1.4s return camera curve but remains visually in the
+  driven state, keeping the tree, panels, controls and other Plan chrome
+  hidden. Only after the return passage completes are those elements restored
+  in one frame; they must not slide back in while the camera is still moving.
 - **The letterbox rules were split.** What the head gives up when the screen
   is short — the key glyphs, most of its padding, the two switch banks
   sharing a row — is true of either layout and stays keyed to the letterbox
