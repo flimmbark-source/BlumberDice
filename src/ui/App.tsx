@@ -140,11 +140,15 @@ export function App(): JSX.Element {
   // Aim the drive at the committed layout. Measured from a layout effect the
   // element is in its roll-phase shape and still untransformed, which is the
   // only moment both are true.
+  //
+  // The skin and the stage scale are dependencies because a phone turned
+  // sideways mid-roll changes both, and a drive aimed at the chassis it was
+  // wearing a moment ago points nowhere.
   useLayoutEffect(() => {
     if (phase !== 'roll') { setZoom(NO_ZOOM); return; }
     const el = chamberRef.current;
     if (el && canDrive()) setZoom((z) => zoomOnto(el.getBoundingClientRect(), z));
-  }, [phase]);
+  }, [phase, skin, stageScale]);
 
   // A transform changes nothing about layout, so the tray has to be told the
   // drive has finished or it keeps the backing store it was sized for.

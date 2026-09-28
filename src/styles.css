@@ -3297,6 +3297,58 @@ body:has(.app--photo)::before { display: none; }
 .app--photo .brand__word::after { margin-top: 5px; font-size: 8.5px; }
 
 
+/* --------------------------------- the photograph, pressed with a finger */
+/*
+ * The stage is scaled as a whole, so every control shrinks with it. On a
+ * phone held sideways that scale is about 0.41, and the small chrome lands
+ * at sizes no finger can hit: the tree's three tools at 12x12 with a 3px
+ * gap, the settings key the same, "View full tree" 11px tall, and the Score
+ * pill -- the control the whole force field runs on -- 24px tall against a
+ * 44px floor.
+ *
+ * `--touch` is one authored pixel divided by the stage scale, so a length
+ * written in it renders at a fixed size whatever the stage is doing. Two
+ * different remedies follow from it, and the difference is deliberate:
+ *
+ *   - The Score pill, the "View full tree" key and the settings key keep
+ *     their drawn size exactly and grow an invisible pad instead. Each sits
+ *     on painted chassis or empty glass, so the pad lands on nothing.
+ *   - The tree's three tools cannot do that: their pitch is 15px, so any
+ *     pad wide enough to matter would swallow its neighbour. They are made
+ *     larger for real. They are chrome sitting on the tree's own screen
+ *     rather than part of the machine's casting, so growing them costs the
+ *     photograph less than a control nobody can press.
+ *
+ * Keyed to the pointer, so a mouse on a small window sees none of it.
+ */
+@media (pointer: coarse) {
+  /* A length divided by the stage scale is authored larger exactly as the
+     stage shrinks, so it lands on screen at the size written here. The floor
+     keeps it from going the other way and shrinking anything on a stage that
+     is already close to 1:1. */
+  .app--photo .iconbtn {
+    width: max(29px, calc(26px / var(--stage-k, 1)));
+    height: max(29px, calc(26px / var(--stage-k, 1)));
+  }
+  .app--photo .tree__tools { gap: max(5px, calc(7px / var(--stage-k, 1))); }
+
+  /* The pads: the control keeps the size it is drawn at and the finger is
+     given a taller box that is invisible. Full width, because both of these
+     are wide and short -- height is the whole of what they are missing.
+     Only the tree key is given a containing block; the Score pill already
+     has one, and re-declaring `position` on it would drop the `inset: 0`
+     that stretches it across its cut-out and collapse it to its text. */
+  .app--photo .tree__tools .btn { position: relative; }
+  .app--photo .currency::after,
+  .app--photo .tree__tools .btn::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: max(44px, calc(44px / var(--stage-k, 1)));
+    transform: translateY(-50%);
+  }
+}
+
 /* ------------------------------------------------ notation at two scales */
 /*
  * The inspector prints the mechanic at reading size, the way the reference

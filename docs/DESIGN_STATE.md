@@ -1353,6 +1353,65 @@ plate. The drive still covers the screen edge to edge and returns to identity.
 
 ---
 
+### 40. The photograph on a phone held sideways, and what it costs
+
+39 gave a sideways phone the drawn faceplate. It was then asked for the
+photograph instead, with the numbers on the table, so the photograph is what
+it gets. The reasoning is recorded here because the decision is against the
+measurements rather than ignorant of them.
+
+The stage is a fixed 1672x941 object scaled as a whole. A landscape phone is
+about 390px tall, so the fit scale is 390/941, about 0.41, and nothing tunes
+that away: no phone is 560px tall in landscape, and scaling to cover instead
+crops the head strip and the switch row clean off the screen -- taking the
+Score pill with them. At 0.41 the readouts land at 5.4px against a design
+value of 13px, the Score value at 7.5px, and 18% of the screen is the dark
+surround the stage cannot fill. Those are accepted. `?skin=css` still opts out
+and is remembered, which is the way back, and the drawn faceplate's own
+landscape rules from 39 are what it returns to.
+
+What was not accepted is a control too small to press, which is a different
+kind of cost: the readouts are merely hard to read, but a 12x12 key cannot be
+used at all. The relief is keyed to the pointer, so a mouse sees none of it,
+and it takes two forms:
+
+- **A pad, where there is room.** The Score pill is drawn 122x24 and keeps
+  exactly that; an invisible pseudo-element gives it a 44px box to be hit in.
+  It sits in a cut-out with painted chassis above and below, so the pad lands
+  on nothing. Same for the tree's "View full tree" key, 11px tall as drawn.
+- **Real size, where there is not.** The tree's three tools sit on a 15px
+  pitch, so any pad wide enough to matter would swallow its neighbour. They
+  are counter-scaled instead -- a length divided by the stage scale is
+  authored larger exactly as the stage shrinks -- and land at 26px. They are
+  chrome on the tree's own screen rather than part of the machine's casting,
+  so growing them costs the photograph less than a key nobody can press.
+
+The pad must not redeclare `position` on the Score pill. The photo skin
+stretches it across its cut-out with `position: absolute; inset: 0`, and a
+`position: relative` added for the pseudo-element's sake drops the `inset`
+and collapses the pill to the width of its text. Only the tree key, which is
+statically positioned, is given a containing block.
+
+**The skin is now re-read when the window changes shape.** It used to be read
+once, which was survivable while the choice turned on size floors alone -- a
+window does not often cross 1000px -- but it turns on orientation now, and a
+phone opened upright and then turned sideways is the ordinary case. The drive
+re-aims on the same signal, because a drive aimed at the chassis the machine
+was wearing a moment ago points nowhere.
+
+**Still rough, and known.** Tree nodes draw at 15px at rest. The web is
+pinch-and-pan on touch and the zoom keys are now pressable, so four presses
+of + puts a node at 26px; the path exists but it is a path rather than a
+direct tap.
+
+Measured at 800x360, 844x390 and 932x430 with a coarse pointer: the
+photograph is worn, the Score pill's tap box is 44px tall while its drawn
+size is unchanged, the tree tools are 26px and do not overlap or leave their
+screen, and there is no page overflow. With a mouse, at 1440x900, nothing
+changes: no pad is generated and the tool keys stay as drawn.
+
+---
+
 ## Unresolved — deliberately not implemented
 
 - **Trauma.** No trauma stat, no damaged dice, no corrupted probability, no
