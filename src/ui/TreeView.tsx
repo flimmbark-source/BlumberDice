@@ -84,35 +84,10 @@ export const TreeView = memo(function TreeView({
     () => new Set(discoveredKey.split(',').filter(Boolean) as DiscoveryFlag[]), [discoveredKey],
   );
 
-  const readNativePan = (): boolean => (
-    typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
-  );
-  const [nativePan, setNativePan] = useState(readNativePan);
-  useEffect(() => {
-    const mq = window.matchMedia('(pointer: coarse)');
-    const sync = (): void => setNativePan(mq.matches);
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, []);
-
   const [view, setView] = useState({ x: 0, y: 0, zoom: 1 });
   const userZoomed = useRef(false);
 
   const [size, setSize] = useState({ w: 0, h: 0 });
-
-  // Native mobile scrolling should preserve the tree's old apparent scale.
-  // This is exactly the same fit + minimum-small-node calculation previously
-  // used by the transformed SVG, converted into a physical scroll surface.
-  const nativeSurface = useMemo(() => {
-    if (!nativePan || size.w <= 0 || size.h <= 0) return null;
-    const fit = Math.min(size.w / VB.w, size.h / VB.h);
-    const drawn = NODE_RADIUS.small * 2 * fit;
-    const z = drawn >= MIN_NODE_PX ? 1 : Math.min(3, MIN_NODE_PX / drawn);
-    return {
-      w: Math.max(size.w, VB.w * fit * z),
-      h: Math.max(size.h, VB.h * fit * z),
-    };
-  }, [nativePan, size.w, size.h]);
 
   /**
    * A node that was just bought, for the spark that marks the purchase.
@@ -134,22 +109,14 @@ export const TreeView = memo(function TreeView({
   // Keep the smallest node hittable. `scale(z) translate(t)` maps a node at p
   // to z*(p+t), so holding `start` in the middle of the viewBox means t = C/z.
   useEffect(() => {
-    if (size.w === 0 || size.h === 0) return;
-    if (nativePan) {
-      // Phone/tablet: node size comes from the oversized scroll surface, not
-      // an SVG transform. Keeping the graph at 1× lets the browser scroll one
-      // cached surface natively instead of repainting it under a finger.
-      setView({ x: 0, y: 0, zoom: 1 });
-      return;
-    }
-    if (userZoomed.current) return;
+    if (userZoomed.current || size.w === 0 || size.h === 0) return;
     const fit = Math.min(size.w / VB.w, size.h / VB.h);
     const drawn = NODE_RADIUS.small * 2 * fit;
     const z = drawn >= MIN_NODE_PX ? 1 : Math.min(3, MIN_NODE_PX / drawn);
     const cx = VB.minX + VB.w / 2;
     const cy = VB.minY + VB.h / 2;
     setView({ x: z === 1 ? 0 : cx / z, y: z === 1 ? 0 : cy / z, zoom: z });
-  }, [nativePan, size.w, size.h]);
+  }, [size.w, size.h]);
   const drag = useRef<{
     x: number; y: number; vx: number; vy: number; vz: number;
     /** Touch/pen pans update the SVG directly and commit React state on release. */
@@ -164,6 +131,7 @@ export const TreeView = memo(function TreeView({
   const svgRef = useRef<SVGSVGElement>(null);
   const graphRef = useRef<SVGGElement>(null);
   const pendingDragView = useRef<{ x: number; y: number; zoom: number } | null>(null);
+  const touchVisual = useRef<{ dx: number; dy: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -190,28 +158,6 @@ export const TreeView = memo(function TreeView({
     return m;
   }, [allocated, discovered, score, meta]);
 
-  const scrollNodeToCentre = (node: PassiveNode, behavior: ScrollBehavior = 'auto'): void => {
-    const wrap = wrapRef.current;
-    const svg = svgRef.current;
-    if (!wrap || !svg) return;
-    const x = (node.position.x - VB.minX) / VB.w * svg.clientWidth;
-    const y = (node.position.y - VB.minY) / VB.h * svg.clientHeight;
-    wrap.scrollTo({
-      left: Math.max(0, x - wrap.clientWidth / 2),
-      top: Math.max(0, y - wrap.clientHeight / 2),
-      behavior,
-    });
-  };
-
-  // Native mobile scrolling starts on the root rather than the top-left
-  // corner of the oversized tree surface.
-  useEffect(() => {
-    if (!nativePan || size.w === 0 || size.h === 0) return;
-    const root = NODES.find((n) => n.prerequisites.length === 0) ?? NODES[0];
-    const raf = requestAnimationFrame(() => scrollNodeToCentre(root));
-    return () => cancelAnimationFrame(raf);
-  }, [nativePan, size.w, size.h]);
-
   /**
    * Pan a requested node to the middle of the panel.
    *
@@ -222,20 +168,18 @@ export const TreeView = memo(function TreeView({
     if (!focus) return;
     const node = NODES_BY_ID.get(focus.id);
     if (!node) return;
+    // The player has now said where they want to be looking; stop refitting.
     userZoomed.current = true;
-    if (nativePan) {
-      scrollNodeToCentre(node, 'smooth');
-    } else {
-      setView((v) => ({
-        ...v,
-        x: (VB.minX + VB.w / 2) / v.zoom - node.position.x,
-        y: (VB.minY + VB.h / 2) / v.zoom - node.position.y,
-      }));
-    }
+    setView((v) => ({
+      ...v,
+      x: (VB.minX + VB.w / 2) / v.zoom - node.position.x,
+      y: (VB.minY + VB.h / 2) / v.zoom - node.position.y,
+    }));
     // A focus request is an action, not persistent state. Leaving it hanging
-    // around meant any later remount/layout rebuild could replay an old jump.
+    // around meant any later remount/layout rebuild could replay an old jump
+    // (often back to the root, "The Die").
     onFocusConsumed?.();
-  }, [focus?.n, nativePan]);
+  }, [focus?.n]);
 
   /** Zoom about the middle of the panel, which is where the eye already is. */
   const nudgeZoom = (k: number): void => {
@@ -252,11 +196,6 @@ export const TreeView = memo(function TreeView({
 
   const recentre = (): void => {
     userZoomed.current = false;
-    if (nativePan) {
-      const root = NODES.find((n) => n.prerequisites.length === 0) ?? NODES[0];
-      scrollNodeToCentre(root, 'smooth');
-      return;
-    }
     const fit = Math.min(size.w / VB.w, size.h / VB.h);
     const drawn = NODE_RADIUS.small * 2 * fit;
     const z = drawn >= MIN_NODE_PX ? 1 : Math.min(3, MIN_NODE_PX / drawn);
@@ -264,14 +203,13 @@ export const TreeView = memo(function TreeView({
   };
 
   const onWheel = (e: React.WheelEvent): void => {
-    if (nativePan) return;
     const z = Math.min(3, Math.max(0.5, view.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
     userZoomed.current = true;
     setView((v) => ({ ...v, zoom: z }));
   };
 
   const onDown = (e: React.PointerEvent<SVGSVGElement>): void => {
-    if (nativePan || e.button !== 0) return;
+    if (e.button !== 0) return;
     suppressNodeClick.current = false;
     drag.current = {
       x: e.clientX,
@@ -289,7 +227,6 @@ export const TreeView = memo(function TreeView({
   };
 
   const onMove = (e: React.PointerEvent<SVGSVGElement>): void => {
-    if (nativePan) return;
     const d = drag.current;
     if (!d) return;
     const dx = e.clientX - d.x;
@@ -315,13 +252,13 @@ export const TreeView = memo(function TreeView({
     };
 
     if (d.direct) {
-      // Touch/pen: transform only the graph group. React state is committed
-      // once on release instead of rebuilding every edge/node per pointermove.
+      // Keep the exact original SVG size/zoom. During a finger drag, move the
+      // already-rendered SVG as one compositor layer instead of repainting the
+      // entire graph. Commit the real graph position only once on release.
       pendingDragView.current = next;
-      graphRef.current?.setAttribute(
-        'transform',
-        `scale(${next.zoom}) translate(${next.x} ${next.y})`,
-      );
+      touchVisual.current = { dx, dy };
+      const svg = svgRef.current;
+      if (svg) svg.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
       return;
     }
 
@@ -329,7 +266,6 @@ export const TreeView = memo(function TreeView({
   };
 
   const onUp = (e: React.PointerEvent<SVGSVGElement>): void => {
-    if (nativePan) return;
     const d = drag.current;
     drag.current = null;
     if (!d?.direct) setDragging(false);
@@ -339,29 +275,27 @@ export const TreeView = memo(function TreeView({
     if (d?.direct && pendingDragView.current) {
       const finalView = pendingDragView.current;
       pendingDragView.current = null;
+      touchVisual.current = null;
+      const svg = svgRef.current;
+      if (svg) svg.style.transform = '';
       setView(finalView);
+    }
+    if (d?.direct && !pendingDragView.current) {
+      touchVisual.current = null;
+      const svg = svgRef.current;
+      if (svg) svg.style.transform = '';
     }
     // A press on empty canvas that was not a pan puts the popup away.
     if (d && !d.moved && !d.onNode) setInspected(null);
   };
 
   return (
-    <div
-      className={`tree panel panel--left${expanded ? ' tree--expanded' : ''}`}
-      data-native-pan={nativePan ? 'true' : undefined}
-      ref={wrapRef}
-    >
+    <div className={`tree panel panel--left${expanded ? ' tree--expanded' : ''}`} ref={wrapRef}>
       {!embedded && <h2 className="panel__title">Build tree</h2>}
       <svg
         ref={svgRef}
         className={`tree__svg${dragging ? ' tree__svg--dragging' : ''}`}
         viewBox={VIEWBOX}
-        style={nativeSurface ? {
-          width: `${nativeSurface.w}px`,
-          height: `${nativeSurface.h}px`,
-          maxWidth: 'none',
-          maxHeight: 'none',
-        } : undefined}
         onWheel={onWheel}
         onPointerDown={onDown}
         onPointerMove={onMove}
@@ -453,14 +387,10 @@ export const TreeView = memo(function TreeView({
 
 
       <div className="tree__tools">
-        {!nativePan && (
-          <>
-            <button type="button" className="iconbtn" aria-label="Zoom out"
-              onClick={() => nudgeZoom(1 / 1.25)}>&minus;</button>
-            <button type="button" className="iconbtn" aria-label="Zoom in"
-              onClick={() => nudgeZoom(1.25)}>+</button>
-          </>
-        )}
+        <button type="button" className="iconbtn" aria-label="Zoom out"
+          onClick={() => nudgeZoom(1 / 1.25)}>&minus;</button>
+        <button type="button" className="iconbtn" aria-label="Zoom in"
+          onClick={() => nudgeZoom(1.25)}>+</button>
         <button type="button" className="iconbtn" aria-label="Recentre the web"
           onClick={recentre}>&#9678;</button>
         <button type="button" className="btn btn--ghost btn--sm"
