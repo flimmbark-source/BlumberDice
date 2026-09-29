@@ -61,9 +61,9 @@ const COVER_AT_ARM = 0.65;
  * drive and reappeared at the other. The live face rides the passage now.
  * Each traveller is scaled about the chamber's centre by the same factor and
  * curve as the shell, which reproduces a single global scale of the whole
- * plate exactly. The chamber glass is deliberately one of those travellers:
- * the player now crosses the screen itself rather than watching it disappear
- * while the casing moves around an empty opening.
+ * plate exactly. The chamber glass has its own matching layer in the shell:
+ * moving the live tray here would also magnify the dice canvas and make it
+ * snap back when the passage ends.
  *
  * The list has to stay disjoint by ancestry, or a panel inside a rail would
  * be scaled twice. It is deliberately not `.fixed-panel`: those live inside
@@ -73,7 +73,7 @@ const COVER_AT_ARM = 0.65;
  * the plate"; the two describe the same set and there is no way to share one
  * string between them.
  */
-const TRAVELLERS = '.topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby, .tray';
+const TRAVELLERS = '.topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby';
 
 type Tab = 'roll' | 'web' | 'stats' | 'log';
 
@@ -865,6 +865,19 @@ function PassageShell({ passage, shell, photo, carry }: {
         <span
           className="passage-shell__piece"
           style={{ clipPath: passageKeyhole(shell.geom), transformOrigin: origin }}
+        />
+        {/* The CRT glass travels with the faceplate, while the live dice canvas
+            stays at its stable rendered size above it. This is what makes the
+            passage read as crossing the screen rather than crossing an empty
+            hole or magnifying the dice themselves. */}
+        <span
+          className="passage-shell__glass"
+          style={{
+            left: `${shell.geom.x}px`,
+            top: `${shell.geom.y}px`,
+            width: `${shell.geom.width}px`,
+            height: `${shell.geom.height}px`,
+          }}
         />
         {/* The milled step the photograph is set into. It paints only outside
             its own box, so it lands on the panel around the stage and never
