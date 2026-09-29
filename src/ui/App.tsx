@@ -52,6 +52,30 @@ const TREE_UNLOCK_SCORE = 20;
  */
 const COVER_AT_ARM = 0.65;
 
+/**
+ * The parts of the machine that ride the faceplate through the passage.
+ *
+ * On a phone the faceplate used to go by blank: the panels, their rivets and
+ * their etched labels were switched off the moment the shell covered them,
+ * so what travelled was a bare sheet of enamel and the machine's face
+ * vanished at one end of the drive and reappeared at the other. It has the
+ * face on it now. Each of these is scaled about the chamber's centre by the
+ * same factor and curve as the shell, which reproduces a single global scale
+ * of the whole plate exactly -- plain transform interpolation, no
+ * counter-scale anywhere, and above all nothing done to the tray.
+ *
+ * The list has to stay disjoint by ancestry, or a panel inside a rail would
+ * be scaled twice. It is deliberately not `.fixed-panel`: those live inside
+ * the rails, and the rails are what travels. `.face-vent` is absent for a
+ * different reason -- it is taken out with `display: none` while covered, so
+ * it has no box left to measure an origin against.
+ *
+ * Kept in step with the selector list in `styles.css` under "the face rides
+ * the plate"; the two describe the same set and there is no way to share one
+ * string between them.
+ */
+const TRAVELLERS = '.topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls';
+
 type Tab = 'roll' | 'web' | 'stats' | 'log';
 
 const MOBILE_SURFACE_QUERY =
@@ -159,6 +183,33 @@ export function App(): JSX.Element {
     const cut = { geom, camX: cam.tx, camY: cam.ty };
     shellRef.current = cut;
     setShell(cut);
+    setTravelOrigins(geom);
+  };
+
+  /**
+   * Point each travelling panel at the chamber's centre.
+   *
+   * `transform-origin` is stated in the element's own box, so the one shared
+   * scale keyframe means a different thing on every panel unless each is told
+   * where the chamber is relative to itself. Told that, `scale()` on each
+   * panel is arithmetically identical to scaling the whole plate about the
+   * chamber -- which is what the shell behind them is doing.
+   *
+   * Rectangles are read live rather than from `geom` because the panels are
+   * only ever hidden with `visibility`, never taken out of the flow, so their
+   * boxes are valid at both ends of the passage. The camera translation is
+   * subtracted out on the way back: the origin has to be expressed in the
+   * machine's resting frame, which is the frame `geom` was measured in.
+   */
+  const setTravelOrigins = (geom: PassageGeometry): void => {
+    const v = viewRef.current;
+    const cx = geom.x + geom.width / 2;
+    const cy = geom.y + geom.height / 2;
+    for (const el of document.querySelectorAll<HTMLElement>(TRAVELLERS)) {
+      const b = el.getBoundingClientRect();
+      el.style.transformOrigin = `${cx - (b.left - v.tx)}px ${cy - (b.top - v.ty)}px`;
+    }
+    document.documentElement.style.setProperty('--pass-scale', String(passageScale(geom)));
   };
 
   const clearPassageTimers = (): void => {
@@ -287,6 +338,10 @@ export function App(): JSX.Element {
   const endRoll = (): void => {
     if (phase !== 'roll') return;
     const t = driveTimings(prefersReducedMotion(), mobileSurfaces);
+    // The entry cleared these when it finished. The panels have not moved --
+    // they have been sitting invisibly in their Plan boxes the whole time --
+    // so the same measurement is taken again for the way back.
+    if (shellRef.current) setTravelOrigins(shellRef.current.geom);
     playWhirr('out', t.out);
     playDeckRail('stow', HUD_STOW_MS);
     runPassage('out', t.out, t.restrike);
@@ -445,6 +500,22 @@ export function App(): JSX.Element {
   useEffect(() => clearPassageTimers, []);
 
   /**
+   * Take the travel origins back off once nothing is travelling.
+   *
+   * They are inert at rest -- no transform is applied, so no origin is
+   * consulted -- but they would be wrong after a resize, and leaving a stale
+   * origin on a panel that grows its own transform later is a trap rather
+   * than a saving.
+   */
+  useEffect(() => {
+    if (passage !== null) return;
+    for (const el of document.querySelectorAll<HTMLElement>(TRAVELLERS)) {
+      el.style.removeProperty('transform-origin');
+    }
+    document.documentElement.style.removeProperty('--pass-scale');
+  }, [passage]);
+
+  /**
    * Publish the photo stage's fit to the document root.
    *
    * The panel the photograph is mounted in is not part of the photograph: it
@@ -478,6 +549,16 @@ export function App(): JSX.Element {
     };
   }, []);
 
+  /**
+   * Whether the machine's own face rides the plate through this passage.
+   *
+   * Phones only, for now, and measured rather than assumed: keeping the
+   * panels lit means rasterising them at the drive's largest scale, which is
+   * the cost the stacked layout can afford and the photographed faceplate --
+   * already the slower of the two passages -- cannot.
+   */
+  const carry = mobileSurfaces && passage !== null;
+
   return (
     <>
     {/* Up during the arm beat, with the shell, for the same reason: a
@@ -494,6 +575,7 @@ export function App(): JSX.Element {
         + (passage === 'in' ? ' viewport--entering' : '')
         + (passage === 'out' ? ' viewport--exiting' : '')
         + (covered ? ' viewport--covered' : '')
+        + (carry ? ' viewport--carry' : '')
         + (phase === 'roll' && passage === null ? ' viewport--unwalled' : '')
         + (restoreSnap ? ' viewport--restore-snap' : '')
       }
@@ -668,7 +750,7 @@ export function App(): JSX.Element {
     {/* The machine passing the player, as one object. Cut and painted during
         the arm beat so the drive does not start by building it. */}
     {shell && passage !== null && (
-      <PassageShell passage={passage} shell={shell} photo={photo} />
+      <PassageShell passage={passage} shell={shell} photo={photo} carry={carry} />
     )}
 
     {/* Outside the drive, so it stays put while the view moves. The readout
@@ -758,15 +840,18 @@ export function App(): JSX.Element {
  * dark by then -- the machine armed and put its screens out before any of
  * this started moving.
  */
-function PassageShell({ passage, shell, photo }: {
+function PassageShell({ passage, shell, photo, carry }: {
   passage: Passage;
   shell: { geom: PassageGeometry; camX: number; camY: number };
   photo: boolean;
+  /** The live panels are riding the plate, so the plate paints behind them. */
+  carry: boolean;
 }): JSX.Element {
   const origin = `${shell.geom.originX}% ${shell.geom.originY}%`;
   return (
     <div
-      className={`passage-shell passage-shell--${passage} passage-shell--${photo ? 'photo' : 'drawn'}`}
+      className={`passage-shell passage-shell--${passage} passage-shell--${photo ? 'photo' : 'drawn'}`
+        + (carry ? ' passage-shell--carry' : '')}
       style={{
         ['--cam-x' as string]: `${shell.camX}px`,
         ['--cam-y' as string]: `${shell.camY}px`,

@@ -4078,11 +4078,11 @@ body:has(.app--photo)::before { display: none; }
  * chamber lamp holds an infinite animation that `visibility` would leave
  * running against a surface nobody can see.
  */
-.viewport--covered .topbar,
-.viewport--covered .panel-rail,
-.viewport--covered .fixed-panel,
-.viewport--covered .game__controls,
-.viewport--covered .fixed-panel--goal-mobile {
+.viewport--covered:not(.viewport--carry) .topbar,
+.viewport--covered:not(.viewport--carry) .panel-rail,
+.viewport--covered:not(.viewport--carry) .fixed-panel,
+.viewport--covered:not(.viewport--carry) .game__controls,
+.viewport--covered:not(.viewport--carry) .fixed-panel--goal-mobile {
   visibility: hidden;
 }
 .viewport--covered .face-vent,
@@ -4310,6 +4310,60 @@ body:has(.app--photo)::before { display: none; }
   0%   { opacity: 0; }
   26%  { opacity: 1; }
   100% { opacity: 1; }
+}
+
+
+/* ------------------------------------------------- the face rides the plate */
+/*
+ * A faceplate with the machine still on it.
+ *
+ * Under `--carry` the panels are not handed over to the shell at all: they
+ * keep their enamel, their rivets and their etched labels and travel with it.
+ * The shell is still there and still necessary -- it is the sheet between and
+ * behind the panels, and the only thing that can carry the hole the chamber
+ * goes through -- but it paints below the live face instead of over it, so
+ * what passes the camera is the machine rather than a blank plate with the
+ * machine's outline.
+ *
+ * The trick that makes this exact is `transform-origin`: each panel is told
+ * in `App.tsx` where the chamber's centre is inside its own box, so one
+ * shared `scale()` on each of them reproduces a single scale of the whole
+ * plate about that point, to the pixel and with ordinary transform
+ * interpolation. No counter-scale is needed anywhere, and in particular
+ * nothing is applied to the tray, which is still the one thing in this
+ * interface that never moves under its own picture.
+ *
+ * The screens stay out. They went dark in the arm beat and they are still
+ * dark here: what travels is plate, not phosphor.
+ *
+ * Kept in step with `TRAVELLERS` in `App.tsx`. The set has to stay disjoint
+ * by ancestry -- a `.fixed-panel` inside a `.panel-rail` would be scaled
+ * twice -- which is why the rails are named and the panels inside them
+ * are not.
+ */
+.viewport--carry:is(.viewport--entering, .viewport--exiting) :is(
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls) {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+.viewport--carry.viewport--entering :is(
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls) {
+  animation:
+    passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both,
+    passShellFadeIn var(--drive-in) linear both;
+}
+.viewport--carry.viewport--exiting :is(
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls) {
+  animation:
+    passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both,
+    passShellFadeOut var(--drive-out) linear both;
+}
+
+/* And the plate goes under them. Its own stacking is unchanged otherwise:
+   still above the roll field it is carrying the hole onto, still below the
+   instrument that arrives at the end of the drive. */
+.passage-shell--carry {
+  z-index: 0;
 }
 
 
@@ -4683,10 +4737,25 @@ body:has(.rollfield)::before { display: none; }
   .passage-shell__piece,
   .passage-shell__recess,
   .passage-shell__rim,
+  .viewport--carry .topbar,
+  .viewport--carry .panel-rail,
+  .viewport--carry .fixed-panel--goal-mobile,
+  .viewport--carry .game__controls,
   .viewport--restore-snap .fixed-panel__body > *,
   .viewport--restore-snap .currency > .currency__value,
   .viewport--restore-snap .tray__readout {
     animation: none !important;
   }
   .passage-shell { display: none; }
+  /*
+   * And nothing is carried either. Carrying only means anything while there
+   * is a plate for the face to ride on; with the shell gone the panels would
+   * simply be left standing over the roll field for the length of the cut and
+   * then vanish. Same specificity as the rule that excepts them, and later in
+   * the sheet, so this is the one that applies.
+   */
+  .viewport--covered.viewport--carry :is(
+    .topbar, .panel-rail, .fixed-panel, .game__controls, .fixed-panel--goal-mobile) {
+    visibility: hidden;
+  }
 }
