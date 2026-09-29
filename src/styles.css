@@ -3495,10 +3495,10 @@ body:has(.app--photo)::before { display: none; }
 .app--photo .tray__readout { inset: 15px 26px auto 26px; }
 .app--photo .tray__hint { bottom: 26px; }
 
-/* Roll has crossed the television, so the photographed tray becomes the same
-   edge-free opening as the drawn/mobile tray. Keep these after the photo skin
-   rules so the skin cannot restore its 10px CRT radius. */
-:is(.viewport--entering, .viewport--driven, .viewport--exiting) .app--photo .tray {
+/* Once Roll has crossed the television, the live photographed tray becomes
+   the same edge-free opening as the drawn/mobile tray. During the passage the
+   moving CRT surface belongs to `.passage-shell__glass`. */
+.viewport--unwalled .app--photo .tray {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -4151,6 +4151,7 @@ body:has(.app--photo)::before { display: none; }
  */
 .passage-shell--arm .passage-shell__piece,
 .passage-shell--arm .passage-shell__recess,
+.passage-shell--arm .passage-shell__glass,
 .passage-shell--arm .passage-shell__rim {
   animation: passShellArm 260ms linear both;
 }
@@ -4244,6 +4245,25 @@ body:has(.app--photo)::before { display: none; }
  * edge the entire way instead of being a rectangle punched in a plate. The
  * photograph carries its lip in the bitmap, so it needs none of this.
  */
+/* The screen surface itself. It occupies the shell's keyhole and scales with
+   the same camera move as the surrounding plate, while the live dice canvases
+   remain in the translated viewport above it. */
+.passage-shell__glass {
+  position: absolute;
+  border-radius: 18px;
+  pointer-events: none;
+  background:
+    radial-gradient(92% 84% at 50% 42%, transparent 54%, rgba(0, 0, 0, 0.34) 88%, rgba(0, 0, 0, 0.5)),
+    linear-gradient(118deg, transparent 28%, rgba(196, 244, 212, 0.032) 45%, rgba(196, 244, 212, 0.012) 54%, transparent 66%),
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 3px),
+    radial-gradient(130% 120% at 50% 0%, rgba(160, 230, 180, 0.06), transparent 58%),
+    radial-gradient(120% 130% at 50% 0%, var(--screen-hi), var(--screen) 45%, var(--screen-lo));
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform-origin: center center;
+}
+.passage-shell--photo .passage-shell__glass { border-radius: 10px; }
+
 .passage-shell__rim {
   position: absolute;
   border-radius: 18px;
@@ -4281,6 +4301,12 @@ body:has(.app--photo)::before { display: none; }
   animation:
     passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both,
     passShellFadeOut var(--drive-out) linear both;
+}
+.passage-shell--in .passage-shell__glass {
+  animation: passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
+}
+.passage-shell--out .passage-shell__glass {
+  animation: passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
 }
 
 /* `--pass-scale` is measured per window by `passageScale`: the point at which
@@ -4339,18 +4365,18 @@ body:has(.app--photo)::before { display: none; }
  * are not.
  */
 .viewport--carry:is(.viewport--entering, .viewport--exiting) :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby, .tray) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
   will-change: transform, opacity;
   backface-visibility: hidden;
 }
 .viewport--carry.viewport--entering :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby, .tray) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
   animation:
     passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both,
     passShellFadeIn var(--drive-in) linear both;
 }
 .viewport--carry.viewport--exiting :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby, .tray) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
   animation:
     passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both,
     passShellFadeOut var(--drive-out) linear both;
@@ -4408,18 +4434,16 @@ body:has(.app--photo)::before { display: none; }
   overflow: visible;
 }
 
-.viewport--covered:not(.viewport--carry) .tray {
+.viewport--covered .tray {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
-/* During entry/exit the chamber glass is a travelling piece of the machine.
-   Keep its CRT surface and glass treatment intact while it scales through the
-   camera; only the phosphor telemetry and interaction hints go dark. Once the
-   passage has completed, the player is inside that screen and the settled
-   Roll view can hand the surface over to the full-window roll field. */
-.viewport--covered:not(.viewport--carry) .tray::before,
-.viewport--covered:not(.viewport--carry) .tray::after,
+/* The live tray keeps the dice canvas stable. Its physical CRT treatment is
+   handed to passage-shell__glass for the drive, so the glass moves through
+   the camera without magnifying the dice or snapping them back afterward. */
+.viewport--covered .tray::before,
+.viewport--covered .tray::after,
 .viewport--covered .tray__readout,
 .viewport--covered .tray__hint,
 .viewport--covered .tray__queue {
@@ -4743,7 +4767,7 @@ body:has(.rollfield)::before { display: none; }
   .viewport--carry .game__controls,
   .viewport--carry .face-vent,
   .viewport--carry .standby,
-  .viewport--carry .tray,
+  .passage-shell__glass,
   .viewport--restore-snap .fixed-panel__body > *,
   .viewport--restore-snap .currency > .currency__value,
   .viewport--restore-snap .tray__readout {
@@ -4759,7 +4783,7 @@ body:has(.rollfield)::before { display: none; }
    */
   .viewport--covered.viewport--carry :is(
     .topbar, .panel-rail, .fixed-panel, .game__controls, .fixed-panel--goal-mobile,
-    .face-vent, .standby, .tray) {
+    .face-vent, .standby) {
     visibility: hidden;
   }
 }
