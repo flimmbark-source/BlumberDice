@@ -4146,7 +4146,8 @@ body:has(.app--photo)::before { display: none; }
 .passage-shell--arm .passage-shell__piece,
 .passage-shell--arm .passage-shell__recess,
 .passage-shell--arm .passage-shell__glass,
-.passage-shell--arm .passage-shell__rim {
+.passage-shell--arm .passage-shell__rim,
+.passage-shell--arm .passage-shell__compact-band {
   animation: passShellArm 260ms linear both;
 }
 @keyframes passShellArm {
@@ -4177,6 +4178,43 @@ body:has(.app--photo)::before { display: none; }
 @keyframes passCameraOut {
   from { transform: translate3d(var(--cam-x, 0px), var(--cam-y, 0px), 0); }
   to   { transform: translate3d(0, 0, 0); }
+}
+
+/*
+ * Compact/mobile passage.
+ *
+ * Scaling the full face to the point where a phone-sized chamber clears the
+ * viewport can require a 3x+ raster. That is the source of the mobile stalls.
+ * Four casing bands move away with translation only, while the simple CRT
+ * glass layer grows to viewport size. The live dice remain translation-only.
+ */
+.passage-shell--compact .passage-shell__camera {
+  animation: none !important;
+  transform: none !important;
+}
+
+.passage-shell__compact-band {
+  position: absolute;
+  background:
+    radial-gradient(120% 100% at 50% 0%, rgba(255, 255, 255, 0.42), transparent 72%),
+    radial-gradient(130% 115% at 50% 46%, transparent 48%, rgba(96, 80, 54, 0.22)),
+    var(--plate-wear),
+    var(--plate);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+.passage-shell__compact-band--top { left: 0; top: 0; right: 0; }
+.passage-shell__compact-band--bottom { left: 0; right: 0; bottom: 0; }
+.passage-shell__compact-band--left { left: 0; }
+.passage-shell__compact-band--right { right: 0; }
+
+.passage-shell--compact .passage-shell__glass {
+  box-shadow:
+    0 0 0 4px var(--plate-lo),
+    0 0 0 5px var(--plate-edge),
+    0 0 0 6px rgba(255, 253, 247, 0.62),
+    0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 0 0 1px #0a120d;
 }
 
 .passage-shell__piece {
@@ -4296,6 +4334,97 @@ body:has(.app--photo)::before { display: none; }
 @keyframes passShellOut {
   from { transform: scale(var(--pass-scale, 5)); }
   to   { transform: scale(1); }
+}
+
+/* Compact casing exits by translation, never by enlarging its raster. */
+.passage-shell--compact.passage-shell--in .passage-shell__compact-band--top {
+  animation: passCompactTopIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
+}
+.passage-shell--compact.passage-shell--in .passage-shell__compact-band--bottom {
+  animation: passCompactBottomIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
+}
+.passage-shell--compact.passage-shell--in .passage-shell__compact-band--left {
+  animation: passCompactLeftIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
+}
+.passage-shell--compact.passage-shell--in .passage-shell__compact-band--right {
+  animation: passCompactRightIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
+}
+.passage-shell--compact.passage-shell--out .passage-shell__compact-band--top {
+  animation: passCompactTopOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
+}
+.passage-shell--compact.passage-shell--out .passage-shell__compact-band--bottom {
+  animation: passCompactBottomOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
+}
+.passage-shell--compact.passage-shell--out .passage-shell__compact-band--left {
+  animation: passCompactLeftOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
+}
+.passage-shell--compact.passage-shell--out .passage-shell__compact-band--right {
+  animation: passCompactRightOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
+}
+
+.passage-shell--compact.passage-shell--in .passage-shell__glass {
+  animation: passCompactGlassIn var(--drive-in) linear(
+    0, 0.048 15%, 0.161 30%, 0.175 34%, 0.225 38%,
+    0.355 50%, 0.483 60%, 0.497 64%, 0.575 68%, 0.611 70%,
+    0.857 85%, 0.967 93%, 1.004 97%, 1
+  ) both;
+}
+.passage-shell--compact.passage-shell--out .passage-shell__glass {
+  animation: passCompactGlassOut var(--drive-out) linear(
+    0, -0.004 3%, 0.033 7%, 0.143 15%,
+    0.389 30%, 0.425 32%, 0.503 36%, 0.517 40%,
+    0.645 50%, 0.775 62%, 0.825 66%, 0.839 70%,
+    0.952 85%, 1
+  ) both;
+}
+
+@keyframes passCompactTopIn {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, calc(var(--compact-up) * -1), 0); }
+}
+@keyframes passCompactBottomIn {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, var(--compact-down), 0); }
+}
+@keyframes passCompactLeftIn {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(calc(var(--compact-left) * -1), 0, 0); }
+}
+@keyframes passCompactRightIn {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(var(--compact-right), 0, 0); }
+}
+@keyframes passCompactTopOut {
+  from { transform: translate3d(0, calc(var(--compact-up) * -1), 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+@keyframes passCompactBottomOut {
+  from { transform: translate3d(0, var(--compact-down), 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+@keyframes passCompactLeftOut {
+  from { transform: translate3d(calc(var(--compact-left) * -1), 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+@keyframes passCompactRightOut {
+  from { transform: translate3d(var(--compact-right), 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+@keyframes passCompactGlassIn {
+  from { transform: translate3d(0, 0, 0) scale(1, 1); }
+  to {
+    transform:
+      translate3d(var(--cam-x, 0px), var(--cam-y, 0px), 0)
+      scale(var(--glass-sx, 1), var(--glass-sy, 1));
+  }
+}
+@keyframes passCompactGlassOut {
+  from {
+    transform:
+      translate3d(var(--cam-x, 0px), var(--cam-y, 0px), 0)
+      scale(var(--glass-sx, 1), var(--glass-sy, 1));
+  }
+  to { transform: translate3d(0, 0, 0) scale(1, 1); }
 }
 /* ------------------------------------------------- the face rides the plate */
 /*
@@ -4524,6 +4653,32 @@ body:has(.rollfield)::before { display: none; }
   :root {
     --drive-in: 1500ms;
     --drive-out: 1000ms;
+  }
+
+  /*
+   * Do not scale live mobile UI. These are already large, text-heavy layers;
+   * enlarging them to 3x+ forces huge textures on a phone GPU. They still
+   * physically leave with the machine, but by translation only.
+   */
+  .viewport--carry:is(.viewport--entering, .viewport--exiting) :is(
+    .topbar, .game__controls, .fixed-panel--goal-mobile) {
+    contain: paint;
+  }
+  .viewport--carry:is(.viewport--entering, .viewport--exiting) :is(
+    .topbar, .game__controls, .fixed-panel--goal-mobile) * {
+    animation-play-state: paused !important;
+  }
+  .viewport--carry.viewport--entering .topbar {
+    animation: passCompactTopIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
+  }
+  .viewport--carry.viewport--entering :is(.game__controls, .fixed-panel--goal-mobile) {
+    animation: passCompactBottomIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
+  }
+  .viewport--carry.viewport--exiting .topbar {
+    animation: passCompactTopOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
+  }
+  .viewport--carry.viewport--exiting :is(.game__controls, .fixed-panel--goal-mobile) {
+    animation: passCompactBottomOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
   }
 }
 
