@@ -874,11 +874,11 @@ function PassageShell({ passage, shell, photo, carry, compact }: {
         ['--glass-sy' as string]: String(
           typeof window === 'undefined' ? 1 : window.innerHeight / shell.geom.height,
         ),
-        ['--compact-up' as string]: `${shell.geom.y + 24}px`,
+        ['--compact-up' as string]: `${-(shell.geom.y + 24)}px`,
         ['--compact-down' as string]: `${typeof window === 'undefined'
           ? 24
           : Math.max(24, window.innerHeight - shell.geom.y - shell.geom.height + 24)}px`,
-        ['--compact-left' as string]: `${shell.geom.x + 24}px`,
+        ['--compact-left' as string]: `${-(shell.geom.x + 24)}px`,
         ['--compact-right' as string]: `${typeof window === 'undefined'
           ? 24
           : Math.max(24, window.innerWidth - shell.geom.x - shell.geom.width + 24)}px`,
