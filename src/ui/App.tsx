@@ -568,10 +568,10 @@ export function App(): JSX.Element {
         not begin by paying for one. */}
     {(phase === 'roll' || passage !== null)
       && <div className={`rollfield rollfield--${passage ?? 'held'}`} aria-hidden />}
-    {/* The outer view supplies the camera translation for the stable dice
-        tray. The faceplate fixtures and the shell's CRT-glass layer scale
-        around the same measured centre, so the player crosses the screen
-        without magnifying the live dice canvas. */}
+    {/* Desktop translates the outer view. Compact/mobile translates only the
+        tray, so the browser never has to promote the entire stacked document
+        into one moving texture. The shell glass follows the same measured
+        camera delta while the casing and live controls leave independently. */}
     <div
       className={
         `viewport${phase === 'roll' || passage === 'out' ? ' viewport--driven' : ''}`
@@ -582,8 +582,13 @@ export function App(): JSX.Element {
         + (carry ? ' viewport--carry' : '')
         + (phase === 'roll' && passage === null ? ' viewport--unwalled' : '')
         + (restoreSnap ? ' viewport--restore-snap' : '')
+        + (mobileSurfaces ? ' viewport--compact-camera' : '')
       }
-      style={{ transform: viewTransformStyle(view) }}
+      style={mobileSurfaces ? {
+        transform: 'none',
+        ['--view-x' as string]: `${view.tx}px`,
+        ['--view-y' as string]: `${view.ty}px`,
+      } : { transform: viewTransformStyle(view) }}
     >
     <div
       className={`app${photo ? ' app--photo' : ''}`}
