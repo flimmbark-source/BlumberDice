@@ -943,7 +943,7 @@ function PassageShell({ passage, shell, photo, carry, compact }: {
             frame, so the opening the player goes through keeps the edge it
             has at rest instead of being a rectangle punched in a plate. The
             photograph carries its lip in the bitmap already. */}
-        {!photo && (
+        {!photo && !compact && (
           <span
             className="passage-shell__rim"
             style={{
