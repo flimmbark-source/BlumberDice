@@ -93,12 +93,11 @@
    * the same tone as the thing it was supposed to be setting off, and an even
    * grid of dots that repeated visibly across the width of a wide screen.
    *
-   * It is darker than the faceplate now and lit the same way, so the
-   * photograph is the lit object sitting in it rather than a picture pasted
-   * onto a mat of its own colour; it falls off into shadow toward the
-   * window's edges; and its four fixings are placed at the stage's own
-   * corners rather than tiled, so nothing repeats at any window shape and
-   * the bolts are visibly holding *this* panel down.
+   * It uses the same warm bone-white family as the mobile faceplate, but
+   * keeps enough edge falloff and relief to read as the mounting panel rather
+   * than empty page. Its fixings are placed against the stage rather than
+   * tiled, so nothing repeats at any window shape and the bolts visibly hold
+   * this panel down.
    *
    * `--stage-k` is published to the root by `App.tsx` -- one number, from
    * which the document and the travelling shell both derive the same stage
@@ -168,10 +167,10 @@
     /* two long scratches across the panel */
     linear-gradient(69deg, transparent 27.6%, rgba(255, 248, 228, 0.07) 27.9%, transparent 28.3%),
     linear-gradient(-74deg, transparent 58.4%, rgba(0, 0, 0, 0.11) 58.7%, transparent 59.2%),
-    /* it falls off into shadow toward the window's edges */
-    radial-gradient(135% 130% at 50% 36%, transparent 34%, rgba(24, 18, 9, 0.62)),
-    /* lit from above, like every plate on this machine */
-    linear-gradient(176deg, #a99b81, #8d8069 42%, #635840);
+    /* Subtle edge relief without turning the surround back into a dark page. */
+    radial-gradient(135% 130% at 50% 36%, transparent 42%, rgba(96, 80, 54, 0.18)),
+    /* Same warm white family as the edge-to-edge mobile faceplate. */
+    linear-gradient(176deg, var(--plate-hi), var(--plate) 42%, var(--plate-lo));
 
   /*
    * The milled step the stage is set into: the cut line, the lip that catches
@@ -3261,7 +3260,7 @@ body:has(.app--photo) {
 
   /* The panel, at rest. `--surround` is the single definition; the shell
      wears the same one while it is travelling. */
-  background-color: var(--plate-deep);
+  background-color: var(--plate);
   background-image: var(--surround);
   background-repeat: no-repeat;
 }
@@ -4088,8 +4087,8 @@ body:has(.app--photo)::before { display: none; }
 .viewport--covered:not(.viewport--carry) .fixed-panel--goal-mobile {
   visibility: hidden;
 }
-.viewport--covered .face-vent,
-.viewport--covered .standby,
+.viewport--covered:not(.viewport--carry) .face-vent,
+.viewport--covered:not(.viewport--carry) .standby,
 .viewport--covered .chamber__lamp,
 .viewport--covered .app::before,
 .viewport--covered .app::after,
@@ -4220,7 +4219,7 @@ body:has(.app--photo)::before { display: none; }
    piece be window-sized -- and window-sized is what lets the panel travel
    with it. */
 .passage-shell--photo .passage-shell__piece {
-  background-color: var(--plate-deep);
+  background-color: var(--plate);
   background-image: var(--chassis), var(--surround);
   background-position: var(--stage-x) var(--stage-y);
   background-size: var(--stage-w) var(--stage-h);
@@ -4333,12 +4332,12 @@ body:has(.app--photo)::before { display: none; }
  * in `App.tsx` where the chamber's centre is inside its own box, so one
  * shared `scale()` on each of them reproduces a single scale of the whole
  * plate about that point, to the pixel and with ordinary transform
- * interpolation. No counter-scale is needed anywhere, and in particular
- * nothing is applied to the tray, which is still the one thing in this
- * interface that never moves under its own picture.
+ * interpolation. No counter-scale is needed anywhere. The chamber glass is
+ * now part of that same moving face, so the player passes through the screen
+ * instead of the screen being stripped away while the casing travels.
  *
- * The screens stay out. They went dark in the arm beat and they are still
- * dark here: what travels is plate, not phosphor.
+ * Information phosphor still goes dark in the arm beat. The physical CRT
+ * glass, tint, scanlines and bezel remain visible and travel with the plate.
  *
  * Kept in step with `TRAVELLERS` in `App.tsx`. The set has to stay disjoint
  * by ancestry -- a `.fixed-panel` inside a `.panel-rail` would be scaled
@@ -4346,18 +4345,18 @@ body:has(.app--photo)::before { display: none; }
  * are not.
  */
 .viewport--carry:is(.viewport--entering, .viewport--exiting) :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .tray) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby, .tray) {
   will-change: transform, opacity;
   backface-visibility: hidden;
 }
 .viewport--carry.viewport--entering :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .tray) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby, .tray) {
   animation:
     passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both,
     passShellFadeIn var(--drive-in) linear both;
 }
 .viewport--carry.viewport--exiting :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .tray) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby, .tray) {
   animation:
     passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both,
     passShellFadeOut var(--drive-out) linear both;
@@ -4373,19 +4372,16 @@ body:has(.app--photo)::before { display: none; }
 
 /* ------------------------------------------------------- the glass itself */
 /*
- * The dice area is the invariant, not the television.
+ * The chamber screen is part of the machine that passes the camera.
  *
- * Inside the passage the tray gives up its CRT presentation: no bloom or
- * scanline filter, no viewfinder brackets, no enamel rings, no rounded tube
- * edge, and no telemetry printed on the glass. The canvas keeps exactly the
- * dimensions it had and is only translated to screen centre.
+ * During entry and exit the tray keeps its CRT glass, tint, scanlines,
+ * viewfinder treatment and rounded edge while scaling with the faceplate.
+ * Its telemetry and interaction hints still go dark so the passage is through
+ * the screen itself, not through a second live control surface.
  *
- * The rings are the delicate part, and they are handled by handoff rather
- * than by fading: the shell's rim is an identical set, drawn in the same
- * place, so the moment the tray stops wearing them the shell is already
- * wearing them for it and is beginning to carry them outward. The edge of
- * the opening is therefore continuous for the whole passage -- it is never
- * a rectangle punched in a plate.
+ * Once the passage is complete, the settled Roll phase can remove the bezel
+ * treatment and open the full-window roll space. That handoff happens only
+ * after the travelling screen has cleared the camera.
  */
 /*
  * And once it has no glass it has no lid either -- but only once it has also
@@ -4750,6 +4746,8 @@ body:has(.rollfield)::before { display: none; }
   .viewport--carry .panel-rail,
   .viewport--carry .fixed-panel--goal-mobile,
   .viewport--carry .game__controls,
+  .viewport--carry .face-vent,
+  .viewport--carry .standby,
   .viewport--carry .tray,
   .viewport--restore-snap .fixed-panel__body > *,
   .viewport--restore-snap .currency > .currency__value,
@@ -4765,7 +4763,8 @@ body:has(.rollfield)::before { display: none; }
    * the sheet, so this is the one that applies.
    */
   .viewport--covered.viewport--carry :is(
-    .topbar, .panel-rail, .fixed-panel, .game__controls, .fixed-panel--goal-mobile) {
+    .topbar, .panel-rail, .fixed-panel, .game__controls, .fixed-panel--goal-mobile,
+    .face-vent, .standby, .tray) {
     visibility: hidden;
   }
 }
