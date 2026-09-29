@@ -93,12 +93,11 @@
    * the same tone as the thing it was supposed to be setting off, and an even
    * grid of dots that repeated visibly across the width of a wide screen.
    *
-   * It is darker than the faceplate now and lit the same way, so the
-   * photograph is the lit object sitting in it rather than a picture pasted
-   * onto a mat of its own colour; it falls off into shadow toward the
-   * window's edges; and its four fixings are placed at the stage's own
-   * corners rather than tiled, so nothing repeats at any window shape and
-   * the bolts are visibly holding *this* panel down.
+   * It uses the same warm bone-white family as the mobile faceplate, but
+   * keeps enough edge falloff and relief to read as the mounting panel rather
+   * than empty page. Its fixings are placed against the stage rather than
+   * tiled, so nothing repeats at any window shape and the bolts visibly hold
+   * this panel down.
    *
    * `--stage-k` is published to the root by `App.tsx` -- one number, from
    * which the document and the travelling shell both derive the same stage
@@ -168,10 +167,10 @@
     /* two long scratches across the panel */
     linear-gradient(69deg, transparent 27.6%, rgba(255, 248, 228, 0.07) 27.9%, transparent 28.3%),
     linear-gradient(-74deg, transparent 58.4%, rgba(0, 0, 0, 0.11) 58.7%, transparent 59.2%),
-    /* it falls off into shadow toward the window's edges */
-    radial-gradient(135% 130% at 50% 36%, transparent 34%, rgba(24, 18, 9, 0.62)),
-    /* lit from above, like every plate on this machine */
-    linear-gradient(176deg, #a99b81, #8d8069 42%, #635840);
+    /* Subtle edge relief without turning the surround back into a dark page. */
+    radial-gradient(135% 130% at 50% 36%, transparent 42%, rgba(96, 80, 54, 0.18)),
+    /* Same warm white family as the edge-to-edge mobile faceplate. */
+    linear-gradient(176deg, var(--plate-hi), var(--plate) 42%, var(--plate-lo));
 
   /*
    * The milled step the stage is set into: the cut line, the lip that catches
@@ -226,9 +225,12 @@ html, body, #root { height: 100%; margin: 0; }
 
 body {
   padding: 9px;
-  background: #241d15;
+  /* Match the warm bone-white face used by the edge-to-edge mobile layout.
+     The UI no longer sits on a black/brown page when the desktop leaves a
+     margin around the machine. */
+  background: var(--plate);
   background-image:
-    radial-gradient(120% 90% at 50% -10%, rgba(92, 76, 52, 0.55), transparent 72%);
+    radial-gradient(120% 90% at 50% -10%, rgba(255, 255, 255, 0.55), transparent 72%);
   color: var(--ink);
   font: 13px/1.5 var(--font-ui);
   -webkit-font-smoothing: antialiased;
@@ -2666,9 +2668,10 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
  * is tall enough not to need them, OR when it is held upright. Equivalently:
  * keep the faceplate on a wide, short, sideways screen.
  *
- * The roll passage is independent of this stacking decision. The outer view
- * only translates the already-rendered tray to screen centre, so the same
- * composition works in either layout without changing tray size.
+ * The roll passage is independent of this stacking decision. The same
+ * measured chamber centre drives both layouts: the live dice tray translates
+ * toward screen centre while the faceplate fixtures and the shell's CRT glass
+ * scale through the passage around it.
  */
 
 @media (max-width: 759px),
@@ -3248,8 +3251,8 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   box-shadow: var(--stage-recess);
 }
 /* The photographed chassis is already the resting shell. During a Roll
-   passage a separate four-piece shell is mounted at viewport level so its
-   CRT opening can remain transparent to the live dice. */
+   passage a viewport-level keyhole shell carries the chassis and its CRT
+   glass around the stable live dice canvas. */
 .app--photo::before,
 .app--photo::after { display: none; }
 body:has(.app--photo) {
@@ -3258,7 +3261,7 @@ body:has(.app--photo) {
 
   /* The panel, at rest. `--surround` is the single definition; the shell
      wears the same one while it is travelling. */
-  background-color: var(--plate-deep);
+  background-color: var(--plate);
   background-image: var(--surround);
   background-repeat: no-repeat;
 }
@@ -3492,10 +3495,10 @@ body:has(.app--photo)::before { display: none; }
 .app--photo .tray__readout { inset: 15px 26px auto 26px; }
 .app--photo .tray__hint { bottom: 26px; }
 
-/* Roll has crossed the television, so the photographed tray becomes the same
-   edge-free opening as the drawn/mobile tray. Keep these after the photo skin
-   rules so the skin cannot restore its 10px CRT radius. */
-:is(.viewport--entering, .viewport--driven, .viewport--exiting) .app--photo .tray {
+/* Once Roll has crossed the television, the live photographed tray becomes
+   the same edge-free opening as the drawn/mobile tray. During the passage the
+   moving CRT surface belongs to `.passage-shell__glass`. */
+.viewport--unwalled .app--photo .tray {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -4018,20 +4021,13 @@ body:has(.app--photo)::before { display: none; }
 
 /* ------------------------------------ beat two: the faceplate goes past */
 /*
- * The peripheral machine no longer travels, and that is the repair rather
- * than an omission.
+ * The old peripheral animation is gone: panels no longer peel sideways or
+ * fade independently from the faceplate they are bolted to.
  *
- * It used to slide 18vw outward over 1400ms while fading out over 260ms,
- * which meant each panel was invisible a fifth of the way into a move it
- * then spent the rest of the drive completing where nobody could see it --
- * and for the quarter-second it *was* visible, it was a riveted plate
- * sliding off the faceplate it is riveted to. A 220px Z push rode along with
- * each of them doing nothing whatever, because a `perspective` applies to
- * its own element's children and `.app` sat between the viewport and every
- * one of those panels without preserving 3D.
- *
- * What passes the camera now is the faceplate itself, in one piece, in the
- * shells below.
+ * What passes the camera now is one coordinated machine. The shell carries
+ * the continuous sheet of plate while the live fixtures, controls and chamber
+ * glass use the same measured origin, scale and timing, so labels, highlights,
+ * screws and screens remain attached to the face instead of blinking away.
  */
 .viewport--driven .topbar,
 .viewport--driven .fixed-panel,
@@ -4078,15 +4074,15 @@ body:has(.app--photo)::before { display: none; }
  * chamber lamp holds an infinite animation that `visibility` would leave
  * running against a surface nobody can see.
  */
-.viewport--covered .topbar,
-.viewport--covered .panel-rail,
-.viewport--covered .fixed-panel,
-.viewport--covered .game__controls,
-.viewport--covered .fixed-panel--goal-mobile {
+.viewport--covered:not(.viewport--carry) .topbar,
+.viewport--covered:not(.viewport--carry) .panel-rail,
+.viewport--covered:not(.viewport--carry) .fixed-panel,
+.viewport--covered:not(.viewport--carry) .game__controls,
+.viewport--covered:not(.viewport--carry) .fixed-panel--goal-mobile {
   visibility: hidden;
 }
-.viewport--covered .face-vent,
-.viewport--covered .standby,
+.viewport--covered:not(.viewport--carry) .face-vent,
+.viewport--covered:not(.viewport--carry) .standby,
 .viewport--covered .chamber__lamp,
 .viewport--covered .app::before,
 .viewport--covered .app::after,
@@ -4114,20 +4110,14 @@ body:has(.app--photo)::before { display: none; }
 /*
  * The machine going past the camera, as one object.
  *
- * Four full-window layers of the machine, each clipped to one band around the
- * chamber, scaled about the chamber's centre. Four bands rather than four
- * boxes is what keeps the material continuous across the seams: one sheet,
- * four windows onto it, no joins to see.
+ * One full-window faceplate layer is cut with a measured keyhole around the
+ * chamber and scaled about that opening's centre. A matching CRT-glass layer
+ * occupies the keyhole, so the plate and the screen travel as one continuous
+ * machine while the live dice canvas remains stable above them.
  *
- * Both skins are the same element now. The photograph used to have a shell of
- * its own, sized to the stage and clipped with the aperture's percentages
- * written down by hand -- which meant the panel the stage is letterboxed into
- * was not in the shell at all. It was painted on the document, so it could
- * not travel, and it blinked out on the drive's first frame while the machine
- * it belongs to drove off without it. Measuring the opening rather than
- * writing it down lets the photograph, its panel and the drawn chassis all be
- * bands of one sheet -- and one sheet is the only thing that can move as one
- * object.
+ * Both skins use this same measured shell. The photograph used to leave its
+ * letterboxed mounting panel behind, which made the side shading and fixings
+ * blink out while the chassis moved. The shell now carries that surround too.
  *
  * The shell is deliberately outside the translated `.viewport`: the camera
  * move must not also move the object that defines the passage, so the camera
@@ -4155,6 +4145,7 @@ body:has(.app--photo)::before { display: none; }
  */
 .passage-shell--arm .passage-shell__piece,
 .passage-shell--arm .passage-shell__recess,
+.passage-shell--arm .passage-shell__glass,
 .passage-shell--arm .passage-shell__rim {
   animation: passShellArm 260ms linear both;
 }
@@ -4201,6 +4192,7 @@ body:has(.app--photo)::before { display: none; }
 .passage-shell--drawn .passage-shell__piece {
   background-color: var(--plate);
   background-image:
+    var(--rivets),
     radial-gradient(1200px 700px at 50% -10%, rgba(255, 255, 255, 0.5), transparent 70%),
     radial-gradient(900px 600px at 90% 110%, rgba(140, 120, 90, 0.28), transparent 65%),
     radial-gradient(130% 115% at 50% 46%, transparent 48%, rgba(96, 80, 54, 0.26)),
@@ -4216,7 +4208,7 @@ body:has(.app--photo)::before { display: none; }
    piece be window-sized -- and window-sized is what lets the panel travel
    with it. */
 .passage-shell--photo .passage-shell__piece {
-  background-color: var(--plate-deep);
+  background-color: var(--plate);
   background-image: var(--chassis), var(--surround);
   background-position: var(--stage-x) var(--stage-y);
   background-size: var(--stage-w) var(--stage-h);
@@ -4247,6 +4239,25 @@ body:has(.app--photo)::before { display: none; }
  * edge the entire way instead of being a rectangle punched in a plate. The
  * photograph carries its lip in the bitmap, so it needs none of this.
  */
+/* The screen surface itself. It occupies the shell's keyhole and scales with
+   the same camera move as the surrounding plate, while the live dice canvases
+   remain in the translated viewport above it. */
+.passage-shell__glass {
+  position: absolute;
+  border-radius: 18px;
+  pointer-events: none;
+  background:
+    radial-gradient(92% 84% at 50% 42%, transparent 54%, rgba(0, 0, 0, 0.34) 88%, rgba(0, 0, 0, 0.5)),
+    linear-gradient(118deg, transparent 28%, rgba(196, 244, 212, 0.032) 45%, rgba(196, 244, 212, 0.012) 54%, transparent 66%),
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 3px),
+    radial-gradient(130% 120% at 50% 0%, rgba(160, 230, 180, 0.06), transparent 58%),
+    radial-gradient(120% 130% at 50% 0%, var(--screen-hi), var(--screen) 45%, var(--screen-lo));
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform-origin: center center;
+}
+.passage-shell--photo .passage-shell__glass { border-radius: 10px; }
+
 .passage-shell__rim {
   position: absolute;
   border-radius: 18px;
@@ -4262,28 +4273,17 @@ body:has(.app--photo)::before { display: none; }
 }
 
 /*
- * Scale and opacity are two animations rather than one, on purpose.
- *
- * A single set of keyframes would have to carry both, and a timing function
- * is applied between each consecutive pair of stops -- so the moment a
- * cross-fade stop is added in the middle for the opacity, the drive's curve
- * is cut into pieces and re-eased at every one of them. Split, the travel
- * keeps the one curve it is supposed to have from end to end, and the fade
- * runs flat underneath it.
+ * Nothing fades during the drive. Every part of the machine leaves or returns
+ * by crossing the viewport edge; opacity changes would recreate the exact
+ * "UI disappears instead of moving" failure this passage is meant to avoid.
  */
-.passage-shell--in .passage-shell__piece,
-.passage-shell--in .passage-shell__recess,
-.passage-shell--in .passage-shell__rim {
-  animation:
-    passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both,
-    passShellFadeIn var(--drive-in) linear both;
+.passage-shell--in :is(
+  .passage-shell__piece, .passage-shell__recess, .passage-shell__glass, .passage-shell__rim) {
+  animation: passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
 }
-.passage-shell--out .passage-shell__piece,
-.passage-shell--out .passage-shell__recess,
-.passage-shell--out .passage-shell__rim {
-  animation:
-    passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both,
-    passShellFadeOut var(--drive-out) linear both;
+.passage-shell--out :is(
+  .passage-shell__piece, .passage-shell__recess, .passage-shell__glass, .passage-shell__rim) {
+  animation: passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
 }
 
 /* `--pass-scale` is measured per window by `passageScale`: the point at which
@@ -4297,37 +4297,67 @@ body:has(.app--photo)::before { display: none; }
   from { transform: scale(var(--pass-scale, 5)); }
   to   { transform: scale(1); }
 }
-/* No fade up: the arm beat handed the drive an opaque, painted shell. */
-@keyframes passShellFadeIn {
-  0%   { opacity: 1; }
-  66%  { opacity: 1; }
-  100% { opacity: 0; }
+/* ------------------------------------------------- the face rides the plate */
+/*
+ * A faceplate with the machine still on it.
+ *
+ * Under `--carry` the panels are not handed over to the shell at all: they
+ * keep their enamel, their rivets and their etched labels and travel with it.
+ * The shell is still there and still necessary -- it is the sheet between and
+ * behind the panels, and the only thing that can carry the hole the chamber
+ * goes through -- but it paints below the live face instead of over it, so
+ * what passes the camera is the machine rather than a blank plate with the
+ * machine's outline.
+ *
+ * The trick that makes this exact is `transform-origin`: each panel is told
+ * in `App.tsx` where the chamber's centre is inside its own box, so one
+ * shared `scale()` on each of them reproduces a single scale of the whole
+ * plate about that point, to the pixel and with ordinary transform
+ * interpolation. No counter-scale is needed anywhere. The chamber glass is
+ * now part of that same moving face, so the player passes through the screen
+ * instead of the screen being stripped away while the casing travels.
+ *
+ * Information phosphor still goes dark in the arm beat. The physical CRT
+ * glass, tint, scanlines and bezel remain visible and travel with the plate.
+ *
+ * Kept in step with `TRAVELLERS` in `App.tsx`. The set has to stay disjoint
+ * by ancestry -- a `.fixed-panel` inside a `.panel-rail` would be scaled
+ * twice -- which is why the rails are named and the panels inside them
+ * are not.
+ */
+.viewport--carry:is(.viewport--entering, .viewport--exiting) :is(
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
+  will-change: transform;
+  backface-visibility: hidden;
 }
-/* No fade out either: the machine behind it is not restored until the camera
-   is home, so the shell holds solid until it is taken away in that same
-   frame. One swap, at a standstill, instead of a cross-fade in motion. */
-@keyframes passShellFadeOut {
-  0%   { opacity: 0; }
-  26%  { opacity: 1; }
-  100% { opacity: 1; }
+.viewport--carry.viewport--entering :is(
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
+  animation: passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
+}
+.viewport--carry.viewport--exiting :is(
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
+  animation: passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
+}
+
+/* And the plate goes under them. Its own stacking is unchanged otherwise:
+   still above the roll field it is carrying the hole onto, still below the
+   instrument that arrives at the end of the drive. */
+.passage-shell--carry {
+  z-index: 0;
 }
 
 
 /* ------------------------------------------------------- the glass itself */
 /*
- * The dice area is the invariant, not the television.
+ * The chamber screen is part of the machine that passes the camera.
  *
- * Inside the passage the tray gives up its CRT presentation: no bloom or
- * scanline filter, no viewfinder brackets, no enamel rings, no rounded tube
- * edge, and no telemetry printed on the glass. The canvas keeps exactly the
- * dimensions it had and is only translated to screen centre.
+ * During entry and exit the shell's dedicated CRT-glass layer carries the
+ * tint, scanlines and rounded screen surface with the faceplate. The live
+ * tray beneath it gives up that physical treatment but keeps its dice canvas
+ * at a stable size. Telemetry and interaction hints stay dark for the drive.
  *
- * The rings are the delicate part, and they are handled by handoff rather
- * than by fading: the shell's rim is an identical set, drawn in the same
- * place, so the moment the tray stops wearing them the shell is already
- * wearing them for it and is beginning to carry them outward. The edge of
- * the opening is therefore continuous for the whole passage -- it is never
- * a rectangle punched in a plate.
+ * Once the passage is complete, the travelling glass has filled the viewport
+ * and hands directly to the full-window Roll field behind it.
  */
 /*
  * And once it has no glass it has no lid either -- but only once it has also
@@ -4365,6 +4395,9 @@ body:has(.app--photo)::before { display: none; }
   background: transparent;
   box-shadow: none;
 }
+/* The live tray keeps the dice canvas stable. Its physical CRT treatment is
+   handed to passage-shell__glass for the drive, so the glass moves through
+   the camera without magnifying the dice or snapping them back afterward. */
 .viewport--covered .tray::before,
 .viewport--covered .tray::after,
 .viewport--covered .tray__readout,
@@ -4415,8 +4448,9 @@ body:has(.app--photo)::before { display: none; }
 /* ----------------------------------------------------------- the roll space */
 /*
  * The Roll world is a viewport-level field, not the old CRT rectangle. It
- * sits behind the unchanged-size dice surface and guarantees the chamber
- * background reaches every screen edge in both UI configurations.
+ * sits behind the chamber once the passage has carried that screen through
+ * the camera and guarantees the Roll background reaches every screen edge in
+ * both UI configurations.
  *
  * It is faded rather than switched on. At full opacity from the first frame
  * it announced the whole move before the machine had begun it — the space
@@ -4683,10 +4717,29 @@ body:has(.rollfield)::before { display: none; }
   .passage-shell__piece,
   .passage-shell__recess,
   .passage-shell__rim,
+  .viewport--carry .topbar,
+  .viewport--carry .panel-rail,
+  .viewport--carry .fixed-panel--goal-mobile,
+  .viewport--carry .game__controls,
+  .viewport--carry .face-vent,
+  .viewport--carry .standby,
+  .passage-shell__glass,
   .viewport--restore-snap .fixed-panel__body > *,
   .viewport--restore-snap .currency > .currency__value,
   .viewport--restore-snap .tray__readout {
     animation: none !important;
   }
   .passage-shell { display: none; }
+  /*
+   * And nothing is carried either. Carrying only means anything while there
+   * is a plate for the face to ride on; with the shell gone the panels would
+   * simply be left standing over the roll field for the length of the cut and
+   * then vanish. Same specificity as the rule that excepts them, and later in
+   * the sheet, so this is the one that applies.
+   */
+  .viewport--covered.viewport--carry :is(
+    .topbar, .panel-rail, .fixed-panel, .game__controls, .fixed-panel--goal-mobile,
+    .face-vent, .standby) {
+    visibility: hidden;
+  }
 }

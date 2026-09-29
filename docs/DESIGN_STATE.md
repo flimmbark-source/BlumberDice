@@ -1861,6 +1861,81 @@ faceplate that travels — a thing that did not exist to be paid for before §42
 It is one layer now, at the scale it needs and no more, and the remaining cost
 is that layer being painted at all.
 
+
+### 45. On a phone the faceplate carries the machine's own face
+
+§42 made the whole face travel as one object, and then sent it past the camera
+blank. The plate was reproduced exactly -- same enamel, same wear, same light
+-- but the panels riveted to it, their bezels and their etched labels were
+switched off the moment the shell covered them and switched back on at the
+other end. So the thing that moved was a sheet with the machine's outline,
+and the machine itself disappeared for the length of the drive and reappeared
+when it stopped. Reported from play, again, and correctly: an object you can
+see the shape of but not the face of is a stand-in, not the thing.
+
+The panels travel now, on phones. Each is scaled about the chamber's centre by
+the same factor and the same curve as the plate behind them, which is
+arithmetically identical to scaling the whole plate about that point -- so
+they stay riveted to it to the pixel, with plain transform interpolation and
+nothing clever.
+
+Three things had to be true for that to work.
+
+**`transform-origin` does the work a counter-scale would have done badly.** A
+shared `scale()` keyframe means a different thing on every element, because
+the origin is stated in the element's own box. Told where the chamber is
+relative to itself, each panel reproduces the global scale exactly. The
+alternatives were worse: an animated custom property is not composited, and
+counter-scaling the tray inside a scaling ancestor does not cancel, because
+`lerp(1/a, 1/b, t)` is not `1/lerp(a, b, t)` anywhere between the stops. The
+tray still never scales, which is the rule the whole passage is built around
+(§38).
+
+**The plate paints under the live face, not over it.** The shell's z-index
+drops below the viewport while carrying, so the panels draw on the enamel it
+is carrying rather than behind it. Everything the machine still gives up --
+the grime layer, the chamber lamp, the arena's bezel -- gives it up as before;
+those are either too expensive to move (a `mix-blend-mode` layer the size of
+the machine) or ancestors of the tray, which cannot be scaled at all.
+
+**Carrying is off where there is no plate to carry.** Under reduced motion the
+shell does not exist, so the panels would simply stand over the roll field for
+the length of the cut and then vanish. The reduced-motion block hands them
+back.
+
+The cost, measured, six runs, unthrottled, phone: **50ms → 175ms of dropped
+frames per passage.** p50 and p95 are unchanged at 16.7ms, so the drive itself
+is as smooth as it was; the whole difference is one ~120ms hitch on the
+drive's first frame. That is the raster of the machine's face at the moment
+its layer starts to move, and it is close to irreducible:
+
+- It is not the panel count. Carrying the head alone, the controls alone, or
+  both, all measure within noise of each other (144ms / 172ms / 175ms). The
+  cost is fixed once anything visible is inside the moving subtree, which
+  means carrying the whole face is the efficient choice rather than a
+  concession.
+- It is not the compositing hints. `will-change` and `backface-visibility`
+  removed: no better. Added during the arm beat as well: no better.
+- It is not the phase change. Deferring `setPhase('roll')` to the middle of
+  the drive leaves the hitch exactly where it was.
+- The arm-beat trick does not apply. Everything §44 moved into the arm beat
+  was discrete work that could be done early. This is the raster of a layer
+  that is only invalidated by its own movement; there is nothing to do sooner.
+
+What makes it acceptable rather than a repeat of §44 is where it lands. The
+drive curve opens slowly on purpose -- 4.8% of the travel in the first 15% of
+the clock -- so the hitch falls in the part of the move that is depicting a
+motor taking up load, and the remaining 1.4 seconds are clean. Whether that
+trade is right is a judgement about a real device, not about this container,
+whose software raster runs about 2.6M px/s; on hardware the same 0.33M-pixel
+raster is a frame or less. If it reads as a stutter on the real thing, `carry`
+in `App.tsx` is one condition and turning it off restores §44's numbers
+exactly.
+
+Desktop is untouched, deliberately: the photographed passage is already the
+slower of the two (782ms measured on this build, unchanged), and it has no
+headroom to spend on this.
+
 ---
 
 ## Unresolved — deliberately not implemented
