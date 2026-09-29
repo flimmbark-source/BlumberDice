@@ -4351,14 +4351,13 @@ body:has(.app--photo)::before { display: none; }
 /*
  * The chamber screen is part of the machine that passes the camera.
  *
- * During entry and exit the tray keeps its CRT glass, tint, scanlines,
- * viewfinder treatment and rounded edge while scaling with the faceplate.
- * Its telemetry and interaction hints still go dark so the passage is through
- * the screen itself, not through a second live control surface.
+ * During entry and exit the shell's dedicated CRT-glass layer carries the
+ * tint, scanlines and rounded screen surface with the faceplate. The live
+ * tray beneath it gives up that physical treatment but keeps its dice canvas
+ * at a stable size. Telemetry and interaction hints stay dark for the drive.
  *
- * Once the passage is complete, the settled Roll phase can remove the bezel
- * treatment and open the full-window roll space. That handoff happens only
- * after the travelling screen has cleared the camera.
+ * Once the passage is complete, the travelling glass has filled the viewport
+ * and hands directly to the full-window Roll field behind it.
  */
 /*
  * And once it has no glass it has no lid either -- but only once it has also
