@@ -2668,9 +2668,10 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
  * is tall enough not to need them, OR when it is held upright. Equivalently:
  * keep the faceplate on a wide, short, sideways screen.
  *
- * The roll passage is independent of this stacking decision. The outer view
- * only translates the already-rendered tray to screen centre, so the same
- * composition works in either layout without changing tray size.
+ * The roll passage is independent of this stacking decision. The same
+ * measured chamber centre drives both layouts: the outer view translates it
+ * toward screen centre while the live face, including the chamber glass,
+ * scales through the passage.
  */
 
 @media (max-width: 759px),
@@ -4020,20 +4021,13 @@ body:has(.app--photo)::before { display: none; }
 
 /* ------------------------------------ beat two: the faceplate goes past */
 /*
- * The peripheral machine no longer travels, and that is the repair rather
- * than an omission.
+ * The old peripheral animation is gone: panels no longer peel sideways or
+ * fade independently from the faceplate they are bolted to.
  *
- * It used to slide 18vw outward over 1400ms while fading out over 260ms,
- * which meant each panel was invisible a fifth of the way into a move it
- * then spent the rest of the drive completing where nobody could see it --
- * and for the quarter-second it *was* visible, it was a riveted plate
- * sliding off the faceplate it is riveted to. A 220px Z push rode along with
- * each of them doing nothing whatever, because a `perspective` applies to
- * its own element's children and `.app` sat between the viewport and every
- * one of those panels without preserving 3D.
- *
- * What passes the camera now is the faceplate itself, in one piece, in the
- * shells below.
+ * What passes the camera now is one coordinated machine. The shell carries
+ * the continuous sheet of plate while the live fixtures, controls and chamber
+ * glass use the same measured origin, scale and timing, so labels, highlights,
+ * screws and screens remain attached to the face instead of blinking away.
  */
 .viewport--driven .topbar,
 .viewport--driven .fixed-panel,
@@ -4474,8 +4468,9 @@ body:has(.app--photo)::before { display: none; }
 /* ----------------------------------------------------------- the roll space */
 /*
  * The Roll world is a viewport-level field, not the old CRT rectangle. It
- * sits behind the unchanged-size dice surface and guarantees the chamber
- * background reaches every screen edge in both UI configurations.
+ * sits behind the chamber once the passage has carried that screen through
+ * the camera and guarantees the Roll background reaches every screen edge in
+ * both UI configurations.
  *
  * It is faded rather than switched on. At full opacity from the first frame
  * it announced the whole move before the machine had begun it — the space
