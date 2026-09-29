@@ -182,7 +182,9 @@ export function App(): JSX.Element {
     const cut = { geom, camX: cam.tx, camY: cam.ty };
     shellRef.current = cut;
     setShell(cut);
-    setTravelOrigins(geom);
+    // The compact/mobile passage is translation-only for the live UI; it does
+    // not need per-element scale origins or a giant raster target.
+    if (!mobileSurfaces) setTravelOrigins(geom);
   };
 
   /**
@@ -341,7 +343,7 @@ export function App(): JSX.Element {
     // The entry cleared these when it finished. The panels have not moved --
     // they have been sitting invisibly in their Plan boxes the whole time --
     // so the same measurement is taken again for the way back.
-    if (shellRef.current) setTravelOrigins(shellRef.current.geom);
+    if (shellRef.current && !mobileSurfaces) setTravelOrigins(shellRef.current.geom);
     playWhirr('out', t.out);
     playDeckRail('stow', HUD_STOW_MS);
     runPassage('out', t.out, t.restrike);
@@ -752,7 +754,13 @@ export function App(): JSX.Element {
     {/* The machine passing the player, as one object. Cut and painted during
         the arm beat so the drive does not start by building it. */}
     {shell && passage !== null && (
-      <PassageShell passage={passage} shell={shell} photo={photo} carry={carry} />
+      <PassageShell
+        passage={passage}
+        shell={shell}
+        photo={photo}
+        carry={carry}
+        compact={mobileSurfaces}
+      />
     )}
 
     {/* Outside the drive, so it stays put while the view moves. The readout
@@ -842,31 +850,77 @@ export function App(): JSX.Element {
  * dark by then -- the machine armed and put its screens out before any of
  * this started moving.
  */
-function PassageShell({ passage, shell, photo, carry }: {
+function PassageShell({ passage, shell, photo, carry, compact }: {
   passage: Passage;
   shell: { geom: PassageGeometry; camX: number; camY: number };
   photo: boolean;
   /** The live panels are riding the plate, so the plate paints behind them. */
   carry: boolean;
+  /** Compact/mobile uses translation-only casing bands to avoid huge scaled rasters. */
+  compact: boolean;
 }): JSX.Element {
   const origin = `${shell.geom.originX}% ${shell.geom.originY}%`;
   return (
     <div
       className={`passage-shell passage-shell--${passage} passage-shell--${photo ? 'photo' : 'drawn'}`
-        + (carry ? ' passage-shell--carry' : '')}
+        + (carry ? ' passage-shell--carry' : '')
+        + (compact ? ' passage-shell--compact' : '')}
       style={{
         ['--cam-x' as string]: `${shell.camX}px`,
         ['--cam-y' as string]: `${shell.camY}px`,
         ['--pass-scale' as string]: String(passageScale(shell.geom)),
+        ['--glass-sx' as string]: String(
+          typeof window === 'undefined' ? 1 : window.innerWidth / shell.geom.width,
+        ),
+        ['--glass-sy' as string]: String(
+          typeof window === 'undefined' ? 1 : window.innerHeight / shell.geom.height,
+        ),
+        ['--compact-up' as string]: `${shell.geom.y + 24}px`,
+        ['--compact-down' as string]: `${typeof window === 'undefined'
+          ? 24
+          : Math.max(24, window.innerHeight - shell.geom.y - shell.geom.height + 24)}px`,
+        ['--compact-left' as string]: `${shell.geom.x + 24}px`,
+        ['--compact-right' as string]: `${typeof window === 'undefined'
+          ? 24
+          : Math.max(24, window.innerWidth - shell.geom.x - shell.geom.width + 24)}px`,
         ...(photo ? { ['--chassis' as string]: `url(${chassisUrl})` } : null),
       }}
       aria-hidden
     >
       <div className="passage-shell__camera">
-        <span
-          className="passage-shell__piece"
-          style={{ clipPath: passageKeyhole(shell.geom), transformOrigin: origin }}
-        />
+        {compact ? (
+          <>
+            <span
+              className="passage-shell__compact-band passage-shell__compact-band--top"
+              style={{ height: `${shell.geom.y}px` }}
+            />
+            <span
+              className="passage-shell__compact-band passage-shell__compact-band--bottom"
+              style={{ top: `${shell.geom.y + shell.geom.height}px` }}
+            />
+            <span
+              className="passage-shell__compact-band passage-shell__compact-band--left"
+              style={{
+                top: `${shell.geom.y}px`,
+                width: `${shell.geom.x}px`,
+                height: `${shell.geom.height}px`,
+              }}
+            />
+            <span
+              className="passage-shell__compact-band passage-shell__compact-band--right"
+              style={{
+                left: `${shell.geom.x + shell.geom.width}px`,
+                top: `${shell.geom.y}px`,
+                height: `${shell.geom.height}px`,
+              }}
+            />
+          </>
+        ) : (
+          <span
+            className="passage-shell__piece"
+            style={{ clipPath: passageKeyhole(shell.geom), transformOrigin: origin }}
+          />
+        )}
         {/* The CRT glass travels with the faceplate, while the live dice canvas
             stays at its stable rendered size above it. This is what makes the
             passage read as crossing the screen rather than crossing an empty
