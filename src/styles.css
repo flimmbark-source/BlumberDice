@@ -181,13 +181,28 @@
    * with the machine has to be the same recess.
    */
   --stage-recess:
+    var(--stage-recess-step),
+    0 16px 34px rgba(0, 0, 0, 0.6),
+    0 40px 96px rgba(0, 0, 0, 0.55);
+
+  /*
+   * The same step without the two soft shadows under it.
+   *
+   * A spread shadow is a rectangle and costs nothing; a blurred one is a
+   * convolution over everything it covers, and this pair is blurred by 34 and
+   * 96 pixels around the whole stage. At rest that is paid once. On the
+   * travelling copy it is paid again at the scale the drive reaches, in the
+   * frame the drive starts, and it was half of what the passage still cost on
+   * the photographed faceplate -- 838ms of dropped frames against 471 without
+   * it. Nothing is lost: an ambient shadow is not resolvable on an object
+   * crossing the screen in a second.
+   */
+  --stage-recess-step:
     0 0 0 1px rgba(30, 23, 12, 0.95),
     0 0 0 3px rgba(48, 39, 23, 0.85),
     0 0 0 8px rgba(233, 223, 199, 0.72),
     0 0 0 10px rgba(122, 108, 80, 0.9),
-    0 0 0 11px rgba(44, 35, 20, 0.7),
-    0 16px 34px rgba(0, 0, 0, 0.6),
-    0 40px 96px rgba(0, 0, 0, 0.55);
+    0 0 0 11px rgba(44, 35, 20, 0.7);
 
   /*
    * The drive's clock, shared with `phase.ts`.
@@ -4129,6 +4144,26 @@ body:has(.app--photo)::before { display: none; }
   inset: 0;
   will-change: transform;
 }
+/*
+ * The arm beat, where the shell is built.
+ *
+ * The browser rasterises it the frame it appears, and doing that with the
+ * drive cost a measured 280ms stall on the move's first frame -- a fifth of
+ * the animation, frozen, exactly where the eye is following it. Here there is
+ * nothing travelling to interrupt, so it fades up over the beat and the drive
+ * starts against a machine that is already painted.
+ */
+.passage-shell--arm .passage-shell__piece,
+.passage-shell--arm .passage-shell__recess,
+.passage-shell--arm .passage-shell__rim {
+  animation: passShellArm 260ms linear both;
+}
+@keyframes passShellArm {
+  0%   { opacity: 0; }
+  50%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
 .passage-shell--in .passage-shell__camera {
   animation: passCameraIn var(--drive-in) linear(
     0, 0.048 15%, 0.161 30%, 0.175 34%, 0.225 38%,
@@ -4197,7 +4232,7 @@ body:has(.app--photo)::before { display: none; }
   top: var(--stage-y);
   width: var(--stage-w);
   height: var(--stage-h);
-  box-shadow: var(--stage-recess);
+  box-shadow: var(--stage-recess-step);
   will-change: transform, opacity;
   backface-visibility: hidden;
 }
@@ -4251,25 +4286,30 @@ body:has(.app--photo)::before { display: none; }
     passShellFadeOut var(--drive-out) linear both;
 }
 
+/* `--pass-scale` is measured per window by `passageScale`: the point at which
+   the opening's edges have cleared the frame, past which every further pixel
+   of faceplate is rasterised for nobody. */
 @keyframes passShellIn {
   from { transform: scale(1); }
-  to   { transform: scale(5); }
+  to   { transform: scale(var(--pass-scale, 5)); }
 }
 @keyframes passShellOut {
-  from { transform: scale(5); }
+  from { transform: scale(var(--pass-scale, 5)); }
   to   { transform: scale(1); }
 }
+/* No fade up: the arm beat handed the drive an opaque, painted shell. */
 @keyframes passShellFadeIn {
-  0%   { opacity: 0; }
-  6%   { opacity: 1; }
+  0%   { opacity: 1; }
   66%  { opacity: 1; }
   100% { opacity: 0; }
 }
+/* No fade out either: the machine behind it is not restored until the camera
+   is home, so the shell holds solid until it is taken away in that same
+   frame. One swap, at a standstill, instead of a cross-fade in motion. */
 @keyframes passShellFadeOut {
   0%   { opacity: 0; }
   26%  { opacity: 1; }
-  94%  { opacity: 1; }
-  100% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 
@@ -4290,28 +4330,33 @@ body:has(.app--photo)::before { display: none; }
  * a rectangle punched in a plate.
  */
 /*
- * And once it has no glass it has no lid either.
+ * And once it has no glass it has no lid either -- but only once it has also
+ * stopped moving.
  *
  * A die is thrown to about two and a half of its own heights, and a bonus die
  * drops in from six, both of which are above the top of a tray sized to hold
  * the floor. In Plan that is right: the chamber is a box, the bezel is its
- * lid, and a die that goes above the glass has gone behind it. Here the box
- * is gone, so the same cut is a die vanishing at a line nobody can see and
- * reappearing out of it.
+ * lid, and a die that goes above the glass has gone behind it. Once the box
+ * is gone the same cut is a die vanishing at a line nobody can see.
  *
- * Every one of these clips has a job in Plan -- the machine is a rounded
- * object with a rounded hole in it and panels that must stay in their
- * windows -- and every one of them is switched off for the same window in
- * which there is no machine to clip against. The dice canvas takes the rest
- * of the screen upward while this is true (see `lift` in `DiceTray.tsx`); it
- * is the only thing in here that reaches past its box, and it only reaches
- * up.
+ * So these clips come off -- but in settled Roll, not for the whole passage,
+ * and that distinction is the entire difference between a smooth drive and a
+ * stuttering one. A clip is what tells the compositor that a subtree's paint
+ * cannot escape its box, and with that guarantee a moving ancestor is a
+ * texture being translated. Take it away and the browser has to assume the
+ * content could be anywhere, so every frame of the camera move invalidates
+ * the document beneath it: measured, thirty million pixels of repainting
+ * over a 1.5s drive, against three and a half with the clips shut.
+ *
+ * Nothing is lost by waiting. The clips matter when a die is in the air, and
+ * a die is thrown in settled Roll, never during the drive -- which is also
+ * the moment nothing is translating, so opening them costs nothing at all.
  */
-.viewport--covered .app,
-.viewport--covered .desktop,
-.viewport--covered .game-area,
-.viewport--covered .game__arena,
-.viewport--covered .tray {
+.viewport--unwalled .app,
+.viewport--unwalled .desktop,
+.viewport--unwalled .game-area,
+.viewport--unwalled .game__arena,
+.viewport--unwalled .tray {
   overflow: visible;
 }
 
@@ -4387,20 +4432,19 @@ body:has(.app--photo)::before { display: none; }
     radial-gradient(70% 58% at 50% 42%, rgba(150, 220, 170, 0.07), transparent 72%),
     radial-gradient(120% 130% at 50% 42%, var(--screen-hi), var(--screen) 45%, var(--screen-lo));
 }
-.rollfield--in { animation: rollfieldRaise var(--drive-in) linear both; }
+.rollfield--arm { animation: rollfieldRaise 260ms linear both; }
+.rollfield--in { opacity: 1; }
 .rollfield--out { animation: rollfieldLower var(--drive-out) linear both; }
 /* Up with the shell and down with it, so the space behind the faceplate is
-   never half there: solid well before anything is seen through it, and it
-   does not begin to go until the faceplate is already back over it. */
+   never half there: solid before the drive engages at all, and it does not
+   begin to go until the faceplate is already back over it. */
 @keyframes rollfieldRaise {
-  0%   { opacity: 0; }
-  6%   { opacity: 1; }
-  100% { opacity: 1; }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 @keyframes rollfieldLower {
   0%   { opacity: 1; }
-  94%  { opacity: 1; }
-  100% { opacity: 0; }
+  100% { opacity: 1; }
 }
 .viewport {
   z-index: 1;
@@ -4410,6 +4454,24 @@ body:has(.app--photo)::before { display: none; }
    and repainting the body underneath it only produced a dark wash in the
    frames where the two faceplates were crossing over. */
 body:has(.rollfield) { overflow: hidden; }
+
+/*
+ * And the page underneath stops painting its panel while the machine is
+ * covered.
+ *
+ * The panel the photograph is mounted in is fifteen gradients -- eight
+ * fixings, the blotching, two scratches, the falloff and the light -- and it
+ * lives on the document, which is the layer a moving camera invalidates. So
+ * every frame of the drive was repainting all fifteen over the whole window
+ * to show something the shell and the roll field are both opaque over:
+ * measured on the photographed faceplate, forty-two million pixels of it per
+ * passage, and the difference between a 50ms frame and a 17ms one.
+ *
+ * Keyed to `--covered` rather than to the field, because that is exactly the
+ * window in which nothing of the document can be seen -- during the arm beat
+ * the shell is still fading up and the panel is still the panel.
+ */
+body:has(.viewport--covered) { background-image: none; }
 /* The enamel's speckle is a viewport-sized `mix-blend-mode` layer. The roll
    field is opaque over it, so once the passage is running it is blending
    against a surface nobody can see -- and making every frame beneath it read
@@ -4609,10 +4671,13 @@ body:has(.rollfield)::before { display: none; }
   .chamber__lamp {
     transition: none !important;
   }
+  .passage-shell--arm .passage-shell__piece,
+  .passage-shell--arm .passage-shell__recess,
+  .passage-shell--arm .passage-shell__rim,
   .viewport--arming .fixed-panel__body > *,
   .viewport--arming .currency > .currency__value,
   .viewport--arming .tray__readout,
-  .rollfield--in,
+  .rollfield--arm,
   .rollfield--out,
   .passage-shell__camera,
   .passage-shell__piece,

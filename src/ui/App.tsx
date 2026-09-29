@@ -27,28 +27,30 @@ import {
 import { prefersReducedMotion } from './motion.ts';
 import {
   centreRollView, driveTimings, HUD_RISE_MS, HUD_STOW_MS,
-  NO_VIEW_TRANSFORM, type Passage, passageClipPaths, passageGeometry,
-  type PassageGeometry, type Phase, viewTransformStyle, type ViewTransform,
+  NO_VIEW_TRANSFORM, type Passage, passageGeometry, type PassageGeometry,
+  passageKeyhole, passageScale, type Phase, viewTransformStyle, type ViewTransform,
 } from './phase.ts';
 
 const TREE_UNLOCK_SCORE = 20;
 
 /**
- * Where in each drive the faceplate shell is opaque enough for the machine
- * behind it to change.
+ * When in the arm beat the machine is handed over to the shell.
  *
- * Fractions rather than milliseconds, so they hold for the stacked layout's
- * shorter drive and the reduced-motion cut alike. The shell's own cross-fades
- * in `styles.css` finish at 6% and begin again at 94%; these sit a further
- * 8% inside that on each side, and the margin is not decoration. A timer
- * started here begins counting the moment React schedules the work, while
- * the animation it is racing does not start until the shell has been
- * committed and painted — a frame or two later. Line the two up exactly and
- * the timer wins on a slow frame, which is a flash of the roll field through
- * a machine that has already taken itself apart.
+ * Covering means `display: none` and `visibility: hidden` on most of the
+ * faceplate, and both of those are layout. Doing layout in the middle of a
+ * camera move is the most expensive moment available to do it in: measured on
+ * the photographed faceplate, moving this off the drive was the difference
+ * between 1360ms and 244ms of dropped frames per passage.
+ *
+ * So it happens in the arm beat, where nothing is travelling. The shell fades
+ * up over the first half of the beat, this fires at two thirds, and the drive
+ * starts at the end -- which leaves a third of the beat for the layout to
+ * settle, and puts an opaque faceplate over the machine well before it
+ * changes. Coming back, the machine is restored at the very end of the
+ * return, in the same frame the shell is taken away and the tubes strike,
+ * with the camera already home.
  */
-const COVER_IN = 0.14;
-const COVER_OUT = 0.86;
+const COVER_AT_ARM = 0.65;
 
 type Tab = 'roll' | 'web' | 'stats' | 'log';
 
@@ -133,41 +135,60 @@ export function App(): JSX.Element {
   const passageTimerRef = useRef<number | null>(null);
   const restoreTimerRef = useRef<number | null>(null);
   const armTimerRef = useRef<number | null>(null);
+  const armFrameRef = useRef<number | null>(null);
+  /** The live value of `shell`, for the arm beat's timer to check. */
+  const shellRef = useRef<{ geom: PassageGeometry; camX: number; camY: number } | null>(null);
   /** The live camera translation, for handlers that must not re-render to read it. */
   const viewRef = useRef<ViewTransform>(NO_VIEW_TRANSFORM);
   viewRef.current = view;
+
+  /**
+   * Cut the faceplate around the chamber as it stands right now.
+   *
+   * Reports through `shellRef` as well as state, because the arm beat's timer
+   * has to know whether it succeeded and React state is not readable from
+   * inside the callback that set it.
+   */
+  const measureShell = (): void => {
+    const rect = chamberRef.current?.getBoundingClientRect();
+    const geom = rect
+      ? passageGeometry(rect, window.innerWidth, window.innerHeight)
+      : null;
+    if (!rect || !geom) { shellRef.current = null; return; }
+    const cam = centreRollView(rect, NO_VIEW_TRANSFORM);
+    const cut = { geom, camX: cam.tx, camY: cam.ty };
+    shellRef.current = cut;
+    setShell(cut);
+  };
 
   const clearPassageTimers = (): void => {
     for (const ref of [passageTimerRef, restoreTimerRef, armTimerRef, coverTimerRef]) {
       if (ref.current !== null) window.clearTimeout(ref.current);
       ref.current = null;
     }
+    if (armFrameRef.current !== null) cancelAnimationFrame(armFrameRef.current);
+    armFrameRef.current = null;
   };
 
   const runPassage = (direction: 'in' | 'out', duration: number, restrike: number): void => {
     if (passageTimerRef.current !== null) window.clearTimeout(passageTimerRef.current);
     if (restoreTimerRef.current !== null) window.clearTimeout(restoreTimerRef.current);
-    if (coverTimerRef.current !== null) window.clearTimeout(coverTimerRef.current);
     setRestoreSnap(false);
     setPassage(direction);
-    // Hand the machine over to the shell, and take it back, inside the window
-    // where the shell is opaque over the whole window. See `COVER_IN`.
-    coverTimerRef.current = window.setTimeout(
-      () => {
-        setCovered(direction === 'in');
-        coverTimerRef.current = null;
-      },
-      Math.max(0, duration * (direction === 'in' ? COVER_IN : COVER_OUT)),
-    );
     passageTimerRef.current = window.setTimeout(() => {
       // On return, the camera reaches Plan first. Only then is the machine UI
       // restored, in one frame, instead of individual panels sliding back
       // while the camera itself is still moving.
       if (direction === 'out') {
+        // The machine comes back in the same frame the shell is taken away
+        // and the tubes strike -- one piece of layout, with the camera home
+        // and nothing moving to be interrupted by it.
+        setCovered(false);
         setRestoreSnap(true);
         playScreensRelight();
         restoreTimerRef.current = window.setTimeout(() => {
           setRestoreSnap(false);
+          shellRef.current = null;
           setShell(null);
           restoreTimerRef.current = null;
         }, Math.max(1, restrike));
@@ -208,22 +229,52 @@ export function App(): JSX.Element {
     }
     playScreensCollapse();
     setPassage('arm');
+
+    /*
+     * Cut the faceplate now, a beat before it has to move.
+     *
+     * The browser rasterises the shell the frame it appears, and mounting it
+     * with the drive cost a measured 280ms stall on the first frame of the
+     * move -- a fifth of the animation, frozen, exactly where the eye is
+     * following it. The arm beat exists for work like this: nothing is
+     * travelling yet, so the layer is built and painted with nothing to
+     * interrupt, and the drive starts against a machine that is already warm.
+     * It fades up over the beat rather than appearing, so the beat still looks
+     * like one thing.
+     *
+     * A frame, not an instant: a phone opening Roll from Build has just been
+     * told to switch surfaces, and the chamber has to be laid out before it
+     * can be measured.
+     */
+    armFrameRef.current = requestAnimationFrame(() => {
+      armFrameRef.current = null;
+      measureShell();
+      setHudDelay(t.hudDelay);
+    });
+
+    // Two thirds of the way through the beat: the shell is opaque by then and
+    // there is still a third of it left for the layout to settle in.
+    coverTimerRef.current = window.setTimeout(
+      () => { setCovered(true); coverTimerRef.current = null; },
+      Math.max(0, t.arm * COVER_AT_ARM),
+    );
+
     armTimerRef.current = window.setTimeout(() => {
       armTimerRef.current = null;
-      const el = chamberRef.current;
-      const rect = el?.getBoundingClientRect();
-      const geom = rect
-        ? passageGeometry(rect, window.innerWidth, window.innerHeight)
-        : null;
-      if (!rect || !geom) {
+      if (armFrameRef.current !== null) {
+        // Reduced motion runs no arm beat at all, so the frame above has not
+        // happened yet and the measurement is taken here instead.
+        cancelAnimationFrame(armFrameRef.current);
+        armFrameRef.current = null;
+        measureShell();
+        setHudDelay(t.hudDelay);
+      }
+      if (!shellRef.current) {
         // No chamber on screen to go through. Opening one would be a claim
         // about a machine part that is not there, so the machine stays shut.
         setPassage(null);
         return;
       }
-      const cam = centreRollView(rect, NO_VIEW_TRANSFORM);
-      setShell({ geom, camX: cam.tx, camY: cam.ty });
-      setHudDelay(t.hudDelay);
       playWhirr('in', t.in);
       playDeckRail('rise', HUD_RISE_MS, t.hudDelay);
       runPassage('in', t.in, t.restrike);
@@ -380,7 +431,11 @@ export function App(): JSX.Element {
         window.innerHeight,
       );
       const cam = centreRollView(rect, v);
-      if (geom) setShell({ geom, camX: cam.tx, camY: cam.ty });
+      if (geom) {
+        const cut = { geom, camX: cam.tx, camY: cam.ty };
+        shellRef.current = cut;
+        setShell(cut);
+      }
       setView(cam);
     };
     window.addEventListener('resize', onResize);
@@ -425,7 +480,10 @@ export function App(): JSX.Element {
 
   return (
     <>
-    {(phase === 'roll' || passage === 'in' || passage === 'out')
+    {/* Up during the arm beat, with the shell, for the same reason: a
+        window-sized gradient is a window-sized raster, and the drive should
+        not begin by paying for one. */}
+    {(phase === 'roll' || passage !== null)
       && <div className={`rollfield rollfield--${passage ?? 'held'}`} aria-hidden />}
     {/* The outer view only translates. Depth comes from the machine layers
         moving around the stable dice tray, not from scaling the tray itself. */}
@@ -436,6 +494,7 @@ export function App(): JSX.Element {
         + (passage === 'in' ? ' viewport--entering' : '')
         + (passage === 'out' ? ' viewport--exiting' : '')
         + (covered ? ' viewport--covered' : '')
+        + (phase === 'roll' && passage === null ? ' viewport--unwalled' : '')
         + (restoreSnap ? ' viewport--restore-snap' : '')
       }
       style={{ transform: viewTransformStyle(view) }}
@@ -473,7 +532,7 @@ export function App(): JSX.Element {
             s={s}
             sealed={phase === 'plan'}
             immersed={phase === 'roll' || passage === 'in' || passage === 'out'}
-            unwalled={covered}
+            headroom={passage !== null || phase === 'roll'}
             onSealed={enterRoll}
             resizeRef={trayResizeRef}
             glassRef={chamberRef}
@@ -606,8 +665,9 @@ export function App(): JSX.Element {
     </div>
     </div>
 
-    {/* The machine passing the player, as one object. */}
-    {shell && (passage === 'in' || passage === 'out') && (
+    {/* The machine passing the player, as one object. Cut and painted during
+        the arm beat so the drive does not start by building it. */}
+    {shell && passage !== null && (
       <PassageShell passage={passage} shell={shell} photo={photo} />
     )}
 
@@ -673,10 +733,12 @@ export function App(): JSX.Element {
  * faceplate itself -- which therefore has to be a separate copy with the
  * chamber cut out of it.
  *
- * Four full-window layers, each clipped to one band around the opening. Four
- * bands rather than four boxes is what keeps the material continuous across
- * the seams: one plate, four windows onto it, no joins to see. The opening is
- * measured from the tray the instant the drive engages, and the same
+ * One window-sized layer with the opening cut out of it, scaled about the
+ * opening's centre. It was four layers clipped to a band each, which is the
+ * obvious way to get a hole out of a shape that can only have one outline --
+ * and four times the raster for the same picture, paid in the frame the drive
+ * starts. `passageKeyhole` gets the hole out of a single outline instead. The
+ * opening is measured from the tray during the arm beat, and the same
  * measurement is kept for the return, because the machine a player comes back
  * to is the one they left.
  *
@@ -697,11 +759,10 @@ export function App(): JSX.Element {
  * this started moving.
  */
 function PassageShell({ passage, shell, photo }: {
-  passage: 'in' | 'out';
+  passage: Passage;
   shell: { geom: PassageGeometry; camX: number; camY: number };
   photo: boolean;
 }): JSX.Element {
-  const clips = passageClipPaths(shell.geom);
   const origin = `${shell.geom.originX}% ${shell.geom.originY}%`;
   return (
     <div
@@ -709,18 +770,16 @@ function PassageShell({ passage, shell, photo }: {
       style={{
         ['--cam-x' as string]: `${shell.camX}px`,
         ['--cam-y' as string]: `${shell.camY}px`,
+        ['--pass-scale' as string]: String(passageScale(shell.geom)),
         ...(photo ? { ['--chassis' as string]: `url(${chassisUrl})` } : null),
       }}
       aria-hidden
     >
       <div className="passage-shell__camera">
-        {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
-          <span
-            key={side}
-            className="passage-shell__piece"
-            style={{ clipPath: clips[side], transformOrigin: origin }}
-          />
-        ))}
+        <span
+          className="passage-shell__piece"
+          style={{ clipPath: passageKeyhole(shell.geom), transformOrigin: origin }}
+        />
         {/* The milled step the photograph is set into. It paints only outside
             its own box, so it lands on the panel around the stage and never
             on the stage itself. The drawn chassis has no stage to be set
@@ -1201,14 +1260,14 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
 /** Long enough for approach, impact, and either fade or shield ricochet. */
 const ENTROPY_ATTACK_MS = 3600;
 
-function GamePanel({ s, sealed, immersed, unwalled, onSealed, resizeRef, glassRef }: {
+function GamePanel({ s, sealed, immersed, headroom, onSealed, resizeRef, glassRef }: {
   s: GameState;
   /** True in the Plan phase: the chamber is shut and a throw opens it. */
   sealed: boolean;
   /** True while crossing or inside the screen; keeps CRT backdrop out through exit. */
   immersed: boolean;
-  /** True while the chamber has no walls, so the dice may be seen above it. */
-  unwalled: boolean;
+  /** True for the whole passage and Roll: the dice layer keeps its headroom. */
+  headroom: boolean;
   onSealed: () => void;
   resizeRef: MutableRefObject<(() => void) | null>;
   /** What the drive fills the window with: the glass, not its bezel. */
@@ -1234,7 +1293,7 @@ function GamePanel({ s, sealed, immersed, unwalled, onSealed, resizeRef, glassRe
           glassRef={glassRef}
           sealed={sealed}
           immersed={immersed}
-          unwalled={unwalled}
+          headroom={headroom}
           onSealed={onSealed}
         />
       </div>

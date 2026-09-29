@@ -1779,6 +1779,88 @@ transparent canvas moves over it, and twenty-two million pixels a second came
 back on the document. Promoting the canvas first did not help. The floor
 redrawing during a shake is the cheaper of the two.
 
+### 44. The passage stuttered, and §43 only measured the parts that did not
+
+A correction. §43's numbers are all real and all still hold, and they are all
+of the *phases* — Plan at rest, Roll at rest, dice in the air. The passage
+between them was never benchmarked, and it was the thing that had got worse.
+Reported from play before it was found in a measurement, which is the right
+order for this to be embarrassing in.
+
+Frames dropped per passage, unthrottled, three runs:
+
+| | phone, drawn | desktop, photographed |
+| --- | --- | --- |
+| before any of §42–43 | 33ms | 416ms |
+| after §42–43 | 289ms | 1360ms |
+| now | 50ms | 738ms |
+
+Four causes, each measured by ablation rather than guessed at.
+
+**The shell was built in the frame the drive started.** Four window-sized
+layers of enamel, rasterised at once, on the first frame of a move the eye is
+already following: a 280ms stall, against 33ms with the shell hidden
+altogether. It is cut and painted during the arm beat now, fading up over the
+first half of it. The arm beat was introduced in §42 for exactly this kind of
+work and then not used for the most expensive piece of it.
+
+**The browser rasterises a scaling layer at the largest scale its animation
+reaches**, so `scale(5)` is twenty-five times the pixels — paid up front.
+Measured on a phone: 272ms at scale 5, 155 at 3, 67 at 2. Five was a number,
+not a measurement. `passageScale` works out where the opening's edges have
+actually cleared the window, past which the faceplate is off-screen and every
+further pixel of it is painted for nobody; on both layouts that is about two
+and a half.
+
+**Four layers were one layer.** A `polygon()` is a single subpath, which looks
+like it cannot have a hole in it — so the faceplate was cut into four bands,
+each carrying the whole thing. It can: run the outline out to the opening
+along a line of zero width, around it the opposite way, and back. Same
+picture, a quarter of the raster. Removing three of the four measured 280ms →
+117ms; `passageKeyhole` gets the same for nothing.
+
+**Opening the clips (§42's headroom) uncontained the whole subtree.** A clip
+is what tells the compositor that a subtree's paint cannot escape its box, and
+with that guarantee a moving ancestor is a texture being translated. Without
+it every frame of the drive invalidated the document: 30M pixels of repainting
+over a 1.5s drive against 3.5M with the clips shut. They come off in settled
+Roll now instead of for the whole passage — which loses nothing, because a die
+is thrown in settled Roll and never during the drive, and that is also the
+moment nothing is translating, so opening them is free.
+
+And two more found while checking the desktop case, which had regressed
+further than the phone:
+
+- **The panel was being repainted every frame to show nothing.** §42 made the
+  letterbox fifteen gradients — eight fixings, blotching, scratches, falloff,
+  light — and it lives on the document, which is the layer a moving camera
+  invalidates. 42M pixels per passage, under a shell and a roll field that are
+  both opaque over it. It stops painting while the machine is covered.
+- **A blurred shadow is a convolution, and the recess had two**, blurred by 34
+  and 96 pixels around the whole stage, rasterised again at the scale the
+  drive reaches. Removing them was 838ms → 471ms of the desktop's remaining
+  cost. The travelling copy of the recess keeps the crisp step and drops the
+  ambient shadow, which is not resolvable on an object crossing the screen in
+  a second.
+
+Two general lessons, written down because both were paid for twice:
+
+- **Benchmark the transition, not only the states.** A steady-state frame rate
+  says nothing about the one second the player is actually looking at.
+- **Discrete work belongs at a standstill.** Mounting a layer, reallocating a
+  canvas, `display: none` on half a faceplate: all of it is cheap when nothing
+  is moving and all of it is a dropped frame in the middle of a camera move.
+  Covering the machine moved from 14% of the drive into the arm beat, and the
+  canvas takes its headroom there too; restoring it happens in the frame the
+  camera lands, with the shell taken away and the tubes struck at the same
+  time — one swap, at a standstill, instead of a cross-fade in motion.
+
+What is still outstanding: the photographed faceplate's passage is 738ms
+against 416 before any of this, and the difference is the raster of a
+faceplate that travels — a thing that did not exist to be paid for before §42.
+It is one layer now, at the scale it needs and no more, and the remaining cost
+is that layer being painted at all.
+
 ---
 
 ## Unresolved — deliberately not implemented
