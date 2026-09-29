@@ -55,11 +55,11 @@ const COVER_AT_ARM = 0.65;
 /**
  * The parts of the machine that ride the faceplate through the passage.
  *
- * On a phone the faceplate used to go by blank: the panels, their rivets and
- * their etched labels were switched off the moment the shell covered them,
- * so what travelled was a bare sheet of enamel and the machine's face
- * vanished at one end of the drive and reappeared at the other. It has the
- * face on it now. Each of these is scaled about the chamber's centre by the
+ * The faceplate used to go by blank: panels, controls and the chamber glass
+ * were switched off the moment the shell covered them, so what travelled was
+ * a bare sheet of enamel and the machine's face vanished at one end of the
+ * drive and reappeared at the other. The live face rides the passage now.
+ * Each traveller is scaled about the chamber's centre by the
  * same factor and curve as the shell, which reproduces a single global scale
  * of the whole plate exactly -- plain transform interpolation, no
  * counter-scale anywhere, and above all nothing done to the tray.
@@ -74,7 +74,7 @@ const COVER_AT_ARM = 0.65;
  * the plate"; the two describe the same set and there is no way to share one
  * string between them.
  */
-const TRAVELLERS = '.topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls';
+const TRAVELLERS = '.topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .tray';
 
 type Tab = 'roll' | 'web' | 'stats' | 'log';
 
@@ -557,7 +557,7 @@ export function App(): JSX.Element {
    * the cost the stacked layout can afford and the photographed faceplate --
    * already the slower of the two passages -- cannot.
    */
-  const carry = mobileSurfaces && passage !== null;
+  const carry = passage !== null;
 
   return (
     <>
