@@ -566,9 +566,10 @@ export function App(): JSX.Element {
         not begin by paying for one. */}
     {(phase === 'roll' || passage !== null)
       && <div className={`rollfield rollfield--${passage ?? 'held'}`} aria-hidden />}
-    {/* The outer view supplies the camera translation. During the passage,
-        the live face -- including the chamber glass -- also scales around the
-        measured chamber centre so the player crosses the screen itself. */}
+    {/* The outer view supplies the camera translation for the stable dice
+        tray. The faceplate fixtures and the shell's CRT-glass layer scale
+        around the same measured centre, so the player crosses the screen
+        without magnifying the live dice canvas. */}
     <div
       className={
         `viewport${phase === 'roll' || passage === 'out' ? ' viewport--driven' : ''}`
