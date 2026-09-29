@@ -3985,6 +3985,51 @@ body:has(.app--photo)::before { display: none; }
   );
 }
 
+/*
+ * Compact/mobile camera.
+ *
+ * The stacked document used to inherit the viewport transform, which promoted
+ * the whole page into a moving layer even though the dice tray is the only
+ * thing that needs the camera translation. On compact layouts the viewport is
+ * stationary and the tray alone follows the measured camera delta.
+ */
+.viewport--compact-camera {
+  transform: none !important;
+  transition: none !important;
+  will-change: auto !important;
+}
+.viewport--compact-camera .tray {
+  transform: translate3d(var(--view-x, 0px), var(--view-y, 0px), 0);
+  transition: transform var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1);
+  transition: transform var(--drive-out) linear(
+    0, -0.004 3%, 0.033 7%, 0.143 15%,
+    0.389 30%, 0.425 32%, 0.503 36%, 0.517 40%,
+    0.645 50%, 0.775 62%, 0.825 66%, 0.839 70%,
+    0.952 85%, 1
+  );
+}
+.viewport--compact-camera.viewport--driven .tray {
+  transition: transform var(--drive-in) cubic-bezier(0.85, 0, 0.35, 1);
+  transition: transform var(--drive-in) linear(
+    0, 0.048 15%, 0.161 30%, 0.175 34%, 0.225 38%,
+    0.355 50%, 0.483 60%, 0.497 64%, 0.575 68%, 0.611 70%,
+    0.857 85%, 0.967 93%, 1.004 97%, 1
+  );
+}
+.viewport--compact-camera.viewport--exiting .tray {
+  transition: transform var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1);
+  transition: transform var(--drive-out) linear(
+    0, -0.004 3%, 0.033 7%, 0.143 15%,
+    0.389 30%, 0.425 32%, 0.503 36%, 0.517 40%,
+    0.645 50%, 0.775 62%, 0.825 66%, 0.839 70%,
+    0.952 85%, 1
+  );
+}
+.viewport--compact-camera:is(
+  .viewport--arming, .viewport--entering, .viewport--driven, .viewport--exiting) .tray {
+  will-change: transform;
+}
+
 
 /* ------------------------------------------- beat one: the screens go out */
 /*
@@ -4879,6 +4924,7 @@ body:has(.rollfield)::before { display: none; }
   .viewport,
   .viewport--driven,
   .viewport--exiting,
+  .viewport--compact-camera .tray,
   .game__arena::before,
   .game__arena::after,
   .chamber__lamp {
