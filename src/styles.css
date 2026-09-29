@@ -4425,7 +4425,7 @@ body:has(.app--photo)::before { display: none; }
 
 @keyframes passCompactTopIn {
   from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(0, calc(var(--compact-up) * -1), 0); }
+  to { transform: translate3d(0, var(--compact-up), 0); }
 }
 @keyframes passCompactBottomIn {
   from { transform: translate3d(0, 0, 0); }
@@ -4433,14 +4433,14 @@ body:has(.app--photo)::before { display: none; }
 }
 @keyframes passCompactLeftIn {
   from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(calc(var(--compact-left) * -1), 0, 0); }
+  to { transform: translate3d(var(--compact-left), 0, 0); }
 }
 @keyframes passCompactRightIn {
   from { transform: translate3d(0, 0, 0); }
   to { transform: translate3d(var(--compact-right), 0, 0); }
 }
 @keyframes passCompactTopOut {
-  from { transform: translate3d(0, calc(var(--compact-up) * -1), 0); }
+  from { transform: translate3d(0, var(--compact-up), 0); }
   to { transform: translate3d(0, 0, 0); }
 }
 @keyframes passCompactBottomOut {
@@ -4448,7 +4448,7 @@ body:has(.app--photo)::before { display: none; }
   to { transform: translate3d(0, 0, 0); }
 }
 @keyframes passCompactLeftOut {
-  from { transform: translate3d(calc(var(--compact-left) * -1), 0, 0); }
+  from { transform: translate3d(var(--compact-left), 0, 0); }
   to { transform: translate3d(0, 0, 0); }
 }
 @keyframes passCompactRightOut {
