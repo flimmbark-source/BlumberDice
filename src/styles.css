@@ -4664,6 +4664,13 @@ body:has(.rollfield)::before { display: none; }
     .topbar, .game__controls, .fixed-panel--goal-mobile) {
     contain: paint;
   }
+  /* Sticky positioning forces extra mobile compositing work while transformed.
+     The passage always starts from scrollTop 0, so relative occupies the same
+     box for the duration of the drive without the sticky bookkeeping. */
+  .viewport--carry:is(.viewport--entering, .viewport--exiting) .topbar {
+    position: relative;
+    top: auto;
+  }
   .viewport--carry:is(.viewport--entering, .viewport--exiting) :is(
     .topbar, .game__controls, .fixed-panel--goal-mobile) * {
     animation-play-state: paused !important;
