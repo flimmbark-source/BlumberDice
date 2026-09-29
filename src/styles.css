@@ -4273,33 +4273,16 @@ body:has(.app--photo)::before { display: none; }
 }
 
 /*
- * Scale and opacity are two animations rather than one, on purpose.
- *
- * A single set of keyframes would have to carry both, and a timing function
- * is applied between each consecutive pair of stops -- so the moment a
- * cross-fade stop is added in the middle for the opacity, the drive's curve
- * is cut into pieces and re-eased at every one of them. Split, the travel
- * keeps the one curve it is supposed to have from end to end, and the fade
- * runs flat underneath it.
+ * Nothing fades during the drive. Every part of the machine leaves or returns
+ * by crossing the viewport edge; opacity changes would recreate the exact
+ * "UI disappears instead of moving" failure this passage is meant to avoid.
  */
-.passage-shell--in .passage-shell__piece,
-.passage-shell--in .passage-shell__recess,
-.passage-shell--in .passage-shell__rim {
-  animation:
-    passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both,
-    passShellFadeIn var(--drive-in) linear both;
-}
-.passage-shell--out .passage-shell__piece,
-.passage-shell--out .passage-shell__recess,
-.passage-shell--out .passage-shell__rim {
-  animation:
-    passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both,
-    passShellFadeOut var(--drive-out) linear both;
-}
-.passage-shell--in .passage-shell__glass {
+.passage-shell--in :is(
+  .passage-shell__piece, .passage-shell__recess, .passage-shell__glass, .passage-shell__rim) {
   animation: passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
 }
-.passage-shell--out .passage-shell__glass {
+.passage-shell--out :is(
+  .passage-shell__piece, .passage-shell__recess, .passage-shell__glass, .passage-shell__rim) {
   animation: passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
 }
 
@@ -4314,22 +4297,6 @@ body:has(.app--photo)::before { display: none; }
   from { transform: scale(var(--pass-scale, 5)); }
   to   { transform: scale(1); }
 }
-/* No fade up: the arm beat handed the drive an opaque, painted shell. */
-@keyframes passShellFadeIn {
-  0%   { opacity: 1; }
-  66%  { opacity: 1; }
-  100% { opacity: 0; }
-}
-/* No fade out either: the machine behind it is not restored until the camera
-   is home, so the shell holds solid until it is taken away in that same
-   frame. One swap, at a standstill, instead of a cross-fade in motion. */
-@keyframes passShellFadeOut {
-  0%   { opacity: 0; }
-  26%  { opacity: 1; }
-  100% { opacity: 1; }
-}
-
-
 /* ------------------------------------------------- the face rides the plate */
 /*
  * A faceplate with the machine still on it.
@@ -4360,20 +4327,16 @@ body:has(.app--photo)::before { display: none; }
  */
 .viewport--carry:is(.viewport--entering, .viewport--exiting) :is(
   .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
-  will-change: transform, opacity;
+  will-change: transform;
   backface-visibility: hidden;
 }
 .viewport--carry.viewport--entering :is(
   .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
-  animation:
-    passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both,
-    passShellFadeIn var(--drive-in) linear both;
+  animation: passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
 }
 .viewport--carry.viewport--exiting :is(
   .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
-  animation:
-    passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both,
-    passShellFadeOut var(--drive-out) linear both;
+  animation: passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
 }
 
 /* And the plate goes under them. Its own stacking is unchanged otherwise:
