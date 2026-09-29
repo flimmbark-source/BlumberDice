@@ -38,6 +38,33 @@ function sideFor(dice: number): number {
  */
 const HEADROOM = 0.28;
 
+/**
+ * How far above the tray the dice layer reaches, in the tray's own units.
+ *
+ * A die is thrown to about two and a half of its own heights, and a die
+ * dropped in for a bonus or a cascade starts at six and is thrown from there,
+ * both of which are well above the top of a tray sized to hold the floor.
+ * Inside the chamber that is right: it is a box, the bezel is its lid, and a
+ * die that goes above the glass has gone behind it. Once the passage has
+ * taken the box away there is no lid, and the same cut becomes a die that
+ * vanishes at a line nobody can see and reappears out of it.
+ *
+ * So the dice layer is given the rest of the window to fall through. The tray
+ * is centred by then, so half the difference between the window and the tray
+ * is exactly the distance to the top of the screen; the extra sixth is so a
+ * die can start above the screen and fall into it rather than beginning its
+ * fall at the edge. `scale` is whatever an ancestor is scaling the tray by --
+ * the photo stage's fit -- and converts the window's height into the layout
+ * units the canvas is measured in.
+ *
+ * It is never negative: a tray taller than the window gets no headroom rather
+ * than a canvas that starts below its own top.
+ */
+export function diceHeadroom(trayH: number, windowH: number, scale: number): number {
+  if (!(trayH > 0) || !(scale > 0)) return 0;
+  return Math.ceil(Math.max(0, (windowH / scale - trayH) / 2) + trayH / 6);
+}
+
 /** How long a die must tumble. Big cascades speed up so the tray keeps pace. */
 function tumbleFor(backlog: number): number {
   if (backlog > 10) return 110;
@@ -45,7 +72,9 @@ function tumbleFor(backlog: number): number {
   return 300;
 }
 
-export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, onSealed }: {
+export function DiceTray({
+  s, rollRef, resizeRef, glassRef, sealed, immersed, unwalled, onSealed,
+}: {
   s: GameState;
   /** Filled in by the tray so the Roll button throws the same dice a click does. */
   rollRef: MutableRefObject<(() => void) | null>;
@@ -69,6 +98,17 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, on
   sealed?: boolean;
   /** True while crossing or inside the screen; removes the tray-local CRT backdrop. */
   immersed?: boolean;
+  /**
+   * True while the chamber has no walls.
+   *
+   * In Plan the chamber is a box with a lid: a die thrown above the glass has
+   * gone behind the bezel, and cutting it off at the glass is what a box does.
+   * Inside the passage the tray has given up its rings, its glass and its
+   * backdrop and the dice are in open space, so the same cut is a die
+   * vanishing at a line nobody can see. This is the window in which the dice
+   * layer is given the rest of the screen to fall through.
+   */
+  unwalled?: boolean;
   /** What a throw means instead, while sealed. */
   onSealed?: () => void;
 }): JSX.Element {
@@ -86,10 +126,14 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, on
   sealedRef.current = Boolean(sealed);
   const immersedRef = useRef(false);
   immersedRef.current = Boolean(immersed);
+  const unwalledRef = useRef(false);
+  unwalledRef.current = Boolean(unwalled);
   const onSealedRef = useRef<(() => void) | undefined>(undefined);
   onSealedRef.current = onSealed;
   /** Current surface width, so the frame loop can spot when it must change. */
   const sideRef = useRef(0);
+  /** The tray's own `resize`, so the walls coming and going can re-run it. */
+  const localResizeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -120,6 +164,14 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, on
     /** Canvas size in CSS pixels; the context is already scaled for dpr. */
     let viewW = 0;
     let viewH = 0;
+    /**
+     * How far above the tray the dice layer reaches, in the same CSS pixels.
+     *
+     * The floor never moves: `originY` stays where it was and this is added
+     * on top of it for the dice alone, so opening the headroom changes what
+     * can be *seen* and nothing about where anything *is*.
+     */
+    let lift = 0;
 
     /**
      * How many dice the floor has to hold: what the next click throws, but
@@ -156,10 +208,21 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, on
       // mobile backing-store cap buys a large fill-rate reduction with little
       // perceptual loss; desktop keeps the existing 3x ceiling.
       const dpr = Math.min((window.devicePixelRatio || 1) * view, mobile ? 1.75 : 3);
-      for (const el of [canvas, ground]) {
-        el.width = Math.max(1, Math.round(w * dpr));
-        el.height = Math.max(1, Math.round(h * dpr));
-      }
+
+      // Only while the chamber has no walls; see `diceHeadroom`. Plan pays
+      // nothing for any of it -- the lift is zero, the backing store is the
+      // size it always was, and the frame clears the area it always cleared.
+      lift = unwalledRef.current ? diceHeadroom(h, window.innerHeight, view) : 0;
+
+      ground.width = Math.max(1, Math.round(w * dpr));
+      ground.height = Math.max(1, Math.round(h * dpr));
+      canvas.width = Math.max(1, Math.round(w * dpr));
+      canvas.height = Math.max(1, Math.round((h + lift) * dpr));
+      // The stylesheet stretches both canvases over the tray; only the dice
+      // layer ever departs from that, and only upward.
+      canvas.style.top = lift > 0 ? `${-lift}px` : '';
+      canvas.style.height = lift > 0 ? `${h + lift}px` : '';
+
       viewW = w;
       viewH = h;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -207,8 +270,13 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, on
     };
     resize();
     if (resizeRef) resizeRef.current = resize;
+    localResizeRef.current = resize;
     const ro = new ResizeObserver(resize);
     ro.observe(wrap);
+    // The headroom is measured against the window, and the photo stage's
+    // layout box does not change when the window does -- so the observer on
+    // the tray never fires for the one change that matters most here.
+    window.addEventListener('resize', resize);
 
     // Start the tray with the dice the current build actually rolls.
     const wanted = effectiveDice(stateRef.current);
@@ -226,7 +294,9 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, on
       const k = canvas.clientWidth > 0 ? rect.width / canvas.clientWidth : 1;
       return {
         x: ((clientX - rect.left) / k - originX) / zoom,
-        y: ((clientY - rect.top) / k - originY) / zoom,
+        // `rect` is the dice canvas, which starts `lift` above the tray, so
+        // the origin it is measured from has to carry the same lift.
+        y: ((clientY - rect.top) / k - (originY + lift)) / zoom,
       };
     };
 
@@ -398,13 +468,13 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, on
         groundWasShaking = shaking;
       }
 
-      ctx.clearRect(0, 0, viewW, viewH);
+      ctx.clearRect(0, 0, viewW, viewH + lift);
       ctx.save();
-      ctx.translate(originX + shakeX, originY + shakeY);
+      ctx.translate(originX + shakeX, originY + lift + shakeY);
       ctx.scale(zoom, zoom);
       drawWorld(ctx, world, theme);
       ctx.restore();
-      drawProcOverlay(ctx, world, theme, originX, originY, zoom);
+      drawProcOverlay(ctx, world, theme, originX, originY + lift, zoom);
 
       raf = requestAnimationFrame(frame);
     };
@@ -533,12 +603,19 @@ export function DiceTray({ s, rollRef, resizeRef, glassRef, sealed, immersed, on
       // Nothing is left to reveal once the tray is gone.
       store.heldBack = { score: 0, meta: 0 };
       ro.disconnect();
+      window.removeEventListener('resize', resize);
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerleave', onLeave);
       canvas.removeEventListener('pointerdown', onDown);
       window.removeEventListener('keydown', onKey);
+      localResizeRef.current = null;
     };
   }, []);
+
+  // The chamber's walls coming and going is a change of what the dice layer
+  // is allowed to show, so it has to re-measure the moment it happens rather
+  // than waiting for the tray's box to change -- which it never does.
+  useEffect(() => { localResizeRef.current?.(); }, [unwalled]);
 
   const dice = effectiveDice(s);
   const ready = canRoll(s);

@@ -20,13 +20,35 @@ import { StatsPanel } from './StatsPanel.tsx';
 import { touchPrimary } from './pointer.ts';
 import { STAGE_H, STAGE_W, useSkin, useStageScale } from './skin.ts';
 import chassisUrl from './chassis.webp';
-import { playChannelClick, playWhirr } from './sound.ts';
 import {
-  centreRollView, DRIVE_IN_MS, DRIVE_OUT_MS, NO_VIEW_TRANSFORM, type Phase,
-  viewTransformStyle, type ViewTransform,
+  playChannelClick, playDeckRail, playScreensCollapse, playScreensRelight, playWhirr,
+} from './sound.ts';
+import { prefersReducedMotion } from './motion.ts';
+import {
+  centreRollView, driveTimings, HUD_RISE_MS, HUD_STOW_MS,
+  NO_VIEW_TRANSFORM, type Passage, passageClipPaths, passageGeometry,
+  type PassageGeometry, type Phase, viewTransformStyle, type ViewTransform,
 } from './phase.ts';
 
 const TREE_UNLOCK_SCORE = 20;
+
+/**
+ * Where in each drive the faceplate shell is opaque enough for the machine
+ * behind it to change.
+ *
+ * Fractions rather than milliseconds, so they hold for the stacked layout's
+ * shorter drive and the reduced-motion cut alike. The shell's own cross-fades
+ * in `styles.css` finish at 6% and begin again at 94%; these sit a further
+ * 8% inside that on each side, and the margin is not decoration. A timer
+ * started here begins counting the moment React schedules the work, while
+ * the animation it is racing does not start until the shell has been
+ * committed and painted — a frame or two later. Line the two up exactly and
+ * the timer wins on a slow frame, which is a flash of the roll field through
+ * a machine that has already taken itself apart.
+ */
+const COVER_IN = 0.14;
+const COVER_OUT = 0.86;
+
 type Tab = 'roll' | 'web' | 'stats' | 'log';
 
 const MOBILE_SURFACE_QUERY =
@@ -72,28 +94,82 @@ export function App(): JSX.Element {
    */
   const [phase, setPhase] = useState<Phase>('plan');
   const [view, setView] = useState<ViewTransform>(NO_VIEW_TRANSFORM);
-  const [passage, setPassage] = useState<'in' | 'out' | null>(null);
+  const [passage, setPassage] = useState<Passage | null>(null);
   const [restoreSnap, setRestoreSnap] = useState(false);
+  /**
+   * The faceplate the drawn chassis passes the player, cut around the
+   * chamber the player is going through.
+   *
+   * The photograph does not need this: it is one bitmap at one known size, so
+   * its shell is cut in the stylesheet once. The drawn chassis reflows, so
+   * its shell has to be cut around whatever rectangle the tray is actually
+   * occupying when the drive engages -- and the same rectangle is kept for
+   * the return, because the machine the player comes back to is the one they
+   * left. `cam` is the matching camera move, held separately because by the
+   * time the view is driving back out the live transform has already been
+   * reset to Plan.
+   */
+  const [shell, setShell] = useState<
+    { geom: PassageGeometry; camX: number; camY: number } | null
+  >(null);
+  /** How long the instrument waits on its rail before it rises. */
+  const [hudDelay, setHudDelay] = useState(0);
+  /**
+   * True exactly while the faceplate shell is opaque over the whole window.
+   *
+   * Everything the live machine has to give up for the passage -- its
+   * enamel, the chamber's bezel, the tray's rings and glass, the panels --
+   * is given up inside this window and taken back inside it, so none of it
+   * is ever seen to change. Doing it on the drive's first frame instead,
+   * which is what the passage used to do, put every one of those changes in
+   * the one frame where the machine is still sitting perfectly still in
+   * front of the player.
+   */
+  const [covered, setCovered] = useState(false);
+  const coverTimerRef = useRef<number | null>(null);
   const chamberRef = useRef<HTMLDivElement>(null);
   const trayResizeRef = useRef<(() => void) | null>(null);
   const passageTimerRef = useRef<number | null>(null);
   const restoreTimerRef = useRef<number | null>(null);
+  const armTimerRef = useRef<number | null>(null);
+  /** The live camera translation, for handlers that must not re-render to read it. */
+  const viewRef = useRef<ViewTransform>(NO_VIEW_TRANSFORM);
+  viewRef.current = view;
 
-  const runPassage = (direction: 'in' | 'out', duration: number): void => {
+  const clearPassageTimers = (): void => {
+    for (const ref of [passageTimerRef, restoreTimerRef, armTimerRef, coverTimerRef]) {
+      if (ref.current !== null) window.clearTimeout(ref.current);
+      ref.current = null;
+    }
+  };
+
+  const runPassage = (direction: 'in' | 'out', duration: number, restrike: number): void => {
     if (passageTimerRef.current !== null) window.clearTimeout(passageTimerRef.current);
     if (restoreTimerRef.current !== null) window.clearTimeout(restoreTimerRef.current);
+    if (coverTimerRef.current !== null) window.clearTimeout(coverTimerRef.current);
     setRestoreSnap(false);
     setPassage(direction);
+    // Hand the machine over to the shell, and take it back, inside the window
+    // where the shell is opaque over the whole window. See `COVER_IN`.
+    coverTimerRef.current = window.setTimeout(
+      () => {
+        setCovered(direction === 'in');
+        coverTimerRef.current = null;
+      },
+      Math.max(0, duration * (direction === 'in' ? COVER_IN : COVER_OUT)),
+    );
     passageTimerRef.current = window.setTimeout(() => {
       // On return, the camera reaches Plan first. Only then is the machine UI
       // restored, in one frame, instead of individual panels sliding back
       // while the camera itself is still moving.
       if (direction === 'out') {
         setRestoreSnap(true);
+        playScreensRelight();
         restoreTimerRef.current = window.setTimeout(() => {
           setRestoreSnap(false);
+          setShell(null);
           restoreTimerRef.current = null;
-        }, 460);
+        }, Math.max(1, restrike));
       }
       setPassage(null);
       passageTimerRef.current = null;
@@ -101,31 +177,68 @@ export function App(): JSX.Element {
   };
 
   /**
-   * Pass through the chamber glass. The tray itself never scales: after the
-   * phase commits we translate its existing rendered rectangle to the centre
-   * of the viewport while the surrounding machine supplies the depth cue.
+   * Pass through the chamber glass, in three beats.
+   *
+   * First the machine arms: the information screens collapse to a line, and
+   * on a phone the selector clunks over to the Roll surface and the page
+   * comes back to the top. Nothing has travelled yet -- that beat exists so
+   * the screens are seen to go dark, rather than being hidden a frame later
+   * by the faceplate that is about to cover them.
+   *
+   * Then the drive engages. The tray itself never scales: after the phase
+   * commits we translate its existing rendered rectangle to the centre of
+   * the viewport while the faceplate around it passes the camera.
+   *
+   * Then the instrument arrives, on the drive's last detent rather than a
+   * fifth of the way into it.
    */
   const enterRoll = (): void => {
-    if (phase === 'roll') return;
+    if (phase === 'roll' || passage !== null) return;
     if (!chamberRef.current) return;
+    const t = driveTimings(prefersReducedMotion(), mobileSurfaces);
+
     // Surface navigation and the mechanical Roll phase are separate. If a
     // phone opens Roll from Score while looking at Build/Stats/Log, reveal the
-    // chamber first so the passage always has a visible screen to cross.
-    if (mobileSurfaces && tab !== 'roll') setTab('roll');
-    playWhirr('in', DRIVE_IN_MS);
-    runPassage('in', DRIVE_IN_MS);
-    setPhase('roll');
-    if (s.scoreLocked) actions.toggleScoreLock();
+    // chamber first so the passage always has a visible screen to cross, and
+    // so the measurement below is of a chamber that is actually laid out.
+    if (mobileSurfaces && tab !== 'roll') {
+      setTab('roll');
+      window.scrollTo(0, 0);
+    }
+    playScreensCollapse();
+    setPassage('arm');
+    armTimerRef.current = window.setTimeout(() => {
+      armTimerRef.current = null;
+      const el = chamberRef.current;
+      const rect = el?.getBoundingClientRect();
+      const geom = rect
+        ? passageGeometry(rect, window.innerWidth, window.innerHeight)
+        : null;
+      if (!rect || !geom) {
+        // No chamber on screen to go through. Opening one would be a claim
+        // about a machine part that is not there, so the machine stays shut.
+        setPassage(null);
+        return;
+      }
+      const cam = centreRollView(rect, NO_VIEW_TRANSFORM);
+      setShell({ geom, camX: cam.tx, camY: cam.ty });
+      setHudDelay(t.hudDelay);
+      playWhirr('in', t.in);
+      playDeckRail('rise', HUD_RISE_MS, t.hudDelay);
+      runPassage('in', t.in, t.restrike);
+      setPhase('roll');
+    }, Math.max(0, t.arm));
   };
 
   /** Engage the shield and let the view back out. */
   const endRollRef = useRef<(() => void) | null>(null);
   const endRoll = (): void => {
     if (phase !== 'roll') return;
-    playWhirr('out', DRIVE_OUT_MS);
-    runPassage('out', DRIVE_OUT_MS);
+    const t = driveTimings(prefersReducedMotion(), mobileSurfaces);
+    playWhirr('out', t.out);
+    playDeckRail('stow', HUD_STOW_MS);
+    runPassage('out', t.out, t.restrike);
     setPhase('plan');
-    if (!s.scoreLocked) actions.toggleScoreLock();
   };
   endRollRef.current = phase === 'roll' ? endRoll : null;
 
@@ -201,10 +314,23 @@ export function App(): JSX.Element {
     if (treeUnlocked && tab === 'stats') actions.seenStats();
   }, [treeUnlocked, tab]);
 
-  // Planning is shielded, always. This is what holds that true across a
-  // reload, a refund, or anything else that reaches the lock directly.
+  /**
+   * Planning is shielded; rolling is not. One place decides it.
+   *
+   * The two halves used to set the lock themselves and this effect only
+   * caught Plan drifting out of step, which worked while the whole phase
+   * change happened inside one click handler. It does not now: the drive is
+   * armed first and commits a beat later, from a timer, and a store
+   * notification arriving between the two was enough for this effect to see
+   * Plan and an unlocked Score together and put the shield straight back on
+   * — so the chamber opened with Score still frozen and the roll could not
+   * earn or lose anything. Deriving the lock from the phase instead of
+   * setting it alongside the phase removes the window entirely, and holds
+   * across a reload or a refund as it did before.
+   */
   useEffect(() => {
-    if (phase === 'plan' && !s.scoreLocked) actions.toggleScoreLock();
+    const shielded = phase === 'plan';
+    if (s.scoreLocked !== shielded) actions.toggleScoreLock();
   }, [phase, s.scoreLocked]);
 
   // Re-centre only after Roll has committed. The chamber's DOMRect already
@@ -221,28 +347,56 @@ export function App(): JSX.Element {
   // changing its layout box. Re-measure after the scene settles so the canvas
   // backing store stays crisp; translation alone does not increase its size.
   useEffect(() => {
-    const ms = (phase === 'roll' ? DRIVE_IN_MS : DRIVE_OUT_MS) + 40;
-    const t = window.setTimeout(() => trayResizeRef.current?.(), ms);
-    return () => window.clearTimeout(t);
-  }, [view, phase, stageScale]);
+    const t = driveTimings(prefersReducedMotion(), mobileSurfaces);
+    const ms = (phase === 'roll' ? t.in : t.out) + 40;
+    const timer = window.setTimeout(() => trayResizeRef.current?.(), ms);
+    return () => window.clearTimeout(timer);
+  }, [view, phase, stageScale, mobileSurfaces]);
 
   // Keep the unchanged-size tray centred if the viewport changes while Roll
-  // is active.
+  // is active, and re-cut the faceplate with it: the hole the player comes
+  // back out through has to be where the chamber will be, not where it was
+  // before the window changed shape. The tray is centred at this point, so
+  // its resting rectangle is its current one less the camera translation.
   useEffect(() => {
     if (phase !== 'roll') return;
     const onResize = (): void => {
       const el = chamberRef.current;
       if (!el) return;
-      setView((v) => centreRollView(el.getBoundingClientRect(), v));
+      const rect = el.getBoundingClientRect();
+      const v = viewRef.current;
+      const geom = passageGeometry(
+        { left: rect.left - v.tx, top: rect.top - v.ty, width: rect.width, height: rect.height },
+        window.innerWidth,
+        window.innerHeight,
+      );
+      const cam = centreRollView(rect, v);
+      if (geom) setShell({ geom, camX: cam.tx, camY: cam.ty });
+      setView(cam);
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, [phase]);
 
-  useEffect(() => () => {
-    if (passageTimerRef.current !== null) window.clearTimeout(passageTimerRef.current);
-    if (restoreTimerRef.current !== null) window.clearTimeout(restoreTimerRef.current);
-  }, []);
+  useEffect(() => clearPassageTimers, []);
+
+  /**
+   * Publish the photo stage's fit to the document root.
+   *
+   * The panel the photograph is mounted in is not part of the photograph: it
+   * is whatever the window has left over once the stage has been fitted into
+   * it. Two places have to draw that panel -- the document, at rest, and the
+   * shell, while it is travelling -- and they have to agree exactly or the
+   * handoff at each end of the drive is a change of material. Publishing the
+   * one number they both derive it from is cheaper than measuring it twice
+   * and safer than writing it down twice. `0` means there is no stage,
+   * which is how the drawn chassis says it fills the window itself.
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--stage-k', photo ? String(stageScale) : '0');
+    return () => { root.style.removeProperty('--stage-k'); };
+  }, [photo, stageScale]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -262,14 +416,17 @@ export function App(): JSX.Element {
 
   return (
     <>
-    {(phase === 'roll' || passage !== null) && <div className="rollfield" aria-hidden />}
+    {(phase === 'roll' || passage === 'in' || passage === 'out')
+      && <div className={`rollfield rollfield--${passage ?? 'held'}`} aria-hidden />}
     {/* The outer view only translates. Depth comes from the machine layers
         moving around the stable dice tray, not from scaling the tray itself. */}
     <div
       className={
         `viewport${phase === 'roll' || passage === 'out' ? ' viewport--driven' : ''}`
+        + (passage === 'arm' ? ' viewport--arming' : '')
         + (passage === 'in' ? ' viewport--entering' : '')
         + (passage === 'out' ? ' viewport--exiting' : '')
+        + (covered ? ' viewport--covered' : '')
         + (restoreSnap ? ' viewport--restore-snap' : '')
       }
       style={{ transform: viewTransformStyle(view) }}
@@ -306,7 +463,8 @@ export function App(): JSX.Element {
           <GamePanel
             s={s}
             sealed={phase === 'plan'}
-            immersed={phase === 'roll' || passage !== null}
+            immersed={phase === 'roll' || passage === 'in' || passage === 'out'}
+            unwalled={covered}
             onSealed={enterRoll}
             resizeRef={trayResizeRef}
             glassRef={chamberRef}
@@ -439,31 +597,21 @@ export function App(): JSX.Element {
     </div>
     </div>
 
-    {photo && passage !== null && (
-      <div
-        className={`photo-passage-shell photo-passage-shell--${passage}`}
-        style={{
-          ['--chassis' as string]: `url(${chassisUrl})`,
-          ['--stage-k' as string]: String(stageScale),
-          width: STAGE_W,
-          height: STAGE_H,
-        }}
-        aria-hidden
-      >
-        <div className="photo-passage-shell__camera">
-          <span className="photo-passage-shell__piece photo-passage-shell__piece--top" />
-          <span className="photo-passage-shell__piece photo-passage-shell__piece--left" />
-          <span className="photo-passage-shell__piece photo-passage-shell__piece--right" />
-          <span className="photo-passage-shell__piece photo-passage-shell__piece--bottom" />
-        </div>
-      </div>
+    {/* The machine passing the player, as one object. */}
+    {shell && (passage === 'in' || passage === 'out') && (
+      <PassageShell passage={passage} shell={shell} photo={photo} />
     )}
 
     {/* Outside the drive, so it stays put while the view moves. The readout
-        rises into the player's view when the chamber opens, and engaging its
-        shield is what closes it again. */}
-    {phase === 'roll' && (
-      <div className="rollhud">
+        comes up its rail as the drive takes its last detent -- not with the
+        press, which used to put it on screen a fifth of the way into a
+        two-second move -- and it is stowed again at the head of the return,
+        while the faceplate coming back is still too far off to meet it. */}
+    {(phase === 'roll' || passage === 'out') && (
+      <div
+        className={`rollhud${passage === 'out' ? ' rollhud--stow' : ''}`}
+        style={{ ['--hud-delay' as string]: `${hudDelay}ms` }}
+      >
         <div className="rollhud__inner">
           {/* The readout shakes harder the fuller the pressure meter behind
               it gets, so the thing you are about to lose is the thing that
@@ -506,6 +654,89 @@ export function App(): JSX.Element {
  * not showing anything, which is true, and is the difference between a
  * machine with a channel off and a machine that looks broken.
  */
+/**
+ * The machine, cut into four bands around the chamber and driven past the
+ * camera.
+ *
+ * It exists because the tray must not scale. The depth in this passage is
+ * the machine moving, not the subject growing, and the only piece of machine
+ * that can travel past the player without taking the dice with it is the
+ * faceplate itself -- which therefore has to be a separate copy with the
+ * chamber cut out of it.
+ *
+ * Four full-window layers, each clipped to one band around the opening. Four
+ * bands rather than four boxes is what keeps the material continuous across
+ * the seams: one plate, four windows onto it, no joins to see. The opening is
+ * measured from the tray the instant the drive engages, and the same
+ * measurement is kept for the return, because the machine a player comes back
+ * to is the one they left.
+ *
+ * Both skins are the same object here, which they did not used to be. The
+ * photograph had its own shell, sized to the stage and clipped with the
+ * aperture's percentages written down by hand; the surround it is letterboxed
+ * into was not in that shell at all -- it was painted on the document, so it
+ * could not travel, and it simply blinked out on the drive's first frame
+ * while the machine it belongs to drove away without it. Measuring the
+ * opening instead of writing it down lets the photograph, the panel it is
+ * mounted in and the drawn chassis all be bands of one sheet, and one sheet
+ * is the only thing that can move as one object.
+ *
+ * It covers the live interface while it runs. That is the point rather than a
+ * side effect: panels peeling off sideways is a thing a faceplate cannot do,
+ * so instead the whole face goes by at once, and the panels behind it are
+ * dark by then -- the machine armed and put its screens out before any of
+ * this started moving.
+ */
+function PassageShell({ passage, shell, photo }: {
+  passage: 'in' | 'out';
+  shell: { geom: PassageGeometry; camX: number; camY: number };
+  photo: boolean;
+}): JSX.Element {
+  const clips = passageClipPaths(shell.geom);
+  const origin = `${shell.geom.originX}% ${shell.geom.originY}%`;
+  return (
+    <div
+      className={`passage-shell passage-shell--${passage} passage-shell--${photo ? 'photo' : 'drawn'}`}
+      style={{
+        ['--cam-x' as string]: `${shell.camX}px`,
+        ['--cam-y' as string]: `${shell.camY}px`,
+        ...(photo ? { ['--chassis' as string]: `url(${chassisUrl})` } : null),
+      }}
+      aria-hidden
+    >
+      <div className="passage-shell__camera">
+        {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
+          <span
+            key={side}
+            className="passage-shell__piece"
+            style={{ clipPath: clips[side], transformOrigin: origin }}
+          />
+        ))}
+        {/* The milled step the photograph is set into. It paints only outside
+            its own box, so it lands on the panel around the stage and never
+            on the stage itself. The drawn chassis has no stage to be set
+            into, so it gets no recess. */}
+        {photo && <span className="passage-shell__recess" style={{ transformOrigin: origin }} />}
+        {/* The chamber's own lip, drawn on the hole rather than around the
+            frame, so the opening the player goes through keeps the edge it
+            has at rest instead of being a rectangle punched in a plate. The
+            photograph carries its lip in the bitmap already. */}
+        {!photo && (
+          <span
+            className="passage-shell__rim"
+            style={{
+              left: `${shell.geom.x}px`,
+              top: `${shell.geom.y}px`,
+              width: `${shell.geom.width}px`,
+              height: `${shell.geom.height}px`,
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Standby({ slot }: { slot: 'tree' | 'goal' | 'upgrade' | 'chain' }): JSX.Element {
   return (
     <div className={`standby standby--${slot}`} aria-hidden>
@@ -961,12 +1192,14 @@ function EntropyGhosts({ ticks }: { ticks: EntropyTick[] }): JSX.Element {
 /** Long enough for approach, impact, and either fade or shield ricochet. */
 const ENTROPY_ATTACK_MS = 3600;
 
-function GamePanel({ s, sealed, immersed, onSealed, resizeRef, glassRef }: {
+function GamePanel({ s, sealed, immersed, unwalled, onSealed, resizeRef, glassRef }: {
   s: GameState;
   /** True in the Plan phase: the chamber is shut and a throw opens it. */
   sealed: boolean;
   /** True while crossing or inside the screen; keeps CRT backdrop out through exit. */
   immersed: boolean;
+  /** True while the chamber has no walls, so the dice may be seen above it. */
+  unwalled: boolean;
   onSealed: () => void;
   resizeRef: MutableRefObject<(() => void) | null>;
   /** What the drive fills the window with: the glass, not its bezel. */
@@ -982,9 +1215,6 @@ function GamePanel({ s, sealed, immersed, onSealed, resizeRef, glassRef }: {
   return (
     <section className="game game-area__panel">
       <div className="game__arena">
-        {/* A physical threshold around the glass. During the phase transition
-            it rushes past the player while the tray itself remains unscaled. */}
-        <span className="chamber__threshold" aria-hidden />
         {/* The status lamp every other plate carries. It repeats what the
             telemetry line on the glass already says in words. */}
         <span className={`chamber__lamp${ready ? '' : ' chamber__lamp--busy'}`} aria-hidden />
@@ -995,6 +1225,7 @@ function GamePanel({ s, sealed, immersed, onSealed, resizeRef, glassRef }: {
           glassRef={glassRef}
           sealed={sealed}
           immersed={immersed}
+          unwalled={unwalled}
           onSealed={onSealed}
         />
       </div>
