@@ -2669,9 +2669,9 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
  * keep the faceplate on a wide, short, sideways screen.
  *
  * The roll passage is independent of this stacking decision. The same
- * measured chamber centre drives both layouts: the outer view translates it
- * toward screen centre while the live face, including the chamber glass,
- * scales through the passage.
+ * measured chamber centre drives both layouts: the live dice tray translates
+ * toward screen centre while the faceplate fixtures and the shell's CRT glass
+ * scale through the passage around it.
  */
 
 @media (max-width: 759px),
@@ -3251,8 +3251,8 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
   box-shadow: var(--stage-recess);
 }
 /* The photographed chassis is already the resting shell. During a Roll
-   passage a separate four-piece shell is mounted at viewport level so its
-   CRT opening can remain transparent to the live dice. */
+   passage a viewport-level keyhole shell carries the chassis and its CRT
+   glass around the stable live dice canvas. */
 .app--photo::before,
 .app--photo::after { display: none; }
 body:has(.app--photo) {
@@ -4110,20 +4110,14 @@ body:has(.app--photo)::before { display: none; }
 /*
  * The machine going past the camera, as one object.
  *
- * Four full-window layers of the machine, each clipped to one band around the
- * chamber, scaled about the chamber's centre. Four bands rather than four
- * boxes is what keeps the material continuous across the seams: one sheet,
- * four windows onto it, no joins to see.
+ * One full-window faceplate layer is cut with a measured keyhole around the
+ * chamber and scaled about that opening's centre. A matching CRT-glass layer
+ * occupies the keyhole, so the plate and the screen travel as one continuous
+ * machine while the live dice canvas remains stable above them.
  *
- * Both skins are the same element now. The photograph used to have a shell of
- * its own, sized to the stage and clipped with the aperture's percentages
- * written down by hand -- which meant the panel the stage is letterboxed into
- * was not in the shell at all. It was painted on the document, so it could
- * not travel, and it blinked out on the drive's first frame while the machine
- * it belongs to drove off without it. Measuring the opening rather than
- * writing it down lets the photograph, its panel and the drawn chassis all be
- * bands of one sheet -- and one sheet is the only thing that can move as one
- * object.
+ * Both skins use this same measured shell. The photograph used to leave its
+ * letterboxed mounting panel behind, which made the side shading and fixings
+ * blink out while the chassis moved. The shell now carries that surround too.
  *
  * The shell is deliberately outside the translated `.viewport`: the camera
  * move must not also move the object that defines the passage, so the camera
