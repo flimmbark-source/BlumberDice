@@ -833,30 +833,21 @@ export function App(): JSX.Element {
  * faceplate itself -- which therefore has to be a separate copy with the
  * chamber cut out of it.
  *
- * One window-sized layer with the opening cut out of it, scaled about the
- * opening's centre. It was four layers clipped to a band each, which is the
- * obvious way to get a hole out of a shape that can only have one outline --
- * and four times the raster for the same picture, paid in the frame the drive
- * starts. `passageKeyhole` gets the hole out of a single outline instead. The
- * opening is measured from the tray during the arm beat, and the same
- * measurement is kept for the return, because the machine a player comes back
- * to is the one they left.
+ * Desktop uses one window-sized keyhole layer scaled about the opening's
+ * centre. Compact/mobile deliberately does not: the scale needed on a tall
+ * phone can exceed 3x and turns a smooth passage into a giant raster upload.
+ * There the same measured opening is split into four translation-only casing
+ * bands, while a lightweight CRT-glass layer expands over the stable dice.
  *
- * Both skins are the same object here, which they did not used to be. The
- * photograph had its own shell, sized to the stage and clipped with the
- * aperture's percentages written down by hand; the surround it is letterboxed
- * into was not in that shell at all -- it was painted on the document, so it
- * could not travel, and it simply blinked out on the drive's first frame
- * while the machine it belongs to drove away without it. Measuring the
- * opening instead of writing it down lets the photograph, the panel it is
- * mounted in and the drawn chassis all be bands of one sheet, and one sheet
- * is the only thing that can move as one object.
+ * The photograph and drawn chassis still share the same measured geometry.
+ * On desktop that geometry keeps the surround, fixings and faceplate moving
+ * as one object; on compact layouts it tells each casing band exactly where
+ * the screen begins so the pieces can clear the viewport without scaling.
  *
- * It covers the live interface while it runs. That is the point rather than a
- * side effect: panels peeling off sideways is a thing a faceplate cannot do,
- * so instead the whole face goes by at once, and the panels behind it are
- * dark by then -- the machine armed and put its screens out before any of
- * this started moving.
+ * Live controls ride alongside the shell. Desktop can afford the shared scale;
+ * mobile moves the header and deck by translation only and keeps the stacked
+ * document stationary, so the visual passage remains intact without promoting
+ * or magnifying the whole phone UI.
  */
 function PassageShell({ passage, shell, photo, carry, compact }: {
   passage: Passage;
