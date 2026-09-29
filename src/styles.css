@@ -4669,17 +4669,34 @@ body:has(.rollfield)::before { display: none; }
     animation-play-state: paused !important;
   }
   .viewport--carry.viewport--entering .topbar {
-    animation: passCompactTopIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
+    animation: passCompactLiveTopIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
   }
   .viewport--carry.viewport--entering :is(.game__controls, .fixed-panel--goal-mobile) {
-    animation: passCompactBottomIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
+    animation: passCompactLiveBottomIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
   }
   .viewport--carry.viewport--exiting .topbar {
-    animation: passCompactTopOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
+    animation: passCompactLiveTopOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
   }
   .viewport--carry.viewport--exiting :is(.game__controls, .fixed-panel--goal-mobile) {
-    animation: passCompactBottomOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
+    animation: passCompactLiveBottomOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
   }
+}
+
+@keyframes passCompactLiveTopIn {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, -110vh, 0); }
+}
+@keyframes passCompactLiveBottomIn {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, 110vh, 0); }
+}
+@keyframes passCompactLiveTopOut {
+  from { transform: translate3d(0, -110vh, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+@keyframes passCompactLiveBottomOut {
+  from { transform: translate3d(0, 110vh, 0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 
 
@@ -4872,6 +4889,7 @@ body:has(.rollfield)::before { display: none; }
   .passage-shell__piece,
   .passage-shell__recess,
   .passage-shell__rim,
+  .passage-shell__compact-band,
   .viewport--carry .topbar,
   .viewport--carry .panel-rail,
   .viewport--carry .fixed-panel--goal-mobile,
