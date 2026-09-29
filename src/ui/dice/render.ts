@@ -314,6 +314,35 @@ export function drawShadow(c: CanvasRenderingContext2D, die: DieBody, theme: The
   c.restore();
 }
 
+/**
+ * Whether the frame just drawn contained anything that moves on the clock.
+ *
+ * Almost everything on this layer is a pure function of the world's state: a
+ * cube's position and orientation, its shadow, the rings under it. Those can
+ * be compared between frames and, when they match, the frame can be skipped
+ * outright. A handful of things cannot -- a result number fading up off a
+ * die, a proc pulse, the destruct beam -- because they are functions of
+ * `world.t` and would freeze mid-fade if the frame that carries them were
+ * skipped.
+ *
+ * Rather than write down how long each of those lasts in two places and wait
+ * for the two to disagree, each one raises this flag at the point where it
+ * has decided it still has something to draw. A caller that sees it raised
+ * knows to draw the next frame unconditionally; a caller that sees it clear
+ * knows the layer is now a function of state alone.
+ */
+let animated = false;
+
+/** Call immediately before a frame's draw calls. */
+export function beginDiceFrame(): void {
+  animated = false;
+}
+
+/** True if the frame just drawn is still moving on its own. */
+export function diceFrameAnimating(): boolean {
+  return animated;
+}
+
 function drawImpacts(c: CanvasRenderingContext2D, die: DieBody, theme: Theme): void {
   for (const im of die.impacts) {
     const p = im.t / 520;
@@ -438,6 +467,7 @@ function drawProcPulse(
 ): void {
   const active = procAt(procs, settledAt, t);
   if (!active) return;
+  animated = true;
   const { proc, age } = active;
   const p = Math.min(1, age / PROC_VISIBLE_MS);
   const strength = proc.kind === 'jackpot' ? 1 : proc.kind === 'pattern' ? 0.55 : 0.4;
@@ -476,6 +506,7 @@ function drawProcLabelScreen(
 ): void {
   const active = procAt(procs, settledAt, t);
   if (!active) return;
+  animated = true;
   const { proc, age } = active;
   const p = Math.min(1, age / PROC_VISIBLE_MS);
   const enter = Math.min(1, p / 0.12);
@@ -522,6 +553,7 @@ function drawGhostValue(
 ): void {
   const age = t - settledAt;
   if (age < 0 || age > ghostLife) return;
+  animated = true;
 
   const p = age / ghostLife;
   const rise = 20 + p * 52;
@@ -586,6 +618,7 @@ function drawZap(c: CanvasRenderingContext2D, die: DieBody, t: number): void {
   if (die.zapAt === null) return;
   const age = t - die.zapAt;
   if (age < 0 || age > ZAP_TOTAL_MS) return;
+  animated = true;
 
   const foot = project(v3(die.pos.x, die.pos.y, 0));
   const head = project(v3(die.pos.x, die.pos.y, DIE * 16));

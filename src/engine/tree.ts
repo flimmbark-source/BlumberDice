@@ -114,3 +114,48 @@ export function isReachable(nodeId: string, allocated: ReadonlySet<string>): boo
   if (node.prerequisites.length === 0) return true;
   return node.prerequisites.some((p) => allocated.has(p));
 }
+
+/**
+ * The only values of a currency the build tree can tell apart.
+ *
+ * Every node's shading turns on one question -- can this be bought -- and
+ * that question is a set of `>=` tests against a fixed, small list of costs.
+ * Between one cost and the next, every value of Score produces exactly the
+ * same tree, so the tree does not need to be told about any of them.
+ *
+ * That matters because Score moves continuously: Entropy pulls on it every
+ * frame, and the raw number was being handed to the tree as a prop. It defeated
+ * the tree's memo outright -- a rebuild of every node's status and a fresh
+ * render of the whole web on each frame the number ticked, for a picture that
+ * had not changed since the last time the player crossed a price.
+ *
+ * `affordanceOf` rounds a currency down to the largest cost at or below it,
+ * which every test answers identically and none can distinguish. Zero is one
+ * of those costs -- a node that is priced at nothing is affordable at nothing
+ * and not affordable at less than nothing -- so it is in the list, and a
+ * currency below every price rounds to -1, which nothing is priced at.
+ */
+function costSteps(of: (node: PassiveNode) => number | undefined): number[] {
+  const seen = new Set<number>([0]);
+  for (const node of NODES) seen.add(of(node) ?? 0);
+  return [...seen].sort((a, b) => a - b);
+}
+
+const SCORE_STEPS = costSteps((n) => n.costs.score);
+const META_STEPS = costSteps((n) => n.costs.meta);
+
+function stepAtOrBelow(steps: number[], value: number): number {
+  let lo = -1;
+  for (const step of steps) {
+    if (step > value) break;
+    lo = step;
+  }
+  return lo;
+}
+
+export function affordanceOf(score: number, meta: number): { score: number; meta: number } {
+  return {
+    score: stepAtOrBelow(SCORE_STEPS, score),
+    meta: stepAtOrBelow(META_STEPS, meta),
+  };
+}

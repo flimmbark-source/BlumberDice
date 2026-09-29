@@ -1682,6 +1682,103 @@ Consequences worth naming:
   plate of the same colour, at the one moment the whole face is already
   moving, and it is left as a known cost.
 
+### 43. The machine was redrawing a still picture
+
+A performance pass, measured rather than guessed. Every number below is from
+this container, whose Chromium runs on SwiftShader — software rasterisation,
+no GPU — so the absolute frame rates are not anybody's real frame rates. What
+it is a good proxy for is a weak device, because the costs it exaggerates are
+exactly the ones that hurt on a cheap phone: large blended layers, deep layer
+trees, and fill.
+
+**The profiler said it was not the game.** Ninety-two per cent of the Roll
+phase was `(program)` — the browser's own rendering — against about five per
+cent of everything the game executes, engine and React together. So the pass
+went after pixels, not code.
+
+**And the pixels were nearly all one canvas, drawing nothing.** Repainted
+area per second, before:
+
+| | before | after |
+| --- | --- | --- |
+| Plan, at rest | 22.6M px/s | ~0.0M px/s |
+| Roll, at rest | 25.7M px/s | 0.2M px/s |
+| Roll, dice in the air | 38.3M px/s | 38.3M px/s |
+
+The dice layer was ninety-odd per cent of it and it never stopped: a tray of
+dice lying perfectly still was cleared and redrawn sixty times a second for as
+long as the tab was open. The fix is to compare each frame's inputs against
+the last one's and skip the draw when they match (`worldSignature`). The
+comparison covers what the draw calls actually read — a cube's place and
+orientation, its fade, the pointer, the rings on the floor, the state that
+decides what is drawn at all — and deliberately excludes the clock, because a
+handful of things *are* functions of the clock and would otherwise freeze
+mid-fade. Those report themselves instead: each raises a flag at the point it
+decides it still has something to draw (`beginDiceFrame`), so the next frame
+is drawn unconditionally and nothing has to write down how long a fade lasts
+in two places.
+
+Frames per second, free-running, median of three four-second runs:
+
+| | plan | roll | throwing |
+| --- | --- | --- | --- |
+| desktop, photographed skin | 84 → 678 | 50 → 366 | 46 → 47 |
+| phone, drawn chassis | 180 → 761 | 105 → 389 | 78 → 88 |
+
+The main thread went from pinned at 100% to 9% in Plan and 15% in Roll.
+Throwing is unchanged and should be: dice in the air is the one case where the
+canvas genuinely has a new picture every frame.
+
+The rest, in order of what it was worth:
+
+- **`opacity: 0` is not free, and it was hiding a whole machine.** Everything
+  the passage hides was transparent rather than hidden, which keeps it in the
+  layer tree, keeps it rasterised, and keeps anything animating inside it
+  animating. Roll carried 69 composited layers against 20 for the whole
+  faceplate at rest. The plates in the layout use `visibility: hidden`, which
+  keeps the box — the drawn chassis is a column, and taking the head or the
+  deck out of the flow would resize the chamber under them and move the tray
+  the passage has just centred. Everything absolutely positioned, and every
+  pseudo-element, goes out with `display: none`. 69 layers → 44.
+- **Two of those were worth their own rule.** The chassis grime is a
+  `mix-blend-mode` layer the size of the machine, so every frame beneath it —
+  the dice canvas included — had to be read back to blend it; and the enamel's
+  speckle is another, the size of the window, which the roll field is opaque
+  over anyway. Both are `display: none` once there is nothing under them to
+  grime.
+- **A glow is a painted property.** The Score shield breathed by animating
+  `box-shadow` and its sheen travelled by animating `background-position`,
+  which between them repainted the plate three million times a second for the
+  whole of Plan — the largest thing left once the canvas stopped. The shield
+  now fades and the sheen slides on a transform, both of which the compositor
+  does without repainting. Same for the lamp on every panel: a lamp dims as a
+  whole rather than only in its halo, so it breathes with opacity.
+- **`will-change` is a promise kept only while there is something to
+  promise.** The viewport held one permanently, pinning a window-sized layer
+  through every second of Plan, where it never moves. The arm beat is what
+  makes dropping it safe: the hint goes on a quarter-second before the drive
+  engages.
+- **The web was being rebuilt by a number it cannot read.** Every node's
+  shading turns on `can this be bought`, which is a set of `>=` tests against a
+  small fixed list of prices — but the live Score was handed to it as a prop,
+  and Entropy moves Score every frame. So the memo never held: a rebuild of
+  every node's status and a fresh render of the whole web, per frame.
+  `affordanceOf` rounds each currency down to the largest price at or below it,
+  which every one of those tests answers identically. Pinned by a test that
+  checks every node at every value either side of every price.
+- **The dice canvas backing store is capped lower**, 3 → 2 on desktop and 1.75
+  → 1.5 on a phone. The dice are large flat-shaded solids with no fine detail
+  to lose, and each step of that multiplier squares the fill a throw costs.
+
+**One thing was tried and reverted**, and is written down so it is not tried
+again: moving the shake jolt off the canvas transforms and onto the two canvas
+elements as a CSS transform. A jolt is a translation, so it should have been
+free and should have saved the floor's twelve million pixels a second of
+redrawing. Measured, Chromium invalidates the whole document layer when a
+transparent canvas moves over it, and twenty-two million pixels a second came
+back on the document. Promoting the canvas first did not help. The floor
+redrawing during a shake is the cheaper of the two.
+
 ---
 
 ## Unresolved — deliberately not implemented

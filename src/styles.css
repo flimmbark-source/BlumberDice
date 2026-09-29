@@ -647,17 +647,34 @@ button:disabled { cursor: default; }
 /* Score lock shield: keep the field attached to the Score glass instead of
    rotating a rectangle around it. The effect is a tight electric rim with
    a faint contained shimmer across the surface. */
+/*
+ * The shield, and why it breathes with opacity rather than with its glow.
+ *
+ * This is the one thing on the faceplate that animates for as long as a
+ * player is planning, which is most of the time they spend here. It used to
+ * do it by animating `box-shadow`, and a shadow is a painted property: the
+ * plate under it was being rasterised afresh sixty times a second for the
+ * whole of Plan -- measured, two million pixels a second, which once the dice
+ * layer stopped redrawing a still picture was the largest thing left on the
+ * screen.
+ *
+ * The glow is now fixed at the top of its old range and the whole field
+ * breathes by fading, which the compositor does without repainting anything.
+ * A glow that brightens and a glow that fades up are the same glow: the
+ * outer radius was changing by three pixels and nothing was reading it.
+ */
 .currency__forcefield {
   position: absolute;
   inset: -4px;
   z-index: 5;
   pointer-events: none;
+  overflow: hidden;
   border-radius: 9px;
   border: 1px solid rgba(121, 211, 255, 0.72);
   box-shadow:
-    0 0 5px rgba(72, 181, 255, 0.42),
-    0 0 10px rgba(72, 181, 255, 0.14),
-    inset 0 0 7px rgba(111, 211, 255, 0.08);
+    0 0 7px rgba(72, 181, 255, 0.5),
+    0 0 13px rgba(72, 181, 255, 0.16),
+    inset 0 0 9px rgba(111, 211, 255, 0.1);
   animation: goalFieldBreathe 2.8s ease-in-out infinite;
 }
 .currency__forcefield::before,
@@ -674,9 +691,16 @@ button:disabled { cursor: default; }
     inset 0 0 8px rgba(96, 199, 255, 0.08),
     0 0 3px rgba(117, 210, 255, 0.12);
 }
+/*
+ * The sheen crossing the field. Same repair: it travelled by animating
+ * `background-position`, which repaints, so it is now a band wider than the
+ * glass that slides across on a transform, clipped by the field itself.
+ */
 .currency__forcefield::after {
-  inset: 2px;
-  overflow: hidden;
+  top: 2px;
+  bottom: 2px;
+  left: -70%;
+  width: 240%;
   background:
     linear-gradient(105deg,
       transparent 0 38%,
@@ -684,29 +708,16 @@ button:disabled { cursor: default; }
       rgba(157, 226, 255, 0.16) 49%,
       rgba(157, 226, 255, 0.04) 54%,
       transparent 60% 100%);
-  background-size: 240% 100%;
   mix-blend-mode: screen;
   animation: goalFieldSweep 3.6s ease-in-out infinite;
 }
 @keyframes goalFieldBreathe {
-  0%, 100% {
-    opacity: 0.72;
-    box-shadow:
-      0 0 4px rgba(72, 181, 255, 0.34),
-      0 0 9px rgba(72, 181, 255, 0.1),
-      inset 0 0 6px rgba(111, 211, 255, 0.06);
-  }
-  50% {
-    opacity: 1;
-    box-shadow:
-      0 0 7px rgba(72, 181, 255, 0.5),
-      0 0 13px rgba(72, 181, 255, 0.16),
-      inset 0 0 9px rgba(111, 211, 255, 0.1);
-  }
+  0%, 100% { opacity: 0.66; }
+  50%      { opacity: 1; }
 }
 @keyframes goalFieldSweep {
-  0%, 100% { background-position: 150% 50%; opacity: 0.28; }
-  50% { background-position: -50% 50%; opacity: 0.62; }
+  0%, 100% { transform: translateX(29%); opacity: 0.28; }
+  50%      { transform: translateX(-29%); opacity: 0.62; }
 }
 /* Falling only dims the lamp. Red is reserved for a Score that is actually
    under zero -- with Entropy pulling every second, a red-while-falling
@@ -1355,12 +1366,19 @@ button:disabled { cursor: default; }
   flex: none;
   border: 1.5px solid var(--orange);
   background: radial-gradient(circle at 35% 30%, #ffd2b4, var(--orange));
-  box-shadow: 0 0 5px rgba(208, 83, 29, 0.55);
+  box-shadow: 0 0 8px rgba(208, 83, 29, 0.72);
   animation: lampBreath 5.2s ease-in-out infinite;
 }
+/*
+ * A lamp dims as a whole, not just in its halo -- so it breathes by fading
+ * rather than by animating its glow. Every plate on the machine carries one
+ * of these, and a shadow is a painted property: breathing them the old way
+ * repainted a lamp and the enamel around it, on every panel, sixty times a
+ * second, for as long as the page was open.
+ */
 @keyframes lampBreath {
-  0%, 100% { box-shadow: 0 0 4px rgba(208, 83, 29, 0.42); }
-  50% { box-shadow: 0 0 8px rgba(208, 83, 29, 0.72); }
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
 }
 .fixed-panel__bar::after {
   content: '';
@@ -1534,18 +1552,19 @@ button:disabled { cursor: default; }
   border-radius: 50%;
   border: 1.5px solid var(--orange);
   background: radial-gradient(circle at 35% 30%, #ffd2b4, var(--orange));
-  box-shadow: 0 0 5px rgba(208, 83, 29, 0.55);
+  box-shadow: 0 0 8px rgba(208, 83, 29, 0.72);
   animation: lampBreath 5.2s ease-in-out infinite;
 }
 /* Under load it stops breathing and runs hot. */
 .chamber__lamp--busy {
   border-color: #ffd9a0;
   background: radial-gradient(circle at 35% 30%, #fff4e2, #ffab3d);
+  box-shadow: 0 0 13px rgba(255, 196, 110, 0.95);
   animation: lampWork 0.9s ease-in-out infinite;
 }
 @keyframes lampWork {
-  0%, 100% { box-shadow: 0 0 6px rgba(255, 171, 61, 0.7); }
-  50% { box-shadow: 0 0 13px rgba(255, 196, 110, 0.95); }
+  0%, 100% { opacity: 0.72; }
+  50%      { opacity: 1; }
 }
 
 /* Chamber nameplate, etched on the bezel above the glass. */
@@ -3885,7 +3904,6 @@ body:has(.app--photo)::before { display: none; }
   width: 100%;
   height: 100%;
   transform-origin: 0 0;
-  will-change: transform;
   /* Returning to Plan: the stable tray travels back to its place in the UI. */
   transition: transform var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1);
   transition: transform var(--drive-out) linear(
@@ -3920,6 +3938,21 @@ body:has(.app--photo)::before { display: none; }
   );
   background: transparent;
   touch-action: none;
+}
+
+/*
+ * `will-change` is a promise to the compositor, and it is only kept while
+ * there is something to promise. Held permanently it pinned a viewport-sized
+ * layer for the whole life of the page, including every second of Plan, where
+ * this element never moves at all. The arm beat is what makes dropping it
+ * safe: the hint goes on a quarter of a second before the drive engages, so
+ * the layer exists well before it is asked to travel.
+ */
+.viewport--arming,
+.viewport--entering,
+.viewport--driven,
+.viewport--exiting {
+  will-change: transform;
 }
 
 /* Exit is still visually in Roll until the camera is home, but its camera
@@ -4006,26 +4039,49 @@ body:has(.app--photo)::before { display: none; }
  * means none of it is ever seen to happen: it happens behind a faceplate,
  * which is the only place a machine is allowed to change.
  */
+/*
+ * Hidden, and hidden in the way that costs nothing.
+ *
+ * These were all `opacity: 0`, which is the cheapest thing to write and one
+ * of the more expensive things to mean. A transparent element is still a
+ * painted element: it keeps its place in the layer tree, it is still
+ * rasterised, and anything animating inside it still animates. Measured, the
+ * machine sitting invisibly behind the roll space was most of the layer tree
+ * -- 69 layers, against 20 for the whole faceplate at rest -- and the
+ * compositor was rebuilding all of it sixty times a second to show nothing.
+ *
+ * `visibility: hidden` keeps the box and drops the paint, so it is what the
+ * plates in the layout use: the drawn chassis is a column, and taking the
+ * head or the deck out of the flow would resize the chamber underneath them
+ * and move the tray the passage has just centred.
+ *
+ * Anything that is absolutely positioned, or is a pseudo-element, has no flow
+ * to disturb and goes out altogether with `display: none`. That is worth
+ * doing separately for two of them: the chassis grime is a `mix-blend-mode`
+ * layer the size of the whole machine, which forces a read-back of everything
+ * beneath it -- the dice canvas included -- on every frame it exists; and the
+ * chamber lamp holds an infinite animation that `visibility` would leave
+ * running against a surface nobody can see.
+ */
 .viewport--covered .topbar,
 .viewport--covered .panel-rail,
-.viewport--covered .face-vent,
-.viewport--covered .standby,
+.viewport--covered .fixed-panel,
 .viewport--covered .game__controls,
 .viewport--covered .fixed-panel--goal-mobile {
-  opacity: 0;
+  visibility: hidden;
 }
-/* In the photo skin the rail wrappers are `display: contents`, so they are
-   not boxes and cannot be hidden. The plates themselves are. */
-.viewport--covered .app--photo .fixed-panel {
-  opacity: 0;
+.viewport--covered .face-vent,
+.viewport--covered .standby,
+.viewport--covered .chamber__lamp,
+.viewport--covered .app::before,
+.viewport--covered .app::after,
+.viewport--covered .game__arena::before,
+.viewport--covered .game__arena::after {
+  display: none;
 }
 .viewport--covered .app {
   background: transparent;
   box-shadow: none;
-}
-.viewport--covered .app::before,
-.viewport--covered .app::after {
-  opacity: 0;
 }
 /* The photographed chassis is one bitmap with no hole in it, so while the
    shell is carrying the face the live copy has to be out of the way -- two
@@ -4037,16 +4093,6 @@ body:has(.app--photo)::before { display: none; }
   background: transparent;
   border-color: transparent;
   box-shadow: none;
-}
-.viewport--covered .game__arena::before,
-.viewport--covered .game__arena::after,
-.viewport--covered .chamber__lamp {
-  opacity: 0;
-}
-.game__arena::before,
-.game__arena::after,
-.chamber__lamp {
-  transition: opacity 180ms ease;
 }
 
 /* ------------------------------------------------ the faceplate, passing by */
@@ -4279,13 +4325,7 @@ body:has(.app--photo)::before { display: none; }
 .viewport--covered .tray__readout,
 .viewport--covered .tray__hint,
 .viewport--covered .tray__queue {
-  opacity: 0;
-}
-.viewport--covered .tray__readout,
-.viewport--covered .tray__hint,
-.viewport--covered .tray__queue {
-  visibility: hidden;
-  pointer-events: none;
+  display: none;
 }
 
 /* -------------------------------------------------------- beat three: land */
@@ -4370,6 +4410,11 @@ body:has(.app--photo)::before { display: none; }
    and repainting the body underneath it only produced a dark wash in the
    frames where the two faceplates were crossing over. */
 body:has(.rollfield) { overflow: hidden; }
+/* The enamel's speckle is a viewport-sized `mix-blend-mode` layer. The roll
+   field is opaque over it, so once the passage is running it is blending
+   against a surface nobody can see -- and making every frame beneath it read
+   back to do so. */
+body:has(.rollfield)::before { display: none; }
 
 /* Stacked layouts still need document height in Plan. Roll locks pan gestures
    but otherwise uses exactly the same centred fixed-size tray composition as
