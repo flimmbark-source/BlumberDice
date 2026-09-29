@@ -226,9 +226,12 @@ html, body, #root { height: 100%; margin: 0; }
 
 body {
   padding: 9px;
-  background: #241d15;
+  /* Match the warm bone-white face used by the edge-to-edge mobile layout.
+     The UI no longer sits on a black/brown page when the desktop leaves a
+     margin around the machine. */
+  background: var(--plate);
   background-image:
-    radial-gradient(120% 90% at 50% -10%, rgba(92, 76, 52, 0.55), transparent 72%);
+    radial-gradient(120% 90% at 50% -10%, rgba(255, 255, 255, 0.55), transparent 72%);
   color: var(--ink);
   font: 13px/1.5 var(--font-ui);
   -webkit-font-smoothing: antialiased;
@@ -4201,6 +4204,7 @@ body:has(.app--photo)::before { display: none; }
 .passage-shell--drawn .passage-shell__piece {
   background-color: var(--plate);
   background-image:
+    var(--rivets),
     radial-gradient(1200px 700px at 50% -10%, rgba(255, 255, 255, 0.5), transparent 70%),
     radial-gradient(900px 600px at 90% 110%, rgba(140, 120, 90, 0.28), transparent 65%),
     radial-gradient(130% 115% at 50% 46%, transparent 48%, rgba(96, 80, 54, 0.26)),
@@ -4342,18 +4346,18 @@ body:has(.app--photo)::before { display: none; }
  * are not.
  */
 .viewport--carry:is(.viewport--entering, .viewport--exiting) :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .tray) {
   will-change: transform, opacity;
   backface-visibility: hidden;
 }
 .viewport--carry.viewport--entering :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .tray) {
   animation:
     passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both,
     passShellFadeIn var(--drive-in) linear both;
 }
 .viewport--carry.viewport--exiting :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .tray) {
   animation:
     passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both,
     passShellFadeOut var(--drive-out) linear both;
@@ -4414,13 +4418,18 @@ body:has(.app--photo)::before { display: none; }
   overflow: visible;
 }
 
-.viewport--covered .tray {
+.viewport--covered:not(.viewport--carry) .tray {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
-.viewport--covered .tray::before,
-.viewport--covered .tray::after,
+/* During entry/exit the chamber glass is a travelling piece of the machine.
+   Keep its CRT surface and glass treatment intact while it scales through the
+   camera; only the phosphor telemetry and interaction hints go dark. Once the
+   passage has completed, the player is inside that screen and the settled
+   Roll view can hand the surface over to the full-window roll field. */
+.viewport--covered:not(.viewport--carry) .tray::before,
+.viewport--covered:not(.viewport--carry) .tray::after,
 .viewport--covered .tray__readout,
 .viewport--covered .tray__hint,
 .viewport--covered .tray__queue {
@@ -4741,6 +4750,7 @@ body:has(.rollfield)::before { display: none; }
   .viewport--carry .panel-rail,
   .viewport--carry .fixed-panel--goal-mobile,
   .viewport--carry .game__controls,
+  .viewport--carry .tray,
   .viewport--restore-snap .fixed-panel__body > *,
   .viewport--restore-snap .currency > .currency__value,
   .viewport--restore-snap .tray__readout {
