@@ -11,6 +11,7 @@ import { ControlRail } from './ControlRail.tsx';
 import { DecisionBar } from './DecisionBar.tsx';
 import { GoalBar } from './GoalBar.tsx';
 import { currentGoal, openTargets } from '../engine/goal.ts';
+import { affordanceOf } from '../engine/tree.ts';
 import { DiceTray } from './dice/DiceTray.tsx';
 import { TreeView } from './TreeView.tsx';
 import {
@@ -265,6 +266,14 @@ export function App(): JSX.Element {
   // plate onto the Roll surface beneath the chamber/deck.
   const showGoalPanel = hasGoalDisplay && tab === 'web' && !mobileSurfaces;
   const photo = skin === 'photo';
+  /*
+   * The web only ever asks whether a node can be bought, so it is given the
+   * one value of each currency that answers every such question the same way
+   * -- see `affordanceOf`. Handed the live number instead, it rebuilt every
+   * node's status and re-rendered the whole web on every frame Entropy moved
+   * Score, which is every frame.
+   */
+  const afford = affordanceOf(s.score, s.meta);
   const showChain = treeUnlocked && Boolean(inspected) && hasLeadsTo(inspected);
 
   const focusNode = (id: string): void => {
@@ -498,8 +507,8 @@ export function App(): JSX.Element {
                   <TreeView
                     allocatedKey={s.allocated.join(',')}
                     discoveredKey={s.discovered.join(',')}
-                    score={s.score}
-                    meta={s.meta}
+                    score={afford.score}
+                    meta={afford.meta}
                     framework={s.framework}
                     pinned={s.pinned}
                     inspected={inspected}

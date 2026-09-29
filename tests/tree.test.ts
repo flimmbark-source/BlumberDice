@@ -5,7 +5,9 @@ import {
 } from '../src/engine/game.ts';
 import { runManualRolls } from '../src/engine/sim.ts';
 import { EDGES, NODES, NODES_BY_ID } from '../src/engine/nodes.ts';
-import { checkAllocation, describeNode, regionsInvested, resolveBuild } from '../src/engine/tree.ts';
+import {
+  affordanceOf, checkAllocation, describeNode, regionsInvested, resolveBuild,
+} from '../src/engine/tree.ts';
 import { ARCHETYPE_REGIONS, type DiscoveryFlag } from '../src/engine/types.ts';
 
 describe('graph integrity', () => {
@@ -412,5 +414,65 @@ describe('refunding the web', () => {
     refundAll(s);
     expect(allocate(s, 'vl_quick').ok).toBe(true);
     expect(s.allocated).toEqual(['start', 'vl_quick']);
+  });
+});
+
+/**
+ * The web is handed a rounded-down currency so that a number moving under it
+ * every frame does not rebuild it every frame. That is only sound if no node
+ * can tell the difference, which is what this asserts: for every node, at
+ * every value either side of every price in the game, the rounded currency
+ * and the real one must give the same answer.
+ */
+describe('the tree cannot tell a rounded currency from a real one', () => {
+  const edges = (of: (n: typeof NODES[number]) => number | undefined): number[] => {
+    const prices = [...new Set(NODES.map((n) => of(n) ?? 0))].sort((a, b) => a - b);
+    return [...new Set([
+      -3, 0, 1, 7, 19, 4999, 100000,
+      ...prices.flatMap((p) => [p - 1, p, p + 1]),
+    ])];
+  };
+  const allocated = new Set<string>();
+  const discovered = new Set<DiscoveryFlag>(['frameworkB']);
+
+  const agrees = (score: number, meta: number): void => {
+    const q = affordanceOf(score, meta);
+    for (const node of NODES) {
+      const real = checkAllocation(node.id, { allocated, discovered, score, meta });
+      const round = checkAllocation(node.id, {
+        allocated, discovered, score: q.score, meta: q.meta,
+      });
+      expect([node.id, round.ok, round.reason])
+        .toEqual([node.id, real.ok, real.reason]);
+    }
+  };
+
+  it('answers every purchase identically at every Score boundary', () => {
+    for (const score of edges((n) => n.costs.score)) {
+      for (const meta of [0, 4, 60, 100000]) agrees(score, meta);
+    }
+  });
+
+  it('answers every purchase identically at every Meta boundary', () => {
+    for (const meta of edges((n) => n.costs.meta)) {
+      for (const score of [0, 40, 900, 100000]) agrees(score, meta);
+    }
+  });
+
+  it('collapses a whole band between two prices to one value', () => {
+    const sorted = [...new Set(NODES.map((n) => n.costs.score ?? 0))].sort((a, b) => a - b);
+    const gap = sorted.find((c, i) => i > 0 && c - sorted[i - 1] > 3);
+    expect(gap).toBeDefined();
+    const below = sorted[sorted.indexOf(gap!) - 1];
+    expect(affordanceOf(below, 0).score).toBe(below);
+    expect(affordanceOf(gap! - 1, 0).score).toBe(below);
+    expect(affordanceOf(gap!, 0).score).toBe(gap);
+  });
+
+  it('sits below every price only when a currency is below zero', () => {
+    // Nothing is priced under nothing, so a node that costs nothing is
+    // affordable at zero and is not affordable at less than zero.
+    expect(affordanceOf(0, 0)).toEqual({ score: 0, meta: 0 });
+    expect(affordanceOf(-1, -1)).toEqual({ score: -1, meta: -1 });
   });
 });

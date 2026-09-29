@@ -12,7 +12,8 @@ import {
   spawnDie, step, throwDie, zapDie, zapTarget, type DieBody, type World,
 } from './physics.ts';
 import {
-  drawBackdrop, drawProcOverlay, drawSurface, drawWorld, THEME_A, THEME_B,
+  beginDiceFrame, diceFrameAnimating, drawBackdrop, drawProcOverlay, drawSurface,
+  drawWorld, THEME_A, THEME_B,
 } from './render.ts';
 
 const MAX_DICE = 9;
@@ -63,6 +64,54 @@ const HEADROOM = 0.28;
 export function diceHeadroom(trayH: number, windowH: number, scale: number): number {
   if (!(trayH > 0) || !(scale > 0)) return 0;
   return Math.ceil(Math.max(0, (windowH / scale - trayH) / 2) + trayH / 6);
+}
+
+/**
+ * Everything the dice layer draws that is not a function of the clock,
+ * reduced to one number.
+ *
+ * The dice layer was the whole cost of this screen: measured, it was 19-26
+ * million pixels a second of repainting, in both halves of the turn, and
+ * nothing else on the page came within two orders of magnitude of it. Most of
+ * that was spent redrawing a picture identical to the one already on the
+ * canvas -- a tray of dice lying still, sixty times a second, for as long as
+ * the tab was open.
+ *
+ * So the frame is compared against the last one and skipped when it matches.
+ * The comparison has to be cheap enough to be worth making and complete
+ * enough to be safe, which is why it takes the quantities the draw calls
+ * actually read rather than a guess at them: a cube's place and orientation,
+ * how far it has faded, whether it is under the pointer, the rings it has
+ * left on the floor and the state that decides what is drawn at all. Anything
+ * time-driven is deliberately absent, because the renderer reports that
+ * separately -- see `beginDiceFrame`.
+ *
+ * Quantised, because these are floats settling by fractions of a pixel: to a
+ * sixty-fourth of a world unit for a position, which is far finer than a
+ * screen pixel at any zoom this tray uses, and to a four-thousandth of a turn
+ * for an orientation.
+ */
+function worldSignature(world: World): number {
+  let h = Math.imul(2166136261 ^ world.dice.length, 16777619) ^ world.ghosts.length;
+  const mix = (v: number): void => { h = Math.imul(h ^ (v | 0), 16777619); };
+  for (const d of world.dice) {
+    mix(d.pos.x * 64); mix(d.pos.y * 64); mix(d.pos.z * 64);
+    mix(d.q.x * 4096); mix(d.q.y * 4096); mix(d.q.z * 4096); mix(d.q.w * 4096);
+    mix(d.alpha * 256);
+    mix(d.hover ? 1 : 2);
+    mix(d.state.charCodeAt(0) * 31 + (d.result ?? 0));
+    mix(d.procs.length);
+    mix(d.impacts.length);
+    for (const im of d.impacts) mix(im.t);
+    mix(d.zapAt === null ? 0 : 1);
+  }
+  for (const g of world.ghosts) {
+    mix(g.pos.x * 64); mix(g.pos.y * 64);
+    mix(g.alpha * 256);
+    mix(g.result);
+    mix(g.procs.length);
+  }
+  return h;
 }
 
 /** How long a die must tumble. Big cascades speed up so the tray keeps pace. */
@@ -151,6 +200,11 @@ export function DiceTray({
     let groundFramework: 'A' | 'B' | null = null;
     let groundWasShaking = false;
     let groundImmersed: boolean | null = null;
+    /** Last frame's `worldSignature`, and whether that frame is still moving. */
+    let lastSig = Number.NaN;
+    let diceAnimating = true;
+    /** Set by anything that changes the picture from outside the world. */
+    let diceDirty = true;
 
     // A normal player roll must reuse the physical dice already on the
     // surface. The engine cooldown can finish a few frames before a die's
@@ -207,7 +261,12 @@ export function DiceTray({
       // million pixels each. The chamber is moving content, so a modest
       // mobile backing-store cap buys a large fill-rate reduction with little
       // perceptual loss; desktop keeps the existing 3x ceiling.
-      const dpr = Math.min((window.devicePixelRatio || 1) * view, mobile ? 1.75 : 3);
+      // A ceiling on the backing store. The dice are large flat-shaded solids
+      // with no fine detail to lose, and every step of this multiplier squares
+      // the fill a throw costs: the old desktop ceiling of 3 asked a retina
+      // screen for nine times the pixels of a plain one to draw the same six
+      // faces.
+      const dpr = Math.min((window.devicePixelRatio || 1) * view, mobile ? 1.5 : 2);
 
       // Only while the chamber has no walls; see `diceHeadroom`. Plan pays
       // nothing for any of it -- the lift is zero, the backing store is the
@@ -267,6 +326,7 @@ export function DiceTray({
         arena.style.setProperty('--arena-depth', `${diamondH * zoom}px`);
       }
       groundDirty = true;
+      diceDirty = true;
     };
     resize();
     if (resizeRef) resizeRef.current = resize;
@@ -433,8 +493,21 @@ export function DiceTray({
       store.heldBack = releaseFadedGhosts(world);
 
       const theme = game.framework === 'A' ? THEME_A : THEME_B;
-      // One jolt, shared by both layers, so the ground and the dice on it
-      // never come apart while the tray is shaking.
+      if (groundFramework !== null && groundFramework !== game.framework) diceDirty = true;
+
+      /*
+       * One jolt, shared by both layers, so the ground and the dice on it
+       * never come apart while the tray is shaking.
+       *
+       * It is baked into each layer's own transform rather than applied to
+       * the two canvas elements with a CSS transform, which is the obvious
+       * way to save the floor's redraw and was measured doing the opposite:
+       * moving a transparent canvas over the page makes Chromium invalidate
+       * the whole document layer beneath it, and the twelve million pixels a
+       * second it saved on the floor came back as twenty-two million on the
+       * document. The floor redrawing during a shake is the cheaper of the
+       * two, so it stays.
+       */
       const shake = world.shake;
       const shakeX = shake ? (Math.random() - 0.5) * shake : 0;
       const shakeY = shake ? (Math.random() - 0.5) * shake : 0;
@@ -468,13 +541,30 @@ export function DiceTray({
         groundWasShaking = shaking;
       }
 
-      ctx.clearRect(0, 0, viewW, viewH + lift);
-      ctx.save();
-      ctx.translate(originX + shakeX, originY + lift + shakeY);
-      ctx.scale(zoom, zoom);
-      drawWorld(ctx, world, theme);
-      ctx.restore();
-      drawProcOverlay(ctx, world, theme, originX, originY + lift, zoom);
+      /*
+       * Draw only when the picture would differ from the one already there.
+       *
+       * Three things can make it differ: the world has moved (the signature
+       * changes), the tray is being shaken (the jolt is a fresh random offset
+       * every frame and is not in the world at all), or the previous frame
+       * drew something that is still fading on the clock. `diceDirty` carries
+       * everything outside the world -- a resize, a change of framework, the
+       * headroom opening -- and is set by whoever makes that change.
+       */
+      const sig = worldSignature(world);
+      if (sig !== lastSig || shaking || diceAnimating || diceDirty) {
+        lastSig = sig;
+        diceDirty = false;
+        beginDiceFrame();
+        ctx.clearRect(0, 0, viewW, viewH + lift);
+        ctx.save();
+        ctx.translate(originX + shakeX, originY + lift + shakeY);
+        ctx.scale(zoom, zoom);
+        drawWorld(ctx, world, theme);
+        ctx.restore();
+        drawProcOverlay(ctx, world, theme, originX, originY + lift, zoom);
+        diceAnimating = diceFrameAnimating();
+      }
 
       raf = requestAnimationFrame(frame);
     };
