@@ -276,8 +276,11 @@ export function App(): JSX.Element {
     // phone opens Roll from Score while looking at Build/Stats/Log, reveal the
     // chamber first so the passage always has a visible screen to cross, and
     // so the measurement below is of a chamber that is actually laid out.
-    if (mobileSurfaces && tab !== 'roll') {
-      setTab('roll');
+    if (mobileSurfaces) {
+      if (tab !== 'roll') setTab('roll');
+      // Compact passage temporarily releases the sticky header so it can be
+      // composited as an ordinary translated layer. Normalize the page first
+      // whether Roll was already selected or not.
       window.scrollTo(0, 0);
     }
     playScreensCollapse();
