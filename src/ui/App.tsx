@@ -257,9 +257,10 @@ export function App(): JSX.Element {
    * the screens are seen to go dark, rather than being hidden a frame later
    * by the faceplate that is about to cover them.
    *
-   * Then the drive engages. The tray itself never scales: after the phase
-   * commits we translate its existing rendered rectangle to the centre of
-   * the viewport while the faceplate around it passes the camera.
+   * Then the drive engages. The viewport translates the chamber toward the
+   * centre while the chamber glass and the rest of the live face scale with
+   * the travelling faceplate. The screen therefore remains the thing the
+   * player is crossing rather than becoming an empty aperture.
    *
    * Then the instrument arrives, on the drive's last detent rather than a
    * fifth of the way into it.
@@ -565,8 +566,9 @@ export function App(): JSX.Element {
         not begin by paying for one. */}
     {(phase === 'roll' || passage !== null)
       && <div className={`rollfield rollfield--${passage ?? 'held'}`} aria-hidden />}
-    {/* The outer view only translates. Depth comes from the machine layers
-        moving around the stable dice tray, not from scaling the tray itself. */}
+    {/* The outer view supplies the camera translation. During the passage,
+        the live face -- including the chamber glass -- also scales around the
+        measured chamber centre so the player crosses the screen itself. */}
     <div
       className={
         `viewport${phase === 'roll' || passage === 'out' ? ' viewport--driven' : ''}`
