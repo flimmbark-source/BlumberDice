@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ARM_MS, DRIVE_IN_COMPACT_MS, DRIVE_IN_MS, DRIVE_OUT_COMPACT_MS, DRIVE_OUT_MS,
-  driveTimings, HUD_RISE_MS, passageClipPaths, passageGeometry,
+  driveTimings, HUD_RISE_MS, passageGeometry, passageKeyhole, passageScale,
 } from '../src/ui/phase.ts';
 
 /**
@@ -85,45 +85,92 @@ describe('the hole the faceplate is cut around', () => {
   });
 
   /**
-   * The four bands have to tile the window exactly: overlap and the enamel
-   * doubles up along a seam, leave a gap and the roll field shows through the
-   * faceplate before the player has gone anywhere.
+   * The faceplate is one outline with a hole in it, which a single polygon can
+   * only manage by running out to the hole along a line of zero width and back
+   * along the same line. That trick is easy to get subtly wrong -- a bridge
+   * that does not return along its own path leaves a wedge missing, and a hole
+   * wound the same way round as the outline is not a hole at all -- so the
+   * shape is checked rather than eyeballed.
    */
-  it('tiles the window with four bands and one opening', () => {
+  it('cuts one outline with the chamber missing from the middle', () => {
     const g = passageGeometry(rect, view.w, view.h)!;
-    const clips = passageClipPaths(g);
-    const poly = (s: string): Array<[number, number]> => {
-      const inner = s.slice(s.indexOf('(') + 1, s.lastIndexOf(')'));
-      return inner.split(',').map((pair) => {
-        const [x, y] = pair.trim().split(/\s+/).map((n) => parseFloat(n));
-        return [x, y];
-      });
-    };
-    const box = (s: string): { x0: number; y0: number; x1: number; y1: number } => {
-      const pts = poly(s);
-      return {
-        x0: Math.min(...pts.map((p) => p[0])),
-        y0: Math.min(...pts.map((p) => p[1])),
-        x1: Math.max(...pts.map((p) => p[0])),
-        y1: Math.max(...pts.map((p) => p[1])),
-      };
-    };
+    const path = passageKeyhole(g);
+    const pts = path.slice(path.indexOf('(') + 1, path.lastIndexOf(')'))
+      .split(',')
+      .map((pair) => pair.trim().split(/\s+/).map(parseFloat) as [number, number]);
 
-    const top = box(clips.top);
-    const bottom = box(clips.bottom);
-    const left = box(clips.left);
-    const right = box(clips.right);
+    // The outline is the window, and the bridge leaves and returns on one line.
+    expect(pts[0]).toEqual([0, 0]);
+    expect(pts).toContainEqual([100, 100]);
+    expect(pts).toContainEqual([100, 0]);
+    expect(pts.filter((p) => p[0] === g.left && p[1] === 100)).toHaveLength(2);
+    expect(pts.filter((p) => p[0] === g.left && p[1] === g.bottom)).toHaveLength(2);
 
-    // The bands meet the window's edges and each other, and stop at the hole.
-    expect(top).toEqual({ x0: 0, y0: 0, x1: 100, y1: g.top });
-    expect(bottom).toEqual({ x0: 0, y0: g.bottom, x1: 100, y1: 100 });
-    expect(left).toEqual({ x0: 0, y0: g.top, x1: g.left, y1: g.bottom });
-    expect(right).toEqual({ x0: g.right, y0: g.top, x1: 100, y1: g.bottom });
+    // Nonzero winding: the hole must be traversed the opposite way to the
+    // window, or the polygon is simply solid.
+    const area = (loop: Array<[number, number]>): number => loop.reduce(
+      (a, p, i) => {
+        const q = loop[(i + 1) % loop.length];
+        return a + (p[0] * q[1] - q[0] * p[1]);
+      },
+      0,
+    );
+    const hole: Array<[number, number]> = [
+      [g.left, g.bottom], [g.left, g.top], [g.right, g.top], [g.right, g.bottom],
+    ];
+    const window: Array<[number, number]> = [[0, 0], [0, 100], [100, 100], [100, 0]];
+    expect(Math.sign(area(hole))).toBe(-Math.sign(area(window)));
+  });
+});
 
-    // And together they cover the window less exactly one chamber.
-    const area = (b: { x0: number; y0: number; x1: number; y1: number }): number =>
-      (b.x1 - b.x0) * (b.y1 - b.y0);
-    const hole = (g.right - g.left) * (g.bottom - g.top);
-    expect(area(top) + area(bottom) + area(left) + area(right) + hole).toBeCloseTo(100 * 100);
+/**
+ * How far the faceplate grows before it is off the screen. The browser
+ * rasterises a scaling layer at the largest scale its animation reaches, so
+ * this number is paid for squared, in the frame the drive starts.
+ */
+describe('the faceplate grows as far as it has to and no further', () => {
+  const scaleFor = (
+    tray: { left: number; top: number; width: number; height: number },
+    vw: number,
+    vh: number,
+  ): number => passageScale(passageGeometry(tray, vw, vh)!);
+
+  /** Every edge of the opening has cleared the window at the chosen scale. */
+  const clears = (
+    tray: { left: number; top: number; width: number; height: number },
+    vw: number,
+    vh: number,
+  ): boolean => {
+    const s = scaleFor(tray, vw, vh);
+    const cx = tray.left + tray.width / 2;
+    const cy = tray.top + tray.height / 2;
+    return cx - s * (cx - tray.left) <= 0
+      && cx + s * (tray.left + tray.width - cx) >= vw
+      && cy - s * (cy - tray.top) <= 0
+      && cy + s * (tray.top + tray.height - cy) >= vh;
+  };
+
+  it('clears the window in the layouts this game actually has', () => {
+    // The tray, centred, as each configuration leaves it in Roll.
+    const cases = [
+      [{ left: 19, top: 252, width: 352, height: 341 }, 390, 844],    // phone
+      [{ left: 427, top: 223, width: 585, height: 454 }, 1440, 900],  // desktop photo
+      [{ left: 667, top: 198, width: 585, height: 504 }, 1920, 900],  // wide photo
+    ] as const;
+    for (const [tray, vw, vh] of cases) {
+      expect(clears(tray, vw, vh)).toBe(true);
+      // And is nowhere near the old flat 5, which is the whole point.
+      expect(scaleFor(tray, vw, vh)).toBeLessThan(4);
+    }
+  });
+
+  it('never asks for less than a pass or more than the old ceiling', () => {
+    // A chamber already filling the window needs no growth to clear it, and
+    // still has to read as passing rather than merely fading.
+    expect(scaleFor({ left: 0, top: 0, width: 390, height: 844 }, 390, 844))
+      .toBeGreaterThanOrEqual(1.9);
+    // A pinhole in a huge window would ask for an absurd scale; it is capped.
+    expect(scaleFor({ left: 195, top: 422, width: 4, height: 4 }, 390, 844))
+      .toBeLessThanOrEqual(5);
   });
 });

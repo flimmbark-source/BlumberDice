@@ -122,7 +122,7 @@ function tumbleFor(backlog: number): number {
 }
 
 export function DiceTray({
-  s, rollRef, resizeRef, glassRef, sealed, immersed, unwalled, onSealed,
+  s, rollRef, resizeRef, glassRef, sealed, immersed, headroom, onSealed,
 }: {
   s: GameState;
   /** Filled in by the tray so the Roll button throws the same dice a click does. */
@@ -148,16 +148,17 @@ export function DiceTray({
   /** True while crossing or inside the screen; removes the tray-local CRT backdrop. */
   immersed?: boolean;
   /**
-   * True while the chamber has no walls.
+   * True from the moment a passage arms until it is over, and for all of Roll.
    *
-   * In Plan the chamber is a box with a lid: a die thrown above the glass has
-   * gone behind the bezel, and cutting it off at the glass is what a box does.
-   * Inside the passage the tray has given up its rings, its glass and its
-   * backdrop and the dice are in open space, so the same cut is a die
-   * vanishing at a line nobody can see. This is the window in which the dice
-   * layer is given the rest of the screen to fall through.
+   * This is the canvas's *size*, not what it is allowed to show: whether the
+   * dice may actually be seen above the tray is the stylesheet's business
+   * (`.viewport--unwalled`). The two are separated on purpose. Reallocating a
+   * canvas is expensive, and doing it in the middle of a camera move is
+   * expensive at the worst possible moment, so the headroom is taken during
+   * the arm beat, while nothing is travelling, and kept until the passage is
+   * completely over.
    */
-  unwalled?: boolean;
+  headroom?: boolean;
   /** What a throw means instead, while sealed. */
   onSealed?: () => void;
 }): JSX.Element {
@@ -175,8 +176,8 @@ export function DiceTray({
   sealedRef.current = Boolean(sealed);
   const immersedRef = useRef(false);
   immersedRef.current = Boolean(immersed);
-  const unwalledRef = useRef(false);
-  unwalledRef.current = Boolean(unwalled);
+  const headroomRef = useRef(false);
+  headroomRef.current = Boolean(headroom);
   const onSealedRef = useRef<(() => void) | undefined>(undefined);
   onSealedRef.current = onSealed;
   /** Current surface width, so the frame loop can spot when it must change. */
@@ -271,7 +272,7 @@ export function DiceTray({
       // Only while the chamber has no walls; see `diceHeadroom`. Plan pays
       // nothing for any of it -- the lift is zero, the backing store is the
       // size it always was, and the frame clears the area it always cleared.
-      lift = unwalledRef.current ? diceHeadroom(h, window.innerHeight, view) : 0;
+      lift = headroomRef.current ? diceHeadroom(h, window.innerHeight, view) : 0;
 
       ground.width = Math.max(1, Math.round(w * dpr));
       ground.height = Math.max(1, Math.round(h * dpr));
@@ -702,10 +703,10 @@ export function DiceTray({
     };
   }, []);
 
-  // The chamber's walls coming and going is a change of what the dice layer
-  // is allowed to show, so it has to re-measure the moment it happens rather
-  // than waiting for the tray's box to change -- which it never does.
-  useEffect(() => { localResizeRef.current?.(); }, [unwalled]);
+  // Taking or giving back the headroom is a change of the canvas's size, so it
+  // has to re-measure the moment it happens rather than waiting for the tray's
+  // box to change -- which it never does.
+  useEffect(() => { localResizeRef.current?.(); }, [headroom]);
 
   const dice = effectiveDice(s);
   const ready = canRoll(s);
