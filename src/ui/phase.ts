@@ -141,17 +141,13 @@ export function driveTimings(reduced: boolean, compact = false): DriveTimings {
 /**
  * The shape of the faceplate while it is passing the camera.
  *
- * Both skins solve the same problem: the tray must not change size, so the
- * depth has to come from the machine around it. The photograph can do that
- * with a fixed four-piece copy of itself, because it is one bitmap at one
- * known size. The drawn chassis cannot — it reflows — so its shell is cut to
- * whatever rectangle the tray is actually occupying at the moment the drive
- * engages, and that is what this measures.
+ * Both skins solve the same problem: the live dice tray must not change size,
+ * so the depth comes from the machine and CRT glass moving around it. A single
+ * viewport-sized shell is cut around whatever rectangle the tray occupies when
+ * the drive engages, and the matching glass layer uses that same rectangle.
  *
- * Everything is in viewport percentages so the pieces can be full-screen
- * layers clipped against a common coordinate space: four bands cut from one
- * plate line up across their seams, whereas four separately-sized boxes each
- * painting their own gradient do not.
+ * The opening is expressed in viewport percentages so the shell can remain one
+ * continuous sheet while scaling around the chamber centre.
  */
 export interface PassageGeometry {
   /** The chamber hole, as percentages of the viewport. */
