@@ -59,22 +59,21 @@ const COVER_AT_ARM = 0.65;
  * were switched off the moment the shell covered them, so what travelled was
  * a bare sheet of enamel and the machine's face vanished at one end of the
  * drive and reappeared at the other. The live face rides the passage now.
- * Each traveller is scaled about the chamber's centre by the
- * same factor and curve as the shell, which reproduces a single global scale
- * of the whole plate exactly -- plain transform interpolation, no
- * counter-scale anywhere, and above all nothing done to the tray.
+ * Each traveller is scaled about the chamber's centre by the same factor and
+ * curve as the shell, which reproduces a single global scale of the whole
+ * plate exactly. The chamber glass is deliberately one of those travellers:
+ * the player now crosses the screen itself rather than watching it disappear
+ * while the casing moves around an empty opening.
  *
  * The list has to stay disjoint by ancestry, or a panel inside a rail would
  * be scaled twice. It is deliberately not `.fixed-panel`: those live inside
- * the rails, and the rails are what travels. `.face-vent` is absent for a
- * different reason -- it is taken out with `display: none` while covered, so
- * it has no box left to measure an origin against.
+ * the rails, and the rails are what travels.
  *
  * Kept in step with the selector list in `styles.css` under "the face rides
  * the plate"; the two describe the same set and there is no way to share one
  * string between them.
  */
-const TRAVELLERS = '.topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .tray';
+const TRAVELLERS = '.topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby, .tray';
 
 type Tab = 'roll' | 'web' | 'stats' | 'log';
 
