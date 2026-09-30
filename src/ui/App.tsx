@@ -862,73 +862,40 @@ function PassageShell({ passage, shell, photo, carry }: {
   carry: boolean;
 }): JSX.Element {
   const origin = `${shell.geom.originX}% ${shell.geom.originY}%`;
-  const passageStyle = {
-    ['--cam-x' as string]: `${shell.camX}px`,
-    ['--cam-y' as string]: `${shell.camY}px`,
-    ['--pass-scale' as string]: String(passageScale(shell.geom)),
-    ...(photo ? { ['--chassis' as string]: `url(${chassisUrl})` } : null),
-  };
-
   return (
-    <>
-      <div
-        className={`passage-shell passage-shell--${passage} passage-shell--${photo ? 'photo' : 'drawn'}`
-          + (carry ? ' passage-shell--carry' : '')}
-        style={passageStyle}
-        aria-hidden
-      >
-        <div className="passage-shell__camera">
+    <div
+      className={`passage-shell passage-shell--${passage} passage-shell--${photo ? 'photo' : 'drawn'}`
+        + (carry ? ' passage-shell--carry' : '')}
+      style={{
+        ['--cam-x' as string]: `${shell.camX}px`,
+        ['--cam-y' as string]: `${shell.camY}px`,
+        ['--pass-scale' as string]: String(passageScale(shell.geom)),
+        ...(photo ? { ['--chassis' as string]: `url(${chassisUrl})` } : null),
+      }}
+      aria-hidden
+    >
+      <div className="passage-shell__camera">
+        <span
+          className="passage-shell__piece"
+          style={{ clipPath: passageKeyhole(shell.geom), transformOrigin: origin }}
+        />
+        {/* The physical CRT glass now stays in the live tray itself. That keeps
+            the real stacking order intact: dice behind the glass, telemetry
+            above it. The shell only carries the metal around the opening. */}
+        {photo && <span className="passage-shell__recess" style={{ transformOrigin: origin }} />}
+        {!photo && (
           <span
-            className="passage-shell__piece"
-            style={{ clipPath: passageKeyhole(shell.geom), transformOrigin: origin }}
-          />
-          {/* The milled step the photograph is set into. It paints only outside
-              its own box, so it lands on the panel around the stage and never
-              on the stage itself. The drawn chassis has no stage to be set
-              into, so it gets no recess. */}
-          {photo && <span className="passage-shell__recess" style={{ transformOrigin: origin }} />}
-          {/* The chamber's own lip, drawn on the hole rather than around the
-              frame, so the opening the player goes through keeps the edge it
-              has at rest instead of being a rectangle punched in a plate. The
-              photograph carries its lip in the bitmap already. */}
-          {!photo && (
-            <span
-              className="passage-shell__rim"
-              style={{
-                left: `${shell.geom.x}px`,
-                top: `${shell.geom.y}px`,
-                width: `${shell.geom.width}px`,
-                height: `${shell.geom.height}px`,
-              }}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* The CRT surface cannot live inside the carried faceplate shell.
-          That shell is intentionally below the live UI so labels and controls
-          remain visible; putting the glass there pushed it behind the viewport
-          as well, making the screen disappear. The glass gets its own stacking
-          layer but reuses the exact same camera and scale path. */}
-      <div
-        className={`passage-glass-shell passage-glass-shell--${passage} passage-glass-shell--${photo ? 'photo' : 'drawn'}`}
-        style={passageStyle}
-        aria-hidden
-      >
-        <div className="passage-glass-shell__camera">
-          <span
-            className="passage-shell__glass"
+            className="passage-shell__rim"
             style={{
               left: `${shell.geom.x}px`,
               top: `${shell.geom.y}px`,
               width: `${shell.geom.width}px`,
               height: `${shell.geom.height}px`,
-              transformOrigin: origin,
             }}
           />
-        </div>
+        )}
       </div>
-    </>
+    </div>
   );
 }
 
