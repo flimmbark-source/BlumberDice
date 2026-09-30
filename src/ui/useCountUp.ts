@@ -20,6 +20,7 @@ const SNAP = 0.75;
 export function useCountUp(
   target: number,
   getHold?: () => number,
+  snapDown = false,
 ): { value: number; moving: boolean } {
   const [shown, setShown] = useState(target);
   const current = useRef(target);
@@ -51,7 +52,18 @@ export function useCountUp(
       const held = hold.current?.() ?? 0;
       const revealed = goal.current - held;
       const diff = revealed - current.current;
-      if (Math.abs(diff) < SNAP) {
+
+      // Score losses are event feedback, not a decorative count animation.
+      // Entropy can attack every 50ms at maximum pressure, so easing downward
+      // with the same 160ms time constant used for gains makes the display
+      // accumulate a backlog of hits. When requested by the Score callers,
+      // consume the latest revealed loss immediately. Each entropy hit can
+      // therefore move the displayed integer on the next paint, while gains
+      // keep their existing smooth roll-up.
+      if (snapDown && diff < 0) {
+        current.current = revealed;
+        setShown(revealed);
+      } else if (Math.abs(diff) < SNAP) {
         if (current.current !== revealed) {
           current.current = revealed;
           setShown(revealed);
@@ -74,7 +86,7 @@ export function useCountUp(
     return () => {
       if (raf) cancelAnimationFrame(raf);
     };
-  }, [calm, mobile, target]);
+  }, [calm, mobile, snapDown, target]);
 
   if (calm) return { value: target, moving: false };
 
