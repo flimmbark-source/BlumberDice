@@ -4277,12 +4277,19 @@ body:has(.app--photo)::before { display: none; }
   position: absolute;
   border-radius: 18px;
   pointer-events: none;
+  /*
+   * This is glass, not another copy of the CRT picture. The live dice chamber
+   * must remain visible through it while the television face moves toward the
+   * player. The old final phosphor gradient was opaque and replaced the
+   * chamber with a dark rectangle; keep only curvature, reflection, scanlines
+   * and a very light green tint here.
+   */
   background:
-    radial-gradient(92% 84% at 50% 42%, transparent 54%, rgba(0, 0, 0, 0.34) 88%, rgba(0, 0, 0, 0.5)),
-    linear-gradient(118deg, transparent 28%, rgba(196, 244, 212, 0.032) 45%, rgba(196, 244, 212, 0.012) 54%, transparent 66%),
-    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 3px),
-    radial-gradient(130% 120% at 50% 0%, rgba(160, 230, 180, 0.06), transparent 58%),
-    radial-gradient(120% 130% at 50% 0%, var(--screen-hi), var(--screen) 45%, var(--screen-lo));
+    radial-gradient(92% 84% at 50% 42%, transparent 54%, rgba(0, 0, 0, 0.24) 88%, rgba(0, 0, 0, 0.38)),
+    linear-gradient(118deg, transparent 28%, rgba(196, 244, 212, 0.05) 45%, rgba(196, 244, 212, 0.018) 54%, transparent 66%),
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.11) 0 1px, transparent 1px 3px),
+    radial-gradient(130% 120% at 50% 0%, rgba(160, 230, 180, 0.055), transparent 58%),
+    rgba(28, 62, 39, 0.08);
   will-change: transform, opacity;
   backface-visibility: hidden;
   transform-origin: center center;
@@ -4305,19 +4312,26 @@ body:has(.app--photo)::before { display: none; }
 }
 
 /*
- * Nothing fades during the drive. Every part of the machine leaves or returns
- * by crossing the viewport edge; opacity changes would recreate the exact
- * "UI disappears instead of moving" failure this passage is meant to avoid.
+ * The metal does not fade: it leaves or returns by crossing the viewport edge.
+ * The CRT glass is the one deliberate exception. It remains attached to the
+ * machine for almost the whole drive, then clears in the last fraction just
+ * before its enlarged surface would cover the player's entire view. That
+ * makes the moment read as passing through the glass into the chamber rather
+ * than having a fullscreen glass filter left over in Roll.
  */
 .passage-shell--in :is(
-  .passage-shell__piece, .passage-shell__recess, .passage-shell__rim),
-.passage-glass-shell--in .passage-shell__glass {
+  .passage-shell__piece, .passage-shell__recess, .passage-shell__rim) {
   animation: passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
 }
 .passage-shell--out :is(
-  .passage-shell__piece, .passage-shell__recess, .passage-shell__rim),
-.passage-glass-shell--out .passage-shell__glass {
+  .passage-shell__piece, .passage-shell__recess, .passage-shell__rim) {
   animation: passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
+}
+.passage-glass-shell--in .passage-shell__glass {
+  animation: passGlassIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
+}
+.passage-glass-shell--out .passage-shell__glass {
+  animation: passGlassOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
 }
 
 /* `--pass-scale` is measured per window by `passageScale`: the point at which
@@ -4330,6 +4344,18 @@ body:has(.app--photo)::before { display: none; }
 @keyframes passShellOut {
   from { transform: scale(var(--pass-scale, 5)); }
   to   { transform: scale(1); }
+}
+@keyframes passGlassIn {
+  0%   { transform: scale(1); opacity: 1; }
+  88%  { opacity: 1; }
+  96%  { opacity: 0; }
+  100% { transform: scale(var(--pass-scale, 5)); opacity: 0; }
+}
+@keyframes passGlassOut {
+  0%   { transform: scale(var(--pass-scale, 5)); opacity: 0; }
+  7%   { opacity: 0; }
+  16%  { opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 /* ------------------------------------------------- the face rides the plate */
 /*
