@@ -339,11 +339,20 @@ export function DiceTray({
     // the tray never fires for the one change that matters most here.
     window.addEventListener('resize', resize);
 
-    // Start the tray with the dice the current build actually rolls.
+    // Start the tray with the dice the current build actually rolls. Timed
+    // bonus capacity is tagged on the physical cubes themselves so a later
+    // lapse can laser the actual extra die instead of guessing by position or
+    // animation state.
     const wanted = effectiveDice(stateRef.current);
+    const initialBonus = stateRef.current.bonusDice.length;
+    const baseWanted = Math.max(0, wanted - initialBonus);
     for (let i = 0; i < wanted; i++) {
       const spread = (i - (wanted - 1) / 2) * DIE * 1.35;
-      spawnDie(world, { x: world.w / 2 + spread, y: world.d / 2 - spread * 0.5 });
+      spawnDie(world, {
+        x: world.w / 2 + spread,
+        y: world.d / 2 - spread * 0.5,
+        bonusCapacity: i >= baseWanted,
+      });
     }
 
     const toWorldScreen = (clientX: number, clientY: number): { x: number; y: number } => {
@@ -463,14 +472,23 @@ export function DiceTray({
       // beam had nothing to take but the die the player rolls with.
       {
         const want = effectiveDice(game);
+        const bonusWant = game.bonusDice.length;
         let live = 0;
-        for (const die of world.dice) if (!die.retiring && die.zapAt === null) live++;
-        while (live < want && world.dice.length < MAX_DICE) {
-          // This is capacity maintenance, not a player roll: a genuinely
-          // granted extra die should appear. A normal click never comes
-          // through this path merely because its existing die is still busy.
-          throwDie(world, spawnDie(world, { dropped: true }), { minTumbleMs: 260 });
+        let liveBonus = 0;
+        for (const die of world.dice) {
+          if (die.retiring || die.zapAt !== null) continue;
           live++;
+          if (die.bonusCapacity) liveBonus++;
+        }
+        while (live < want && world.dice.length < MAX_DICE) {
+          // This is capacity maintenance, not a player roll. Once all base
+          // physical slots already exist, any remaining shortfall is the
+          // timed bonus capacity and is tagged so its own lapse can remove it.
+          const bonusCapacity = liveBonus < bonusWant;
+          const die = spawnDie(world, { dropped: true, bonusCapacity });
+          throwDie(world, die, { minTumbleMs: 260 });
+          live++;
+          if (bonusCapacity) liveBonus++;
         }
       }
 
