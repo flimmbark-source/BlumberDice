@@ -4212,9 +4212,20 @@ body:has(.app--photo)::before { display: none; }
 .passage-shell--photo .passage-shell__piece {
   background-color: var(--plate);
   background-image: var(--chassis), var(--surround);
-  background-position: var(--stage-x) var(--stage-y);
-  background-size: var(--stage-w) var(--stage-h);
-  background-repeat: no-repeat;
+  /* The chassis is the fitted 1672x941 stage. The mounting surround is the
+     viewport-sized panel behind it. They used to share the stage-sized
+     background box here, which meant the surround's screws/shading were not
+     actually present in the letterbox bands while the shell travelled; the
+     document copy disappeared under --covered and the bands popped back only
+     when Plan was restored. Give each layer its real coordinate space so the
+     same physical surround moves with the faceplate for the whole passage. */
+  background-position:
+    var(--stage-x) var(--stage-y),
+    0 0;
+  background-size:
+    var(--stage-w) var(--stage-h),
+    100% 100%;
+  background-repeat: no-repeat, no-repeat;
 }
 
 /* The milled step the photograph is set into, on the shell's copy of it. It
