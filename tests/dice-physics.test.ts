@@ -663,3 +663,20 @@ describe('the dice layer reaches the top of the window', () => {
     expect(diceHeadroom(341, 844, 0)).toBe(0);
   });
 });
+
+
+describe('bonus die identity', () => {
+
+  it('targets the tagged bonus-capacity die before the base die', () => {
+    const world = createWorld(420, 420);
+    const base = spawnDie(world);
+    base.state = 'rest';
+    base.settledAt = 10;
+
+    const bonus = spawnDie(world, { dropped: true, bonusCapacity: true });
+    throwDie(world, bonus, { minTumbleMs: 300 });
+
+    expect(zapTarget(world)).toBe(bonus);
+  });
+
+});
