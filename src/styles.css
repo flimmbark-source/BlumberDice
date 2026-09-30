@@ -4067,22 +4067,24 @@ body:has(.app--photo)::before { display: none; }
  * and move the tray the passage has just centred.
  *
  * Anything that is absolutely positioned, or is a pseudo-element, has no flow
- * to disturb and goes out altogether with `display: none`. That is worth
- * doing separately for two of them: the chassis grime is a `mix-blend-mode`
- * layer the size of the whole machine, which forces a read-back of everything
- * beneath it -- the dice canvas included -- on every frame it exists; and the
- * chamber lamp holds an infinite animation that `visibility` would leave
- * running against a surface nobody can see.
+ * to disturb and can usually go out altogether with `display: none`. The
+ * standby slots are the exception: the return passage measures their boxes
+ * before it makes them visible again, so they stay `visibility: hidden` and
+ * pause their breathing text instead. The chassis grime and chamber lamp can
+ * still disappear completely; neither is needed for return geometry.
  */
 .viewport--covered:not(.viewport--carry) .topbar,
 .viewport--covered:not(.viewport--carry) .panel-rail,
 .viewport--covered:not(.viewport--carry) .fixed-panel,
 .viewport--covered:not(.viewport--carry) .game__controls,
-.viewport--covered:not(.viewport--carry) .fixed-panel--goal-mobile {
+.viewport--covered:not(.viewport--carry) .fixed-panel--goal-mobile,
+.viewport--covered:not(.viewport--carry) .standby {
   visibility: hidden;
 }
+.viewport--covered:not(.viewport--carry) .standby__text {
+  animation-play-state: paused;
+}
 .viewport--covered:not(.viewport--carry) .face-vent,
-.viewport--covered:not(.viewport--carry) .standby,
 .viewport--covered .chamber__lamp,
 .viewport--covered .app::before,
 .viewport--covered .app::after,
