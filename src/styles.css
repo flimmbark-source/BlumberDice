@@ -4136,6 +4136,22 @@ body:has(.app--photo)::before { display: none; }
   inset: 0;
   will-change: transform;
 }
+
+/* The CRT surface travels on its own stacking plane. The carried faceplate
+   shell is pushed below the live UI, but the glass must stay above the stable
+   dice canvas so the player actually sees the television pass through the
+   camera instead of watching it disappear at the handoff. */
+.passage-glass-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 120000;
+  pointer-events: none;
+}
+.passage-glass-shell__camera {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
 /*
  * The arm beat, where the shell is built.
  *
@@ -4147,8 +4163,8 @@ body:has(.app--photo)::before { display: none; }
  */
 .passage-shell--arm .passage-shell__piece,
 .passage-shell--arm .passage-shell__recess,
-.passage-shell--arm .passage-shell__glass,
-.passage-shell--arm .passage-shell__rim {
+.passage-shell--arm .passage-shell__rim,
+.passage-glass-shell--arm .passage-shell__glass {
   animation: passShellArm 260ms linear both;
 }
 @keyframes passShellArm {
@@ -4157,14 +4173,16 @@ body:has(.app--photo)::before { display: none; }
   100% { opacity: 1; }
 }
 
-.passage-shell--in .passage-shell__camera {
+.passage-shell--in .passage-shell__camera,
+.passage-glass-shell--in .passage-glass-shell__camera {
   animation: passCameraIn var(--drive-in) linear(
     0, 0.048 15%, 0.161 30%, 0.175 34%, 0.225 38%,
     0.355 50%, 0.483 60%, 0.497 64%, 0.575 68%, 0.611 70%,
     0.857 85%, 0.967 93%, 1.004 97%, 1
   ) both;
 }
-.passage-shell--out .passage-shell__camera {
+.passage-shell--out .passage-shell__camera,
+.passage-glass-shell--out .passage-glass-shell__camera {
   animation: passCameraOut var(--drive-out) linear(
     0, -0.004 3%, 0.033 7%, 0.143 15%,
     0.389 30%, 0.425 32%, 0.503 36%, 0.517 40%,
@@ -4269,7 +4287,8 @@ body:has(.app--photo)::before { display: none; }
   backface-visibility: hidden;
   transform-origin: center center;
 }
-.passage-shell--photo .passage-shell__glass { border-radius: 10px; }
+.passage-shell--photo .passage-shell__glass,
+.passage-glass-shell--photo .passage-shell__glass { border-radius: 10px; }
 
 .passage-shell__rim {
   position: absolute;
@@ -4291,11 +4310,13 @@ body:has(.app--photo)::before { display: none; }
  * "UI disappears instead of moving" failure this passage is meant to avoid.
  */
 .passage-shell--in :is(
-  .passage-shell__piece, .passage-shell__recess, .passage-shell__glass, .passage-shell__rim) {
+  .passage-shell__piece, .passage-shell__recess, .passage-shell__rim),
+.passage-glass-shell--in .passage-shell__glass {
   animation: passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
 }
 .passage-shell--out :is(
-  .passage-shell__piece, .passage-shell__recess, .passage-shell__glass, .passage-shell__rim) {
+  .passage-shell__piece, .passage-shell__recess, .passage-shell__rim),
+.passage-glass-shell--out .passage-shell__glass {
   animation: passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
 }
 
