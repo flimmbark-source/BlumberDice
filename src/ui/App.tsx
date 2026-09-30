@@ -190,17 +190,25 @@ export function App(): JSX.Element {
   /**
    * Point each travelling panel at the chamber's centre.
    *
-   * `transform-origin` is stated in the element's own box, so the one shared
-   * scale keyframe means a different thing on every panel unless each is told
-   * where the chamber is relative to itself. Told that, `scale()` on each
-   * panel is arithmetically identical to scaling the whole plate about the
-   * chamber -- which is what the shell behind them is doing.
+   * `transform-origin` is stated in the element's own, pre-transform box, so
+   * the one shared scale keyframe means a different thing on every panel
+   * unless each is told where the chamber is relative to itself. Told that,
+   * `scale()` on each panel is arithmetically identical to scaling the whole
+   * plate about the chamber -- which is what the shell behind them is doing.
    *
    * Rectangles are read live rather than from `geom` because the panels are
    * only ever hidden with `visibility`, never taken out of the flow, so their
    * boxes are valid at both ends of the passage. The camera translation is
    * subtracted out on the way back: the origin has to be expressed in the
    * machine's resting frame, which is the frame `geom` was measured in.
+   *
+   * The photographed desktop adds one more coordinate space. Its whole
+   * 1672x941 stage is already scaled by `stageScale`, so a DOMRect is in
+   * screen pixels while `transform-origin` on a child panel is in unscaled
+   * stage pixels. Feeding the screen-space offset straight back into CSS makes
+   * the return scale pivot around the wrong point; at passage scale that error
+   * looks like the live text is flying in from the page corner. Convert the
+   * offset back through the stage scale for those photo-stage descendants.
    */
   const setTravelOrigins = (geom: PassageGeometry): void => {
     const v = viewRef.current;
@@ -208,7 +216,15 @@ export function App(): JSX.Element {
     const cy = geom.y + geom.height / 2;
     for (const el of document.querySelectorAll<HTMLElement>(TRAVELLERS)) {
       const b = el.getBoundingClientRect();
-      el.style.transformOrigin = `${cx - (b.left - v.tx)}px ${cy - (b.top - v.ty)}px`;
+      if (b.width === 0 && b.height === 0) continue;
+
+      const inPhotoDesktop = Boolean(
+        !mobileSurfaces && el.closest('.app--photo[data-mobile="false"]'),
+      );
+      const localScale = inPhotoDesktop && stageScale > 0 ? stageScale : 1;
+      const originX = (cx - (b.left - v.tx)) / localScale;
+      const originY = (cy - (b.top - v.ty)) / localScale;
+      el.style.transformOrigin = `${originX}px ${originY}px`;
     }
     document.documentElement.style.setProperty('--pass-scale', String(passageScale(geom)));
   };
