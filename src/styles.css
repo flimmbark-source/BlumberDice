@@ -4320,22 +4320,29 @@ body:has(.app--photo)::before { display: none; }
  * Information phosphor still goes dark in the arm beat. The physical CRT
  * glass, tint, scanlines and bezel remain visible and travel with the plate.
  *
- * Kept in step with `TRAVELLERS` in `App.tsx`. The set has to stay disjoint
- * by ancestry -- a `.fixed-panel` inside a `.panel-rail` would be scaled
- * twice -- which is why the rails are named and the panels inside them
- * are not.
+ * Kept in step with `TRAVELLERS` in `App.tsx`. The set stays disjoint by
+ * rendered boxes: normally the rail travels and its child panels inherit that
+ * transform. The photographed desktop makes the rail `display: contents`,
+ * though, so it has no box to animate; there the child fixed panels are the
+ * travellers instead. The data-mobile guard leaves the mobile passage alone.
  */
 .viewport--carry:is(.viewport--entering, .viewport--exiting) :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby),
+.viewport--carry:is(.viewport--entering, .viewport--exiting)
+  .app--photo[data-mobile='false'] .panel-rail > .fixed-panel {
   will-change: transform;
   backface-visibility: hidden;
 }
 .viewport--carry.viewport--entering :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby),
+.viewport--carry.viewport--entering
+  .app--photo[data-mobile='false'] .panel-rail > .fixed-panel {
   animation: passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
 }
 .viewport--carry.viewport--exiting :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby) {
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby),
+.viewport--carry.viewport--exiting
+  .app--photo[data-mobile='false'] .panel-rail > .fixed-panel {
   animation: passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
 }
 
@@ -4719,6 +4726,7 @@ body:has(.rollfield)::before { display: none; }
   .passage-shell__rim,
   .viewport--carry .topbar,
   .viewport--carry .panel-rail,
+  .viewport--carry .app--photo[data-mobile='false'] .panel-rail > .fixed-panel,
   .viewport--carry .fixed-panel--goal-mobile,
   .viewport--carry .game__controls,
   .viewport--carry .face-vent,
