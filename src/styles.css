@@ -2750,7 +2750,9 @@ button.chain__btn:hover { border-color: var(--orange); background: rgba(224, 122
      still lands the same way; the tubes just come back up already lit. */
   .viewport--restore-snap .fixed-panel__body > *,
   .viewport--restore-snap .currency > .currency__value,
-  .viewport--restore-snap .tray__readout {
+  .viewport--restore-snap .tray__readout,
+  .viewport--restore-snap .tray__hint,
+  .viewport--restore-snap .tray__queue {
     animation: none;
   }
 
@@ -4387,39 +4389,24 @@ body:has(.app--photo)::before { display: none; }
   animation: passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
 }
 
-/* The CRT text does not exist in fullscreen Roll, so it should not pop back
-   the instant the return starts. Keep it dark while the glass is still
-   effectively filling the player's view, then let it come up once the CRT
-   has visibly become a screen inside the returning machine. */
-.viewport--carry.viewport--exiting :is(.tray__readout, .tray__queue) {
-  animation: passCrtTextOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
-}
-@keyframes passCrtTextOut {
-  0%   { transform: scale(var(--pass-scale, 5)); opacity: 0; }
-  30%  { opacity: 0; }
-  44%  { opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
+/* The CRT text belongs to the powered screen, not to the returning metal.
+   Keep every CRT text layer completely dark for the entire exit movement.
+   Only after the camera and faceplate have landed does restore-snap restrike
+   the phosphor. This prevents readable text from floating into view while
+   the monitor itself is still moving back into place. */
+.viewport--carry.viewport--exiting :is(.tray__readout, .tray__hint, .tray__queue) {
+  animation: none;
+  opacity: 0;
 }
 
-/* Preserve the prompt's own translateX(-50%) centring while it rides the
-   screen. Individual `scale` composes with that existing transform instead
-   of replacing it. On return its opacity follows the CRT telemetry delay, so
-   the prompt cannot appear while the screen is still effectively fullscreen. */
+/* Preserve the prompt's own translateX(-50%) centring on entry. Individual
+   `scale` composes with that existing transform instead of replacing it. */
 .viewport--carry.viewport--entering .tray__hint {
   animation: passHintScaleIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
-}
-.viewport--carry.viewport--exiting .tray__hint {
-  animation: passHintScaleOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
 }
 @keyframes passHintScaleIn {
   from { scale: 1; }
   to   { scale: var(--pass-scale, 5); }
-}
-@keyframes passHintScaleOut {
-  0%   { scale: var(--pass-scale, 5); opacity: 0; }
-  30%  { opacity: 0; }
-  44%  { opacity: 1; }
-  100% { scale: 1; opacity: 1; }
 }
 
 /* And the plate goes under them. Its own stacking is unchanged otherwise:
@@ -4546,10 +4533,28 @@ body:has(.app--photo)::before { display: none; }
 }
 
 .viewport--restore-snap .fixed-panel__body > *,
-.viewport--restore-snap .currency > .currency__value,
-.viewport--restore-snap .tray__readout {
+.viewport--restore-snap .currency > .currency__value {
   animation: planScreenRestrike 430ms steps(1, end) both;
   transform-origin: center center;
+}
+
+/* CRT text restrikes only after the return passage has fully completed.
+   Opacity/brightness only: unlike panel content, the bottom prompt already
+   owns a centring transform and must not have that transform replaced by the
+   flicker animation. */
+.viewport--restore-snap :is(.tray__readout, .tray__hint, .tray__queue) {
+  animation: crtTextRestrike 430ms steps(1, end) both;
+}
+@keyframes crtTextRestrike {
+  0%   { opacity: 0; filter: brightness(0.25); }
+  9%   { opacity: 0.9; filter: brightness(3); }
+  17%  { opacity: 0.05; filter: brightness(0.45); }
+  27%  { opacity: 1; filter: brightness(2.2); }
+  39%  { opacity: 0.28; filter: brightness(0.75); }
+  52%  { opacity: 1; filter: brightness(1.5); }
+  66%  { opacity: 0.58; filter: brightness(0.9); }
+  80%  { opacity: 1; filter: brightness(1.12); }
+  100% { opacity: 1; filter: none; }
 }
 @keyframes planScreenRestrike {
   0%   { opacity: 0; filter: brightness(0.35); transform: scaleY(0.04); }
@@ -4846,7 +4851,9 @@ body:has(.rollfield)::before { display: none; }
   .passage-shell__glass,
   .viewport--restore-snap .fixed-panel__body > *,
   .viewport--restore-snap .currency > .currency__value,
-  .viewport--restore-snap .tray__readout {
+  .viewport--restore-snap .tray__readout,
+  .viewport--restore-snap .tray__hint,
+  .viewport--restore-snap .tray__queue {
     animation: none !important;
   }
   .passage-shell { display: none; }
