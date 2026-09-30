@@ -3986,37 +3986,15 @@ body:has(.app--photo)::before { display: none; }
 }
 
 
-/* ------------------------------------------- beat one: the screens go out */
+/* -------------------------------------- beat one: preserve the live face */
 /*
- * What counts as a screen, and therefore as a thing allowed to blink.
- *
- * The digits in a readout are phosphor and may collapse. The word etched
- * beside them is paint on the bezel and may not: it is on the plate, and
- * plate does not flicker. That distinction is the whole of the rule the
- * machine is built on, and it is why `.currency__label` is absent from every
- * list below while `.currency__value` is in all of them.
+ * The passage is a movement of the machine, not a power-down. An older
+ * version collapsed panel contents and readout digits during the arm beat,
+ * which made the photographed chassis keep moving while its live UI vanished
+ * in place. Keep every visible screen attached to its physical panel for the
+ * whole carried portion of the drive. Settled Roll still hides the machine
+ * after it has actually cleared the viewport.
  */
-.viewport--arming .fixed-panel__body > *,
-.viewport--arming .currency > .currency__value,
-.viewport--arming .tray__readout {
-  animation: screenCollapse 260ms steps(1, end) both;
-  transform-origin: center center;
-}
-@keyframes screenCollapse {
-  0%   { opacity: 1; filter: none; transform: scaleY(1); }
-  24%  { opacity: 1; filter: brightness(1.8); transform: scaleY(1); }
-  48%  { opacity: 1; filter: brightness(2.7); transform: scaleY(0.1); }
-  72%  { opacity: 1; filter: brightness(3.4); transform: scaleY(0.03); }
-  100% { opacity: 0; filter: brightness(0.35); transform: scaleY(0.02); }
-}
-
-/* And they stay out for the whole passage. Nothing behind the faceplate is
-   lit, so nothing has to be put out again when the faceplate leaves. */
-.viewport--driven .fixed-panel__body > *,
-.viewport--driven .currency > .currency__value,
-.viewport--driven .tray__readout {
-  opacity: 0;
-}
 
 
 /* ------------------------------------ beat two: the faceplate goes past */
@@ -4387,20 +4365,23 @@ body:has(.app--photo)::before { display: none; }
  * travellers instead. The data-mobile guard leaves the mobile passage alone.
  */
 .viewport--carry:is(.viewport--entering, .viewport--exiting) :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby),
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby,
+  .tray__readout, .tray__hint, .tray__queue),
 .viewport--carry:is(.viewport--entering, .viewport--exiting)
   .app--photo[data-mobile='false'] .panel-rail > .fixed-panel {
   will-change: transform;
   backface-visibility: hidden;
 }
 .viewport--carry.viewport--entering :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby),
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby,
+  .tray__readout, .tray__hint, .tray__queue),
 .viewport--carry.viewport--entering
   .app--photo[data-mobile='false'] .panel-rail > .fixed-panel {
   animation: passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
 }
 .viewport--carry.viewport--exiting :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby),
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby,
+  .tray__readout, .tray__hint, .tray__queue),
 .viewport--carry.viewport--exiting
   .app--photo[data-mobile='false'] .panel-rail > .fixed-panel {
   animation: passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
@@ -4466,10 +4447,15 @@ body:has(.app--photo)::before { display: none; }
    handed to passage-shell__glass for the drive, so the glass moves through
    the camera without magnifying the dice or snapping them back afterward. */
 .viewport--covered .tray::before,
-.viewport--covered .tray::after,
-.viewport--covered .tray__readout,
-.viewport--covered .tray__hint,
-.viewport--covered .tray__queue {
+.viewport--covered .tray::after {
+  display: none;
+}
+/* Telemetry and the chamber hint are printed on the CRT face. Keep them
+   measurable and visible while the glass is travelling, then remove them
+   only after the passage has landed in settled Roll. */
+.viewport--covered:not(.viewport--carry) .tray__readout,
+.viewport--covered:not(.viewport--carry) .tray__hint,
+.viewport--covered:not(.viewport--carry) .tray__queue {
   display: none;
 }
 
@@ -4775,9 +4761,6 @@ body:has(.rollfield)::before { display: none; }
   .passage-shell--arm .passage-shell__piece,
   .passage-shell--arm .passage-shell__recess,
   .passage-shell--arm .passage-shell__rim,
-  .viewport--arming .fixed-panel__body > *,
-  .viewport--arming .currency > .currency__value,
-  .viewport--arming .tray__readout,
   .rollfield--arm,
   .rollfield--out,
   .passage-shell__camera,
@@ -4791,6 +4774,9 @@ body:has(.rollfield)::before { display: none; }
   .viewport--carry .game__controls,
   .viewport--carry .face-vent,
   .viewport--carry .standby,
+  .viewport--carry .tray__readout,
+  .viewport--carry .tray__hint,
+  .viewport--carry .tray__queue,
   .passage-shell__glass,
   .viewport--restore-snap .fixed-panel__body > *,
   .viewport--restore-snap .currency > .currency__value,
