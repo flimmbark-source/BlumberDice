@@ -75,7 +75,7 @@ const COVER_AT_ARM = 0.65;
  * the plate"; the two describe the same set and there is no way to share one
  * string between them.
  */
-const TRAVELLERS = '.topbar, .panel-rail, .app--photo[data-mobile="false"] .panel-rail > .fixed-panel, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby';
+const TRAVELLERS = '.topbar, .panel-rail, .app--photo[data-mobile="false"] .panel-rail > .fixed-panel, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby, .tray__readout, .tray__hint, .tray__queue';
 
 type Tab = 'roll' | 'web' | 'stats' | 'log';
 
