@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createWorld, DIE, DIE_HALF, dieAt, faceUp, LOCAL_VERTICES, nudgeDie,
   orientationFor, owesReveal, planThrow, releaseFadedGhosts, retireDie, setWorldSize, sweepSpent,
-  spawnDie, step, throwDie, type DieBody, type World,
+  spawnDie, step, throwDie, zapTarget, type DieBody, type World,
 } from '../src/ui/dice/physics.ts';
 import {
   dot, project, qRandom, qRotate, v3, VIEW_DIR, add, len,
