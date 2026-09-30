@@ -4208,22 +4208,22 @@ body:has(.app--photo)::before { display: none; }
    piece be window-sized -- and window-sized is what lets the panel travel
    with it. */
 .passage-shell--photo .passage-shell__piece {
+  /*
+   * Keep the fitted chassis as the first (topmost) background layer, then let
+   * every layer inside --surround use the element's full positioning area.
+   *
+   * Do not split position/size into two-value longhand lists here. --surround
+   * expands to many comma-separated backgrounds (four side bolts, four
+   * top/bottom bolts, wear, scratches, shading and the plate fill). With only
+   * two longhand values CSS repeats them across that expanded list, so every
+   * other screw inherits the chassis' stage-sized coordinate space. That was
+   * why one pair travelled and the lower pair vanished.
+   */
+  background:
+    var(--chassis) var(--stage-x) var(--stage-y) /
+      var(--stage-w) var(--stage-h) no-repeat,
+    var(--surround);
   background-color: var(--plate);
-  background-image: var(--chassis), var(--surround);
-  /* The chassis is the fitted 1672x941 stage. The mounting surround is the
-     viewport-sized panel behind it. They used to share the stage-sized
-     background box here, which meant the surround's screws/shading were not
-     actually present in the letterbox bands while the shell travelled; the
-     document copy disappeared under --covered and the bands popped back only
-     when Plan was restored. Give each layer its real coordinate space so the
-     same physical surround moves with the faceplate for the whole passage. */
-  background-position:
-    var(--stage-x) var(--stage-y),
-    0 0;
-  background-size:
-    var(--stage-w) var(--stage-h),
-    100% 100%;
-  background-repeat: no-repeat, no-repeat;
 }
 
 /* The milled step the photograph is set into, on the shell's copy of it. It
