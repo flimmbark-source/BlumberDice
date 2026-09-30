@@ -65,15 +65,17 @@ const COVER_AT_ARM = 0.65;
  * moving the live tray here would also magnify the dice canvas and make it
  * snap back when the passage ends.
  *
- * The list has to stay disjoint by ancestry, or a panel inside a rail would
- * be scaled twice. It is deliberately not `.fixed-panel`: those live inside
- * the rails, and the rails are what travels.
+ * The list has to stay disjoint by rendered ancestry, or a panel inside a
+ * real rail would be scaled twice. The photographed desktop is the exception:
+ * its rail is `display: contents`, so there is no rail box to transform and
+ * the fixed panels are the rendered boxes that must travel instead. The
+ * `data-mobile='false'` guard keeps that exception off the mobile path.
  *
  * Kept in step with the selector list in `styles.css` under "the face rides
  * the plate"; the two describe the same set and there is no way to share one
  * string between them.
  */
-const TRAVELLERS = '.topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby';
+const TRAVELLERS = '.topbar, .panel-rail, .app--photo[data-mobile="false"] .panel-rail > .fixed-panel, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby';
 
 type Tab = 'roll' | 'web' | 'stats' | 'log';
 
@@ -586,6 +588,7 @@ export function App(): JSX.Element {
     <div
       className={`app${photo ? ' app--photo' : ''}`}
       data-tab={tab}
+      data-mobile={mobileSurfaces ? 'true' : 'false'}
       style={photo ? {
         ['--chassis' as string]: `url(${chassisUrl})`,
         ['--stage-k' as string]: String(stageScale),
