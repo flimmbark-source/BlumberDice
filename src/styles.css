@@ -4381,16 +4381,30 @@ body:has(.app--photo)::before { display: none; }
   animation: passShellIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
 }
 .viewport--carry.viewport--exiting :is(
-  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby,
-  .tray__readout, .tray__queue),
+  .topbar, .panel-rail, .fixed-panel--goal-mobile, .game__controls, .face-vent, .standby),
 .viewport--carry.viewport--exiting
   .app--photo[data-mobile='false'] .panel-rail > .fixed-panel {
   animation: passShellOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
 }
 
+/* The CRT text does not exist in fullscreen Roll, so it should not pop back
+   the instant the return starts. Keep it dark while the glass is still
+   effectively filling the player's view, then let it come up once the CRT
+   has visibly become a screen inside the returning machine. */
+.viewport--carry.viewport--exiting :is(.tray__readout, .tray__queue) {
+  animation: passCrtTextOut var(--drive-out) cubic-bezier(0.2, 0, 0.25, 1) both;
+}
+@keyframes passCrtTextOut {
+  0%   { transform: scale(var(--pass-scale, 5)); opacity: 0; }
+  30%  { opacity: 0; }
+  44%  { opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 /* Preserve the prompt's own translateX(-50%) centring while it rides the
    screen. Individual `scale` composes with that existing transform instead
-   of replacing it. */
+   of replacing it. On return its opacity follows the CRT telemetry delay, so
+   the prompt cannot appear while the screen is still effectively fullscreen. */
 .viewport--carry.viewport--entering .tray__hint {
   animation: passHintScaleIn var(--drive-in) cubic-bezier(0.55, 0, 0.2, 1) both;
 }
@@ -4402,8 +4416,10 @@ body:has(.app--photo)::before { display: none; }
   to   { scale: var(--pass-scale, 5); }
 }
 @keyframes passHintScaleOut {
-  from { scale: var(--pass-scale, 5); }
-  to   { scale: 1; }
+  0%   { scale: var(--pass-scale, 5); opacity: 0; }
+  30%  { opacity: 0; }
+  44%  { opacity: 1; }
+  100% { scale: 1; opacity: 1; }
 }
 
 /* And the plate goes under them. Its own stacking is unchanged otherwise:
