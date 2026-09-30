@@ -82,6 +82,13 @@ export interface DieBody {
 
   result: Face | null;
   /**
+   * True when this physical cube exists because of one of the engine's
+   * timed bonus-die slots. The timer lives in GameState; this flag gives the
+   * presentation layer the missing identity it needs to destroy the matching
+   * extra cube when that slot lapses.
+   */
+  bonusCapacity: boolean;
+  /**
    * The engine roll this die still owes a reveal for. Cleared once the number
    * above it has faded, which is when the HUD is allowed to count that roll.
    */
@@ -185,7 +192,8 @@ export function orientationFor(q: Quat, face: Face): Quat {
 }
 
 export function spawnDie(
-  world: World, opts: { x?: number; y?: number; dropped?: boolean } = {},
+  world: World,
+  opts: { x?: number; y?: number; dropped?: boolean; bonusCapacity?: boolean } = {},
 ): DieBody {
   const die: DieBody = {
     key: world.nextKey++,
@@ -198,6 +206,7 @@ export function spawnDie(
     q: opts.dropped ? qRandom() : orientationFor(qRandom(), (1 + Math.floor(Math.random() * 6)) as Face),
     omega: v3(0, 0, 0),
     result: null,
+    bonusCapacity: opts.bonusCapacity ?? false,
     rollId: null,
     heldScore: 0,
     heldMeta: 0,
@@ -314,13 +323,33 @@ export function zapDie(world: World, die: DieBody): void {
 }
 
 /**
- * The die a destruct beam should take: the one that has been standing idle
- * longest, and only a tumbling one if nothing is standing still. A bonus die
- * is an extra on the surface, so the extras go first.
+ * The die a destruct beam should take.
+ *
+ * Bonus lifetime belongs to a timed extra *capacity slot*, so the physical
+ * cube created for that slot is tagged `bonusCapacity`. Always destroy one
+ * of those first, regardless of whether it is resting, tumbling, or currently
+ * showing a result. The old heuristic preferred the oldest resting cube,
+ * which was commonly the player's base die; that left the primed extra cube
+ * alive and caused later one-die actions to alternate between two cubes.
+ *
+ * The fallback ordering is only for defensive compatibility with a world
+ * created before capacity identity existed: a result-null tumbling cube is
+ * the strongest signal that it is the primed extra, then an idle/resting die.
  */
 export function zapTarget(world: World): DieBody | null {
   const live = world.dice.filter((die) => die.zapAt === null && !die.retiring);
   if (live.length === 0) return null;
+
+  const bonus = live
+    .filter((die) => die.bonusCapacity)
+    .sort((a, b) => a.bornAt - b.bornAt);
+  if (bonus.length > 0) return bonus[0];
+
+  const primed = live
+    .filter((die) => die.state === 'tumbling' && die.result === null)
+    .sort((a, b) => a.bornAt - b.bornAt);
+  if (primed.length > 0) return primed[0];
+
   const resting = live
     .filter((die) => die.state === 'rest' || die.state === 'idle')
     .sort((a, b) => a.settledAt - b.settledAt);
