@@ -143,18 +143,15 @@ export function App(): JSX.Element {
   /** How long the instrument waits on its rail before it rises. */
   const [hudDelay, setHudDelay] = useState(0);
   /**
-   * True exactly while the faceplate shell is opaque over the whole window.
+   * True while the resting machine has handed its physical chassis to the
+   * travelling passage shell.
    *
-   * Everything the live machine has to give up for the passage -- its
-   * enamel, the chamber's bezel, the tray's rings and glass, the panels --
-   * is given up inside this window and taken back inside it, so none of it
-   * is ever seen to change. Doing it on the drive's first frame instead,
-   * which is what the passage used to do, put every one of those changes in
-   * the one frame where the machine is still sitting perfectly still in
-   * front of the player.
+   * The handoff must happen on the first actual drive frame, never during the
+   * arm beat. During arm nothing has moved yet, so removing the photographed
+   * chassis there is visible as a blink. The shell is pre-painted during arm,
+   * then `covered` flips at the same render that starts `passage === 'in'`.
    */
   const [covered, setCovered] = useState(false);
-  const coverTimerRef = useRef<number | null>(null);
   const chamberRef = useRef<HTMLDivElement>(null);
   const trayResizeRef = useRef<(() => void) | null>(null);
   const passageTimerRef = useRef<number | null>(null);
@@ -230,7 +227,7 @@ export function App(): JSX.Element {
   };
 
   const clearPassageTimers = (): void => {
-    for (const ref of [passageTimerRef, restoreTimerRef, armTimerRef, coverTimerRef]) {
+    for (const ref of [passageTimerRef, restoreTimerRef, armTimerRef]) {
       if (ref.current !== null) window.clearTimeout(ref.current);
       ref.current = null;
     }
@@ -242,6 +239,10 @@ export function App(): JSX.Element {
     if (passageTimerRef.current !== null) window.clearTimeout(passageTimerRef.current);
     if (restoreTimerRef.current !== null) window.clearTimeout(restoreTimerRef.current);
     setRestoreSnap(false);
+    // Entry hands the resting chassis to the already-painted travelling shell
+    // in the same render that motion begins. This prevents any stationary
+    // arm-frame where baked-in UI disappears before the plane moves.
+    if (direction === 'in') setCovered(true);
     setPassage(direction);
     passageTimerRef.current = window.setTimeout(() => {
       // On return, the camera reaches Plan first. Only then is the machine UI
@@ -269,11 +270,10 @@ export function App(): JSX.Element {
   /**
    * Pass through the chamber glass, in three beats.
    *
-   * First the machine arms: the information screens collapse to a line, and
-   * on a phone the selector clunks over to the Roll surface and the page
-   * comes back to the top. Nothing has travelled yet -- that beat exists so
-   * the screens are seen to go dark, rather than being hidden a frame later
-   * by the faceplate that is about to cover them.
+   * First the machine arms: the travelling shell is measured and rasterised,
+   * and on a phone the selector clunks over to the Roll surface and the page
+   * comes back to the top. Nothing visible is removed yet; the resting face
+   * remains intact until the first frame that actually moves.
    *
    * Then the drive engages. The viewport translates the chamber toward the
    * centre while the chamber glass and the rest of the live face scale with
@@ -320,13 +320,6 @@ export function App(): JSX.Element {
       measureShell();
       setHudDelay(t.hudDelay);
     });
-
-    // Two thirds of the way through the beat: the shell is opaque by then and
-    // there is still a third of it left for the layout to settle in.
-    coverTimerRef.current = window.setTimeout(
-      () => { setCovered(true); coverTimerRef.current = null; },
-      Math.max(0, t.arm * COVER_AT_ARM),
-    );
 
     armTimerRef.current = window.setTimeout(() => {
       armTimerRef.current = null;
