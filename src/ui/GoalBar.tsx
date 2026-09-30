@@ -26,7 +26,7 @@ export function GoalBar({ s, onOpenTree }: {
   const goal = currentGoal(s);
   const availableToBuy = purchasableCount(s);
   // Follows the same eased total as the HUD, so the bar and the number agree.
-  const { value: shownScore } = useCountUp(s.score, () => store.heldBack.score);
+  const { value: shownScore } = useCountUp(s.score, () => store.heldBack.score, true);
   const { value: shownMeta } = useCountUp(s.meta, () => store.heldBack.meta);
 
   if (goal.kind === 'none') return null;
