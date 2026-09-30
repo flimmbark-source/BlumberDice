@@ -1175,6 +1175,7 @@ function Currency({
   const { value: shown, moving } = useCountUp(
     value,
     alt ? () => store.heldBack.meta : () => store.heldBack.score,
+    !alt,
   );
   const rising = moving && value > shown;
   // Read off what is on the display rather than off the true total: while the
